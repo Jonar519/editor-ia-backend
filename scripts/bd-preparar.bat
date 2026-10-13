@@ -1,8 +1,9 @@
 @echo off
-rem Deja la base de PRUEBAS migrada con el esquema del repo editor-ia-database (sin tocar la de desarrollo).
+rem Deja lista la base de PRUEBAS: la crea si falta, la migra con editor-ia-database y habilita cuaderno_app.
+rem Nunca toca la base de desarrollo.
 setlocal
-pushd "%~dp0..\..\editor-ia-database"
-call npm run -s migrate -- test
+pushd "%~dp0.."
+node scripts\bd-preparar.mjs
 set "CODIGO=%ERRORLEVEL%"
 popd
 exit /b %CODIGO%

@@ -12,7 +12,7 @@ describe('/health y /ready con dependencias reales (base de pruebas, Redis db 1)
 
   beforeAll(() => {
     pool = crearPool(urlBdPruebas());
-    redis = crearRedis(urlRedisPruebas());
+    redis = crearRedis(urlRedisPruebas(), () => undefined);
   });
   afterAll(async () => {
     await pool.end();
@@ -34,13 +34,16 @@ describe('/health y /ready con dependencias reales (base de pruebas, Redis db 1)
   });
 
   it('/ready 503 si Redis no responde (y no filtra el motivo)', async () => {
-    const caido = crearRedis('redis://127.0.0.1:1/1');
+    const errores: Error[] = [];
+    const caido = crearRedis('redis://127.0.0.1:1/1', (e) => errores.push(e));
     const { app, lineas } = appDePrueba({ comprobaciones: [comprobacionBd(pool), comprobacionRedis(caido)] });
     const r = await request(app).get('/ready');
     caido.disconnect();
     expect(r.status).toBe(503);
     expect(r.body).toEqual({ estado: 'no_listo', comprobaciones: { bd: 'ok', redis: 'falla' } });
     expect(lineas.some((l) => l.comprobacion === 'redis')).toBe(true);
+    // El error de conexión llega al manejador (al log), no a la consola como "Unhandled error event".
+    expect(errores.length).toBeGreaterThan(0);
   });
 
   it('/ready 503 si la base no responde', async () => {

@@ -208,6 +208,14 @@
       "buscar": "    options: '-c statement_timeout=5000',\n",
       "reemplazo": "",
       "comando": "test"
+    },
+    {
+      "id": "S27",
+      "regla": "Los errores de conexión de Redis van al manejador (log), no a la consola",
+      "archivo": "src/infra/redis.ts",
+      "buscar": "  redis.on('error', alError);\n",
+      "reemplazo": "",
+      "comando": "test"
     }
   ]
 }

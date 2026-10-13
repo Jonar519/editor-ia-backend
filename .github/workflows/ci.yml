@@ -48,11 +48,11 @@ jobs:
       PGPORT: '5435'
       PGUSER: cuaderno
       PGPASSWORD: cuaderno_ci
-      CUADERNO_APP_PASSWORD: cuaderno_app_ci
+      CUADERNO_APP_PASSWORD: cuaderno_app_ci_local
       CUADERNO_DEV_DB: cuaderno
       CUADERNO_TEST_DB: cuaderno_test
       # Backend: solo base y Redis de PRUEBAS, como cuaderno_app.
-      TEST_DATABASE_URL: postgresql://cuaderno_app:cuaderno_app_ci@127.0.0.1:5435/cuaderno_test
+      TEST_DATABASE_URL: postgresql://cuaderno_app:cuaderno_app_ci_local@127.0.0.1:5435/cuaderno_test
       TEST_REDIS_URL: redis://127.0.0.1:6381/1
       TZ: UTC
     steps:
@@ -70,13 +70,15 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             editor-ia-database/package-lock.json
-      - name: Migrar la base de pruebas y habilitar cuaderno_app
-        working-directory: editor-ia-database
-        run: |
-          npm ci
-          node scripts/migrate.mjs test
-          node scripts/usuario-app.mjs
       - run: npm ci
+      # El Postgres del CI nace solo con la base "cuaderno": bd-preparar crea cuaderno_test si falta,
+      # la migra con el runner de editor-ia-database y habilita cuaderno_app.
+      - name: Preparar la base de pruebas
+        env:
+          DATABASE_REPO_PATH: editor-ia-database
+        run: |
+          npm ci --prefix editor-ia-database
+          node scripts/bd-preparar.mjs
       - run: npm run prisma:generate
       - run: npm run lint
       - run: npm run typecheck

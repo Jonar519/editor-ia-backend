@@ -24,7 +24,9 @@ async function main(): Promise<void> {
   const log = crearLogger(config.LOG_LEVEL);
   const pool = crearPool(config.DATABASE_URL);
   const prisma = crearPrisma(pool);
-  const redis = crearRedis(config.REDIS_URL);
+  const redis = crearRedis(config.REDIS_URL, (err) => {
+    log.warn({ err }, 'redis: error de conexión');
+  });
 
   const problemas = problemasDePrivilegios(await leerPrivilegios(pool));
   const accion = accionPorPrivilegios(config.NODE_ENV, problemas);
