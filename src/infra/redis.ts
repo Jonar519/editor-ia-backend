@@ -7,11 +7,12 @@ import type { Comprobacion } from '../http/salud.js';
  */
 export function crearRedis(url: string, alError: (error: Error) => void): Redis {
   const redis = new Redis(url, {
-    lazyConnect: true,
-    // Sin cola offline: si Redis no está, las órdenes fallan enseguida en vez de esperar.
-    enableOfflineQueue: false,
+    // Conecta al crear el cliente. Las órdenes enviadas mientras conecta esperan en la cola (sin ella,
+    // las primeras órdenes tras arrancar fallaban con "Stream isn't writeable"); si Redis no responde,
+    // cada orden falla tras UN reintento (~2 s como mucho) en vez de esperar indefinidamente.
     maxRetriesPerRequest: 1,
     connectTimeout: 2000,
+    retryStrategy: (intentos) => Math.min(intentos * 200, 2000),
   });
   redis.on('error', alError);
   return redis;
@@ -21,7 +22,6 @@ export function comprobacionRedis(redis: Redis): Comprobacion {
   return {
     nombre: 'redis',
     comprobar: async () => {
-      if (redis.status === 'wait' || redis.status === 'end') await redis.connect();
       // ping() rechaza la promesa si Redis no responde.
       await redis.ping();
     },
