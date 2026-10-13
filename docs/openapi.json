@@ -1,0 +1,185 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cuaderno API",
+    "version": "0.1.0",
+    "description": "API de Cuaderno, editor colaborativo de documentación técnica con IA. Generada desde los esquemas zod."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:4200",
+      "description": "Desarrollo local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "tokenMetricas": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "SaludRespuesta": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "ListoRespuesta": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "listo",
+              "no_listo",
+              "apagando"
+            ]
+          },
+          "comprobaciones": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "falla"
+              ]
+            },
+            "description": "Resultado de cada dependencia (bd, esquema, redis). Sin detalles internos: el motivo va al log."
+          }
+        },
+        "required": [
+          "estado",
+          "comprobaciones"
+        ]
+      },
+      "ErrorRespuesta": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string",
+                "example": "no_encontrado"
+              },
+              "mensaje": {
+                "type": "string"
+              },
+              "solicitud": {
+                "type": "string",
+                "description": "Id de la solicitud (cabecera x-request-id) para buscarla en el log"
+              },
+              "detalles": {}
+            },
+            "required": [
+              "codigo",
+              "mensaje",
+              "solicitud"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "salud"
+        ],
+        "summary": "Vivo: el proceso responde (no revisa dependencias)",
+        "responses": {
+          "200": {
+            "description": "Proceso vivo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaludRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "salud"
+        ],
+        "summary": "Listo: base, versión del esquema y Redis disponibles",
+        "responses": {
+          "200": {
+            "description": "Listo para recibir tráfico",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListoRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Alguna dependencia falla, o el proceso se está apagando",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListoRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "salud"
+        ],
+        "summary": "Métricas Prometheus (token obligatorio en producción)",
+        "security": [
+          {
+            "tokenMetricas": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Métricas en formato de texto de Prometheus",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta o es inválido el token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
