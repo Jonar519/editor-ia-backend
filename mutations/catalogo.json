@@ -445,7 +445,7 @@
       "id": "E28",
       "regla": "Un enlace vencido se rechaza (410)",
       "archivo": "src/invitaciones/servicio.ts",
-      "buscar": "  if (inv.expira_en <= new Date()) throw new ErrorHttp(410",
+      "buscar": "  if (inv.vencida) throw new ErrorHttp(410",
       "reemplazo": "  if (false) throw new ErrorHttp(410",
       "comando": "test"
     },

@@ -1,0 +1,7 @@
+# Falsos positivos de gitleaks, identificados por huella (commit:archivo:regla:línea).
+# Cada entrada lleva su justificación. Los merges a main se hacen con "Create a merge commit" para que
+# estas huellas sigan siendo válidas (squash o rebase cambiarían el commit).
+
+# docs/demo-E.md línea 53: la variable de cmd del paso 3 de la guía de demostración, con un texto de
+# ejemplo donde la persona pega el token de SU buzón simulado. No es un secreto.
+c82344c2d0dc9d3adbc81c1724cd209079fdd75f:docs/demo-E.md:generic-api-key:53
