@@ -16,6 +16,11 @@
       "tokenMetricas": {
         "type": "http",
         "scheme": "bearer"
+      },
+      "acceso": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     },
     "schemas": {
@@ -89,6 +94,289 @@
         },
         "required": [
           "error"
+        ]
+      },
+      "SesionRespuesta": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT HS256 de 15 min. Guárdalo SOLO en memoria."
+          },
+          "expiraEn": {
+            "type": "integer",
+            "description": "Vencimiento del access token (segundos Unix)"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioPublico"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiraEn",
+          "usuario"
+        ],
+        "description": "Además fija la cookie httpOnly cuaderno_refresco (SameSite=Strict, Path=/api/auth)."
+      },
+      "UsuarioPublico": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "lector"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "InicioSesionSolicitud": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "correo",
+          "contrasena"
+        ]
+      },
+      "YoRespuesta": {
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioPublico"
+          }
+        },
+        "required": [
+          "usuario"
+        ]
+      },
+      "InvitacionCreada": {
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              },
+              "correo": {
+                "type": "string"
+              },
+              "rol": {
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "editor",
+                  "lector"
+                ]
+              },
+              "estado": {
+                "type": "string",
+                "enum": [
+                  "pendiente"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "nombre",
+              "correo",
+              "rol",
+              "estado"
+            ]
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "correoEnviado": {
+            "type": "boolean",
+            "description": "false si el proveedor de correo falló: se puede reenviar"
+          }
+        },
+        "required": [
+          "usuario",
+          "expiraEn",
+          "correoEnviado"
+        ],
+        "description": "NUNCA incluye el enlace ni el token: solo los recibe la persona invitada."
+      },
+      "InvitacionSolicitud": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "correo": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "lector"
+            ]
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "rol"
+        ]
+      },
+      "ListaInvitaciones": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "invitaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitacionPendiente"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "invitaciones"
+        ]
+      },
+      "InvitacionPendiente": {
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "lector"
+            ]
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vencida": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "usuarioId",
+          "nombre",
+          "correo",
+          "rol",
+          "expiraEn",
+          "vencida"
+        ]
+      },
+      "InvitacionConsulta": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "lector"
+            ]
+          },
+          "requiereMfa": {
+            "type": "boolean"
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "nombre",
+          "correo",
+          "rol",
+          "requiereMfa",
+          "expiraEn"
+        ]
+      },
+      "TokenInvitacion": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "CompletarInvitacion": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "token",
+          "contrasena"
         ]
       }
     },
@@ -169,6 +457,702 @@
           },
           "401": {
             "description": "Falta o es inválido el token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/sesion": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Iniciar sesión (bloqueo progresivo; misma respuesta exista o no el correo)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InicioSesionSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sesión abierta. Fija la cookie de refresco.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Correo o contraseña incorrectos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "La cuenta usa MFA (desafío TOTP: bloque F)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Cerrar la sesión actual",
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sesión revocada y cookie borrada"
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresco": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Rotar el refresh (cookie) y obtener un access token nuevo. Reutilizar uno usado revoca la sesión.",
+        "responses": {
+          "200": {
+            "description": "Access nuevo; la cookie trae el refresh nuevo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin cookie, inválido o reutilizado (refresco_reutilizado: la sesión quedó revocada)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origin distinto al del frontend",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/yo": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Cuenta de la sesión actual (verifica que la sesión siga viva)",
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YoRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/invitaciones": {
+      "post": {
+        "tags": [
+          "invitaciones (admin)"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Invitar (crea la cuenta pendiente y envía el enlace por correo; la respuesta NUNCA trae el enlace)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitacionSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitación creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Correo en uso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "invitaciones (admin)"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Invitaciones pendientes, las más recientes primero (paginado: ?limite=1..200, ?desde)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            },
+            "required": false,
+            "name": "limite",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "default": 0
+            },
+            "required": false,
+            "name": "desde",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaInvitaciones"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/invitaciones/{usuarioId}/reenviar": {
+      "post": {
+        "tags": [
+          "invitaciones (admin)"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Reenviar con un enlace nuevo (el anterior deja de servir)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "usuarioId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reenviada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionCreada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No hay invitación pendiente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/invitaciones/{usuarioId}": {
+      "delete": {
+        "tags": [
+          "invitaciones (admin)"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Cancelar (borra la cuenta pendiente)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "usuarioId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancelada"
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Solo admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No hay invitación pendiente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/consultar": {
+      "post": {
+        "tags": [
+          "invitaciones"
+        ],
+        "summary": "Datos de la invitación para el formulario (el token va en el cuerpo, nunca en la URL)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenInvitacion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitación vigente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitacionConsulta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Enlace inválido o usado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Enlace vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/completar": {
+      "post": {
+        "tags": [
+          "invitaciones"
+        ],
+        "summary": "Elegir contraseña, activar la cuenta y abrir la primera sesión (un solo uso)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletarInvitacion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta activa y sesión abierta (fija la cookie de refresco)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Enlace inválido o usado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Cuenta admin: se completa con MFA (bloque F)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Enlace vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
             "content": {
               "application/json": {
                 "schema": {
