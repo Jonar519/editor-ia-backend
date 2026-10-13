@@ -1,0 +1,358 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  previewFeatures     = ["partialIndexes"]
+  importFileExtension = "js"
+  moduleFormat        = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model actualizaciones_documento {
+  id            BigInt     @id @default(autoincrement())
+  documento_id  String     @db.Uuid
+  autor_id      String     @db.Uuid
+  actualizacion Bytes
+  creado_en     DateTime   @default(now()) @db.Timestamptz(6)
+  usuarios      usuarios   @relation(fields: [autor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentos    documentos @relation(fields: [documento_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([documento_id, id], map: "actualizaciones_por_documento")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+model cambios_correo {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id     String    @db.Uuid
+  estado_usuario String    @default("activa")
+  correo_nuevo   String    @db.Citext
+  token_hash     Bytes     @unique(map: "cambios_correo_token_unico")
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  expira_en      DateTime  @db.Timestamptz(6)
+  confirmado_en  DateTime? @db.Timestamptz(6)
+  usuarios       usuarios  @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "cambios_correo_usuario_activo")
+
+  @@index([expira_en], map: "cambios_correo_expira_en")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model codigos_respaldo {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id  String    @db.Uuid
+  hash_codigo Bytes
+  creado_en   DateTime  @default(now()) @db.Timestamptz(6)
+  usado_en    DateTime? @db.Timestamptz(6)
+  mfa_totp    mfa_totp  @relation(fields: [usuario_id], references: [usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "codigos_respaldo_de_su_mfa")
+
+  @@unique([usuario_id, hash_codigo], map: "codigos_respaldo_unico")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model comentarios {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documento_id      String        @db.Uuid
+  autor_id          String        @db.Uuid
+  padre_id          String?       @db.Uuid
+  ancla             Bytes?
+  cuerpo            String
+  resuelto_en       DateTime?     @db.Timestamptz(6)
+  creado_en         DateTime      @default(now()) @db.Timestamptz(6)
+  editado_en        DateTime?     @db.Timestamptz(6)
+  usuarios          usuarios      @relation(fields: [autor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentos        documentos    @relation(fields: [documento_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  comentarios       comentarios?  @relation("comentariosTocomentarios", fields: [padre_id, documento_id], references: [id, documento_id], onDelete: Cascade, onUpdate: NoAction, map: "comentarios_responde_su_documento")
+  other_comentarios comentarios[] @relation("comentariosTocomentarios")
+
+  @@unique([id, documento_id], map: "comentarios_id_documento_unico")
+  @@index([documento_id, creado_en], map: "comentarios_por_documento")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model correos_simulados {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  para         String   @db.Citext
+  plantilla    String
+  asunto       String
+  cuerpo_texto String
+  creado_en    DateTime @default(now()) @db.Timestamptz(6)
+  expira_en    DateTime @db.Timestamptz(6)
+
+  @@index([expira_en], map: "correos_simulados_expira_en")
+  @@index([para, creado_en(sort: Desc)], map: "correos_simulados_por_destinatario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model documentos {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  espacio_id                String                      @db.Uuid
+  titulo                    String
+  creado_por                String                      @db.Uuid
+  estado_yjs                Bytes?
+  creado_en                 DateTime                    @default(now()) @db.Timestamptz(6)
+  actualizado_en            DateTime                    @default(now()) @db.Timestamptz(6)
+  actualizaciones_documento actualizaciones_documento[]
+  comentarios               comentarios[]
+  usuarios                  usuarios                    @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  espacios                  espacios                    @relation(fields: [espacio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  embeddings                embeddings[]
+  permisos_documento        permisos_documento[]
+  sesiones_edicion          sesiones_edicion[]
+  versiones                 versiones[]
+
+  @@unique([id, espacio_id], map: "documentos_id_espacio_unico")
+  @@index([espacio_id], map: "documentos_por_espacio")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model embeddings {
+  id           String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documento_id String                @db.Uuid
+  espacio_id   String                @db.Uuid
+  fragmento    Int
+  texto        String
+  hash_texto   Bytes
+  modelo       String
+  embedding    Unsupported("vector")
+  indexado_por String                @db.Uuid
+  creado_en    DateTime              @default(now()) @db.Timestamptz(6)
+  usuarios     usuarios              @relation(fields: [indexado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentos   documentos            @relation(fields: [documento_id, espacio_id], references: [id, espacio_id], onDelete: Cascade, onUpdate: NoAction, map: "embeddings_mismo_espacio_que_documento")
+
+  @@unique([documento_id, fragmento], map: "embeddings_fragmento_unico")
+  @@index([espacio_id], map: "embeddings_por_espacio")
+  @@index([embedding], map: "embeddings_vector_coseno")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model espacios {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre           String
+  creado_por       String             @db.Uuid
+  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
+  documentos       documentos[]
+  usuarios         usuarios           @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  miembros_espacio miembros_espacio[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model invitaciones {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id     String   @unique(map: "invitaciones_una_por_cuenta") @db.Uuid
+  estado_usuario String   @default("pendiente")
+  token_hash     Bytes    @unique(map: "invitaciones_token_unico")
+  creado_en      DateTime @default(now()) @db.Timestamptz(6)
+  expira_en      DateTime @db.Timestamptz(6)
+  usuarios       usuarios @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: Cascade, onUpdate: NoAction, map: "invitaciones_usuario_pendiente")
+
+  @@unique([usuario_id, estado_usuario], map: "invitaciones_usuario_estado_unico")
+  @@index([expira_en], map: "invitaciones_expira_en")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model mfa_totp {
+  usuario_id       String             @id @db.Uuid
+  estado_usuario   String             @default("activa")
+  secreto_cifrado  Bytes
+  iv               Bytes
+  etiqueta         Bytes
+  confirmado_en    DateTime?          @db.Timestamptz(6)
+  ultimo_paso      BigInt?
+  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
+  codigos_respaldo codigos_respaldo[]
+  usuarios         usuarios           @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "mfa_totp_usuario_activo")
+
+  @@unique([usuario_id, estado_usuario], map: "mfa_totp_usuario_estado_unico")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+model miembros_espacio {
+  espacio_id         String               @db.Uuid
+  usuario_id         String               @db.Uuid
+  estado_usuario     String               @default("activa")
+  rol                String
+  creado_en          DateTime             @default(now()) @db.Timestamptz(6)
+  espacios           espacios             @relation(fields: [espacio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios           usuarios             @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "miembros_espacio_usuario_activo")
+  permisos_documento permisos_documento[]
+
+  @@id([espacio_id, usuario_id])
+  @@index([usuario_id], map: "miembros_espacio_por_usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+model permisos_documento {
+  documento_id     String           @db.Uuid
+  espacio_id       String           @db.Uuid
+  usuario_id       String           @db.Uuid
+  rol              String
+  creado_en        DateTime         @default(now()) @db.Timestamptz(6)
+  documentos       documentos       @relation(fields: [documento_id, espacio_id], references: [id, espacio_id], onDelete: Cascade, onUpdate: NoAction, map: "permisos_documento_del_documento")
+  miembros_espacio miembros_espacio @relation(fields: [espacio_id, usuario_id], references: [espacio_id, usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "permisos_documento_solo_miembros")
+
+  @@id([documento_id, usuario_id])
+  @@index([usuario_id], map: "permisos_documento_por_usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model rangos_ip_geo {
+  red    Unsupported("cidr") @id
+  pais   String
+  region String?
+  ciudad String?
+
+  @@ignore
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model schema_migrations {
+  version     Int      @id
+  nombre      String
+  checksum    String   @db.Char(64)
+  aplicada_en DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sesiones {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id        String               @db.Uuid
+  estado_usuario    String               @default("activa")
+  creado_en         DateTime             @default(now()) @db.Timestamptz(6)
+  ultimo_uso_en     DateTime             @default(now()) @db.Timestamptz(6)
+  expira_en         DateTime             @db.Timestamptz(6)
+  revocada_en       DateTime?            @db.Timestamptz(6)
+  motivo_revocacion String?
+  mfa_verificada    Boolean              @default(false)
+  ip_red            Unsupported("cidr")?
+  ubicacion         String?
+  user_agent        String?
+  usuarios          usuarios             @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "sesiones_usuario_activo")
+  sesiones_edicion  sesiones_edicion[]
+  tokens_refresco   tokens_refresco[]
+
+  @@unique([id, usuario_id], map: "sesiones_id_usuario_unico")
+  @@index([expira_en], map: "sesiones_expira_en")
+  @@index([usuario_id], map: "sesiones_vivas_por_usuario", where: raw("(revocada_en IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sesiones_edicion {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documento_id     String     @db.Uuid
+  usuario_id       String     @db.Uuid
+  sesion_id        String     @db.Uuid
+  rol              String
+  conectado_en     DateTime   @default(now()) @db.Timestamptz(6)
+  ultimo_latido_en DateTime   @default(now()) @db.Timestamptz(6)
+  sesiones         sesiones   @relation(fields: [sesion_id, usuario_id], references: [id, usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "sesiones_edicion_de_su_sesion")
+  documentos       documentos @relation(fields: [documento_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([documento_id], map: "sesiones_edicion_por_documento")
+  @@index([sesion_id], map: "sesiones_edicion_por_sesion")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+model tokens_recuperacion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id     String    @db.Uuid
+  estado_usuario String    @default("activa")
+  token_hash     Bytes     @unique(map: "tokens_recuperacion_token_unico")
+  creado_en      DateTime  @default(now()) @db.Timestamptz(6)
+  expira_en      DateTime  @db.Timestamptz(6)
+  usado_en       DateTime? @db.Timestamptz(6)
+  usuarios       usuarios  @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "tokens_recuperacion_usuario_activo")
+
+  @@index([expira_en], map: "tokens_recuperacion_expira_en")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+model tokens_refresco {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sesion_id  String    @db.Uuid
+  usuario_id String    @db.Uuid
+  token_hash Bytes     @unique(map: "tokens_refresco_token_unico")
+  creado_en  DateTime  @default(now()) @db.Timestamptz(6)
+  expira_en  DateTime  @db.Timestamptz(6)
+  usado_en   DateTime? @db.Timestamptz(6)
+  sesiones   sesiones  @relation(fields: [sesion_id, usuario_id], references: [id, usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "tokens_refresco_de_su_sesion")
+
+  @@index([expira_en], map: "tokens_refresco_expira_en")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model uso_ia_diario {
+  usuario_id     String   @db.Uuid
+  dia            DateTime @db.Date
+  peticiones     Int      @default(0)
+  tokens_entrada BigInt   @default(0)
+  tokens_salida  BigInt   @default(0)
+  usuarios       usuarios @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([usuario_id, dia])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model usuarios {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estado                    String                      @default("pendiente")
+  rol                       String
+  correo                    String?                     @unique(map: "usuarios_correo_unico", where: raw("(correo IS NOT NULL)")) @db.Citext
+  nombre                    String?
+  telefono                  String?
+  hash_contrasena           String?
+  fallos_login              Int                         @default(0)
+  bloqueada_hasta           DateTime?                   @db.Timestamptz(6)
+  invitada_por              String?                     @db.Uuid
+  creado_en                 DateTime                    @default(now()) @db.Timestamptz(6)
+  actualizado_en            DateTime                    @default(now()) @db.Timestamptz(6)
+  activada_en               DateTime?                   @db.Timestamptz(6)
+  eliminada_en              DateTime?                   @db.Timestamptz(6)
+  actualizaciones_documento actualizaciones_documento[]
+  cambios_correo            cambios_correo[]
+  comentarios               comentarios[]
+  documentos                documentos[]
+  embeddings                embeddings[]
+  espacios                  espacios[]
+  invitaciones              invitaciones?
+  mfa_totp                  mfa_totp?
+  miembros_espacio          miembros_espacio[]
+  sesiones                  sesiones[]
+  tokens_recuperacion       tokens_recuperacion[]
+  uso_ia_diario             uso_ia_diario[]
+  usuarios                  usuarios?                   @relation("usuariosTousuarios", fields: [invitada_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_usuarios            usuarios[]                  @relation("usuariosTousuarios")
+  versiones                 versiones[]
+
+  @@unique([id, estado], map: "usuarios_id_estado_unico")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model versiones {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documento_id    String      @db.Uuid
+  numero          BigInt
+  motivo          String
+  creado_por      String?     @db.Uuid
+  restaurada_de   String?     @db.Uuid
+  estado_yjs      Bytes
+  contenido_texto String
+  hash_previo     Bytes
+  hash            Bytes       @unique(map: "versiones_hash_unico")
+  creado_en       DateTime    @default(now()) @db.Timestamptz(6)
+  usuarios        usuarios?   @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  documentos      documentos  @relation(fields: [documento_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  versiones       versiones?  @relation("versionesToversiones", fields: [restaurada_de, documento_id], references: [id, documento_id], onDelete: NoAction, onUpdate: NoAction, map: "versiones_restaura_su_documento")
+  other_versiones versiones[] @relation("versionesToversiones")
+
+  @@unique([id, documento_id], map: "versiones_id_documento_unico")
+  @@unique([documento_id, numero], map: "versiones_numero_unico")
+}

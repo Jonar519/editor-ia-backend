@@ -1,18 +1,12 @@
-# Dependencias
 node_modules/
-
-# Variables de entorno (solo se versiona .env.example)
 .env
 .env.*
 !.env.example
-
-# Salidas y reportes
 dist/
 coverage/
 reports/
 *.log
-
-# Sistema operativo y editores
+src/generated/
 Thumbs.db
 desktop.ini
 .DS_Store
