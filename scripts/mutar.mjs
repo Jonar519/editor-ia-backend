@@ -136,7 +136,7 @@ for (const comando of new Set(elegidas.map((m) => m.comando))) {
   process.stdout.write(`Final sin mutaciones: "npm run ${comando}"… `);
   const fin = correr(comando);
   finalOk &&= fin.codigo === 0;
-  console.log(fin.codigo === 0 ? 'OK' : 'FALLA');
+  console.log(fin.codigo === 0 ? 'OK' : `FALLA\n   evidencia: ${evidenciaDe(fin.salida)}`);
 }
 
 console.log('\nResumen de mutaciones');
