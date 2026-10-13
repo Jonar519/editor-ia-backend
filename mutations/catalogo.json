@@ -1,0 +1,213 @@
+{
+  "mutaciones": [
+    {
+      "id": "S01",
+      "regla": "Producción rechaza cualquier proveedor mock",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "if (c[clave] === 'mock') {",
+      "reemplazo": "if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "S02",
+      "regla": "Producción exige METRICS_TOKEN",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "if (c.METRICS_TOKEN === undefined) {",
+      "reemplazo": "if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "S03",
+      "regla": "Producción exige Redis con contraseña o TLS",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "if (redis.password === '' && redis.protocol !== 'rediss:') {",
+      "reemplazo": "if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "S04",
+      "regla": "MFA_ENCRYPTION_KEY de exactamente 32 bytes",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "Buffer.from(v, 'base64').length === 32",
+      "reemplazo": "Buffer.from(v, 'base64').length >= 16",
+      "comando": "test"
+    },
+    {
+      "id": "S05",
+      "regla": "/ready responde 503 apenas empieza el apagado",
+      "archivo": "src/http/salud.ts",
+      "buscar": "if (o.estado.apagando) {",
+      "reemplazo": "if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "S06",
+      "regla": "/ready responde 503 si alguna dependencia falla",
+      "archivo": "src/http/salud.ts",
+      "buscar": "res.status(listo ? 200 : 503)",
+      "reemplazo": "res.status(200)",
+      "comando": "test"
+    },
+    {
+      "id": "S07",
+      "regla": "Cada comprobación de /ready tiene tiempo límite",
+      "archivo": "src/http/salud.ts",
+      "buscar": "await conLimite(c.comprobar(), limite);",
+      "reemplazo": "await c.comprobar();",
+      "comando": "test"
+    },
+    {
+      "id": "S08",
+      "regla": "/metrics exige el token cuando está configurado",
+      "archivo": "src/http/salud.ts",
+      "buscar": "if (o.tokenMetricas !== undefined && !tokenValido(",
+      "reemplazo": "if (false && !tokenValido(",
+      "comando": "test"
+    },
+    {
+      "id": "S09",
+      "regla": "El token de métricas se compara completo (no solo la longitud)",
+      "archivo": "src/http/salud.ts",
+      "buscar": "recibido.length === objetivo.length && timingSafeEqual(recibido, objetivo)",
+      "reemplazo": "recibido.length === objetivo.length",
+      "comando": "test"
+    },
+    {
+      "id": "S10",
+      "regla": "Un error inesperado no filtra su mensaje al cliente",
+      "archivo": "src/http/errores.ts",
+      "buscar": "res.status(500).json(cuerpo('interno', 'Error interno', solicitud));",
+      "reemplazo": "res.status(500).json(cuerpo('interno', err instanceof Error ? err.message : 'Error interno', solicitud));",
+      "comando": "test"
+    },
+    {
+      "id": "S11",
+      "regla": "JSON mal formado responde 400 json_invalido",
+      "archivo": "src/http/errores.ts",
+      "buscar": "err.type === 'entity.parse.failed'",
+      "reemplazo": "err.type === 'nunca'",
+      "comando": "test"
+    },
+    {
+      "id": "S12",
+      "regla": "El log redacta Authorization",
+      "archivo": "src/observabilidad/log.ts",
+      "buscar": "  'req.headers.authorization',\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "S13",
+      "regla": "El log redacta las cookies",
+      "archivo": "src/observabilidad/log.ts",
+      "buscar": "  'req.headers.cookie',\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "S14",
+      "regla": "Un x-request-id entrante solo se acepta si es seguro",
+      "archivo": "src/app.ts",
+      "buscar": "typeof entrante === 'string' && ID_VALIDO.test(entrante)",
+      "reemplazo": "typeof entrante === 'string'",
+      "comando": "test"
+    },
+    {
+      "id": "S15",
+      "regla": "Límite de 100 kB en el cuerpo JSON",
+      "archivo": "src/app.ts",
+      "buscar": "export const LIMITE_CUERPO = '100kb';",
+      "reemplazo": "export const LIMITE_CUERPO = '10mb';",
+      "comando": "test"
+    },
+    {
+      "id": "S16",
+      "regla": "Cabeceras de seguridad (helmet)",
+      "archivo": "src/app.ts",
+      "buscar": "  app.use(helmet());\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "S17",
+      "regla": "Sin cabecera x-powered-by",
+      "archivo": "src/app.ts",
+      "buscar": "  app.disable('x-powered-by');\n",
+      "reemplazo": "",
+      "comando": "test",
+      "equivalente": "helmet() ya elimina X-Powered-By por defecto (middleware xPoweredBy), así que quitar app.disable no cambia la respuesta. Se conserva como defensa en profundidad por si helmet se configura de otra forma. La mutación S16 (sin helmet) sí se detecta."
+    },
+    {
+      "id": "S18",
+      "regla": "Las métricas usan el PATRÓN de ruta, no la URL",
+      "archivo": "src/observabilidad/metricas.ts",
+      "buscar": "const ruta = typeof patron === 'string' ? `${req.baseUrl}${patron}` : 'sin_ruta';",
+      "reemplazo": "const ruta = req.originalUrl;",
+      "comando": "test"
+    },
+    {
+      "id": "S19",
+      "regla": "El apagado marca el proceso como apagando",
+      "archivo": "src/apagado.ts",
+      "buscar": "      o.estado.apagando = true;\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "S20",
+      "regla": "El apagado es idempotente (recursos cerrados una sola vez)",
+      "archivo": "src/apagado.ts",
+      "buscar": "enCurso ??= new Promise",
+      "reemplazo": "enCurso = new Promise",
+      "comando": "test"
+    },
+    {
+      "id": "S21",
+      "regla": "Si se agota el límite, el apagado corta las conexiones",
+      "archivo": "src/apagado.ts",
+      "buscar": "        o.servidor.closeAllConnections();\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "S22",
+      "regla": "Detecta un usuario dueño de tablas",
+      "archivo": "src/infra/privilegios.ts",
+      "buscar": "if (p.tablasPropias > 0)",
+      "reemplazo": "if (p.tablasPropias > 100)",
+      "comando": "test"
+    },
+    {
+      "id": "S23",
+      "regla": "Detecta un superusuario",
+      "archivo": "src/infra/privilegios.ts",
+      "buscar": "if (p.superusuario) problemas.push",
+      "reemplazo": "if (false) problemas.push",
+      "comando": "test"
+    },
+    {
+      "id": "S24",
+      "regla": "Producción aborta con privilegios de más",
+      "archivo": "src/infra/privilegios.ts",
+      "buscar": "return entorno === 'production' ? 'abortar' : 'avisar';",
+      "reemplazo": "return 'avisar';",
+      "comando": "test"
+    },
+    {
+      "id": "S25",
+      "regla": "/ready falla si el esquema está por detrás del mínimo",
+      "archivo": "src/infra/bd.ts",
+      "buscar": "if (version < minimo) throw",
+      "reemplazo": "if (false) throw",
+      "comando": "test"
+    },
+    {
+      "id": "S26",
+      "regla": "Las consultas largas se cortan (statement_timeout)",
+      "archivo": "src/infra/bd.ts",
+      "buscar": "    options: '-c statement_timeout=5000',\n",
+      "reemplazo": "",
+      "comando": "test"
+    }
+  ]
+}
