@@ -43,6 +43,24 @@ El API queda en `http://127.0.0.1:4200`. Para revisarlo: `/health`, `/ready` y `
 | `mutar.bat [id...]` | Pruebas de mutación (`mutations/catalogo.json`). |
 | `gitleaks.bat` | Busca secretos en todo el historial. |
 | `ci.bat` | Corre los mismos pasos que el CI y muestra el código de salida de cada uno. |
+| `invitar.bat --correo .. --nombre ".." --rol ..` | CLI de operador: invita una cuenta (por ejemplo, el primer admin). El enlace va **solo** al correo. |
+| `buzon.bat <correo>` | Buzón simulado (solo desarrollo y solo con el proveedor mock): los correos recibidos por una dirección. |
+
+## API
+
+Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesión en [docs/adr/0001-sesion.md](docs/adr/0001-sesion.md).
+
+| Ruta | Para qué |
+|---|---|
+| `POST /api/auth/sesion` | Iniciar sesión. Devuelve el access token (15 min, solo en memoria) y fija la cookie de refresco. |
+| `POST /api/auth/refresco` | Rotar el refresh. Reutilizar uno ya usado revoca la sesión entera. |
+| `DELETE /api/auth/sesion` | Cerrar la sesión. |
+| `GET /api/auth/yo` | Cuenta de la sesión actual. |
+| `POST/GET /api/admin/invitaciones` | Invitar y listar las pendientes (solo admin). La respuesta nunca trae el enlace. |
+| `POST /api/admin/invitaciones/{id}/reenviar` | Reenviar la invitación con un enlace nuevo. |
+| `DELETE /api/admin/invitaciones/{id}` | Cancelar la invitación. |
+| `POST /api/invitaciones/consultar` | Datos de la invitación. El token va en el cuerpo. |
+| `POST /api/invitaciones/completar` | Elegir contraseña, activar la cuenta y abrir la primera sesión. |
 
 ## Configuración
 

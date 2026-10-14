@@ -1,8 +1,11 @@
 // Punto de entrada: valida la configuración, abre conexiones, verifica privilegios, escucha y se apaga
 // en orden con SIGTERM/SIGINT.
 import { crearApagado } from './apagado.js';
+import { crearApi } from './api.js';
+import { crearSenuelo } from './auth/contrasenas.js';
+import { crearProveedorCorreo } from './correo/proveedor.js';
 import { crearApp } from './app.js';
-import { cargarConfig, ErrorConfig } from './config/entorno.js';
+import { cargarConfigOSalir } from './config/entorno.js';
 import { comprobacionBd, comprobacionEsquema, crearPool, crearPrisma } from './infra/bd.js';
 import { accionPorPrivilegios, leerPrivilegios, problemasDePrivilegios } from './infra/privilegios.js';
 import { comprobacionRedis, crearRedis } from './infra/redis.js';
@@ -10,16 +13,7 @@ import { crearLogger } from './observabilidad/log.js';
 import { crearMetricas } from './observabilidad/metricas.js';
 
 async function main(): Promise<void> {
-  let config;
-  try {
-    config = cargarConfig(process.env);
-  } catch (e) {
-    if (e instanceof ErrorConfig) {
-      console.error(e.message);
-      process.exit(1);
-    }
-    throw e;
-  }
+  const config = cargarConfigOSalir(process.env);
 
   const log = crearLogger(config.LOG_LEVEL);
   const pool = crearPool(config.DATABASE_URL);
@@ -40,6 +34,17 @@ async function main(): Promise<void> {
   }
 
   const estado = { apagando: false };
+  const api = crearApi({
+    prisma,
+    redis,
+    correo: crearProveedorCorreo(config, prisma),
+    claveAcceso: Buffer.from(config.ACCESS_TOKEN_SECRET, 'base64'),
+    appUrl: config.APP_URL,
+    cookieSegura: config.COOKIE_SECURE,
+    costoHash: config.PASSWORD_HASH_COST,
+    senuelo: await crearSenuelo(config.PASSWORD_HASH_COST),
+    prefijoRedis: 'cuaderno:',
+  });
   const app = crearApp({
     log,
     metricas: crearMetricas(),
@@ -47,6 +52,7 @@ async function main(): Promise<void> {
     estado,
     tokenMetricas: config.METRICS_TOKEN,
     trustProxy: config.TRUST_PROXY,
+    api,
   });
 
   const servidor = app.listen(config.PORT, config.HOST, () => {

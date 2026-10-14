@@ -19,6 +19,15 @@ const claveAes256 = z
     error: 'debe ser exactamente 32 bytes en base64 (AES-256)',
   });
 
+const claveHmac = z
+  .string({ error: 'falta: genérala con scripts\\env-init.bat (ver .env.example)' })
+  .refine((v) => /^[A-Za-z0-9+/]+={0,2}$/.test(v) && Buffer.from(v, 'base64').length >= 32, {
+    error: 'debe ser de al menos 32 bytes en base64',
+  });
+
+/** Costo mínimo de scrypt en producción: N = 2^15. */
+export const COSTO_HASH_MINIMO_PRODUCCION = 15;
+
 const esquema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -30,13 +39,34 @@ const esquema = z
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/, error: 'debe ser una URL postgresql://' }),
     REDIS_URL: z.url({ protocol: /^rediss?$/, error: 'debe ser una URL redis:// o rediss://' }),
     MFA_ENCRYPTION_KEY: claveAes256,
+    ACCESS_TOKEN_SECRET: claveHmac,
     METRICS_TOKEN: opcional(z.string().min(32, { error: 'debe tener 32+ caracteres' })),
+    APP_URL: z.url({ protocol: /^https?$/, error: 'debe ser una URL http(s):// sin ruta' }).default('http://127.0.0.1:5175'),
+    COOKIE_SECURE: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
+    PASSWORD_HASH_COST: z.coerce.number().int().min(10).max(20).default(COSTO_HASH_MINIMO_PRODUCCION),
+    EMAIL_FROM: z.email({ error: 'debe ser un correo' }).default('cuaderno@example.com'),
+    SES_REGION: opcional(z.string().regex(/^[a-z]{2}-[a-z]+-\d$/, { error: 'región AWS inválida (ej. us-east-1)' })),
     AI_PROVIDER: z.enum(PROVEEDORES.AI_PROVIDER).default('mock'),
     EMAIL_PROVIDER: z.enum(PROVEEDORES.EMAIL_PROVIDER).default('mock'),
     GEO_PROVIDER: z.enum(PROVEEDORES.GEO_PROVIDER).default('mock'),
   })
   .superRefine((c, ctx) => {
+    if (c.EMAIL_PROVIDER === 'ses' && c.SES_REGION === undefined) {
+      ctx.addIssue({ code: 'custom', path: ['SES_REGION'], message: 'obligatoria con EMAIL_PROVIDER=ses' });
+    }
+    if (new URL(c.APP_URL).pathname !== '/') {
+      ctx.addIssue({ code: 'custom', path: ['APP_URL'], message: 'debe ser solo el origen, sin ruta' });
+    }
     if (c.NODE_ENV !== 'production') return;
+    if (!c.APP_URL.startsWith('https://')) {
+      ctx.addIssue({ code: 'custom', path: ['APP_URL'], message: 'en producción debe usar https://' });
+    }
+    if (!c.COOKIE_SECURE) {
+      ctx.addIssue({ code: 'custom', path: ['COOKIE_SECURE'], message: 'en producción debe ser true' });
+    }
+    if (c.PASSWORD_HASH_COST < COSTO_HASH_MINIMO_PRODUCCION) {
+      ctx.addIssue({ code: 'custom', path: ['PASSWORD_HASH_COST'], message: `en producción debe ser ${String(COSTO_HASH_MINIMO_PRODUCCION)} o más` });
+    }
     for (const clave of Object.keys(PROVEEDORES) as (keyof typeof PROVEEDORES)[]) {
       if (c[clave] === 'mock') {
         ctx.addIssue({ code: 'custom', path: [clave], message: 'en producción no se permite el proveedor "mock"' });
@@ -57,6 +87,19 @@ export class ErrorConfig extends Error {
   constructor(readonly problemas: string[]) {
     super(`Configuración inválida:\n${problemas.map((p) => `  - ${p}`).join('\n')}`);
     this.name = 'ErrorConfig';
+  }
+}
+
+/** Para puntos de entrada (servidor, CLI): ante una configuración inválida, lista los problemas y sale con 1. */
+export function cargarConfigOSalir(env: Record<string, string | undefined>): Config {
+  try {
+    return cargarConfig(env);
+  } catch (e) {
+    if (e instanceof ErrorConfig) {
+      console.error(e.message);
+      process.exit(1);
+    }
+    throw e;
   }
 }
 

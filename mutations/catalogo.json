@@ -216,6 +216,310 @@
       "buscar": "  redis.on('error', alError);\n",
       "reemplazo": "",
       "comando": "test"
+    },
+    {
+      "id": "E16",
+      "regla": "Correo inexistente: se verifica contra el hash señuelo (mismo tiempo de respuesta)",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "await verificarContrasena(e.contrasena, u?.hash_contrasena ?? d.senuelo)",
+      "reemplazo": "(u?.hash_contrasena ? await verificarContrasena(e.contrasena, u.hash_contrasena) : false)",
+      "comando": "test"
+    },
+    {
+      "id": "S28",
+      "regla": "Redis conecta al crearse (las primeras órdenes no fallan)",
+      "archivo": "src/infra/redis.ts",
+      "buscar": "    maxRetriesPerRequest: 1,\n    connectTimeout: 2000,",
+      "reemplazo": "    lazyConnect: true,\n    enableOfflineQueue: false,\n    maxRetriesPerRequest: 1,\n    connectTimeout: 2000,",
+      "comando": "test"
+    },
+    {
+      "id": "E01",
+      "regla": "Access token: se verifica la firma HMAC",
+      "archivo": "src/auth/tokens.ts",
+      "buscar": "  if (recibido.length !== esperado.length || !timingSafeEqual(recibido, esperado)) return null;\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E02",
+      "regla": "Access token: se rechaza vencido",
+      "archivo": "src/auth/tokens.ts",
+      "buscar": "  if (exp <= Math.floor(ahora / 1000)) return null;\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E03",
+      "regla": "Access token: cabecera fija (sin confusión de algoritmo)",
+      "archivo": "src/auth/tokens.ts",
+      "buscar": "  if (cabecera !== CABECERA) return null;\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E04",
+      "regla": "Access token de 15 minutos",
+      "archivo": "src/auth/tokens.ts",
+      "buscar": "export const DURACION_ACCESO_S = 15 * 60;",
+      "reemplazo": "export const DURACION_ACCESO_S = 60 * 60;",
+      "comando": "test"
+    },
+    {
+      "id": "E05",
+      "regla": "Cada petición verifica que la sesión no esté revocada",
+      "archivo": "src/auth/sesiones.ts",
+      "buscar": "AND s.revocada_en IS NULL AND s.expira_en > now()",
+      "reemplazo": "AND s.expira_en > now()",
+      "comando": "test"
+    },
+    {
+      "id": "E06",
+      "regla": "El middleware consulta la sesión viva (no confía solo en el token)",
+      "archivo": "src/auth/middleware.ts",
+      "buscar": "const usuario = reclamos ? await validarSesion(d.prisma, reclamos.sub, reclamos.sid) : null;",
+      "reemplazo": "const usuario = reclamos ? { id: reclamos.sub, rol: 'editor' as const, nombre: '', correo: '', sesionId: reclamos.sid } : null;",
+      "comando": "test"
+    },
+    {
+      "id": "E07",
+      "regla": "Reutilizar un refresh revoca la sesión (familia)",
+      "archivo": "src/auth/sesiones.ts",
+      "buscar": "UPDATE sesiones SET revocada_en = now(), motivo_revocacion = 'reutilizacion_refresco'",
+      "reemplazo": "UPDATE sesiones SET ultimo_uso_en = now()",
+      "comando": "test"
+    },
+    {
+      "id": "E08",
+      "regla": "Un refresh ya usado se trata como reutilización",
+      "archivo": "src/auth/sesiones.ts",
+      "buscar": "    if (t.usado_en !== null) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "E09",
+      "regla": "La rotación marca el refresh presentado como usado",
+      "archivo": "src/auth/sesiones.ts",
+      "buscar": "    await tx.$executeRaw`UPDATE tokens_refresco SET usado_en = now() WHERE id = ${t.id}::uuid`;\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E10",
+      "regla": "Cookie de refresco httpOnly",
+      "archivo": "src/http/cookies.ts",
+      "buscar": "    httpOnly: true,\n    secure: segura,\n    sameSite: 'strict',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
+      "reemplazo": "    httpOnly: false,\n    secure: segura,\n    sameSite: 'strict',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
+      "comando": "test"
+    },
+    {
+      "id": "E11",
+      "regla": "Cookie de refresco SameSite=Strict",
+      "archivo": "src/http/cookies.ts",
+      "buscar": "    secure: segura,\n    sameSite: 'strict',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
+      "reemplazo": "    secure: segura,\n    sameSite: 'lax',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
+      "comando": "test"
+    },
+    {
+      "id": "E12",
+      "regla": "Cookie de refresco solo para /api/auth",
+      "archivo": "src/http/cookies.ts",
+      "buscar": "export const RUTA_COOKIE_REFRESCO = '/api/auth';",
+      "reemplazo": "export const RUTA_COOKIE_REFRESCO = '/';",
+      "comando": "test"
+    },
+    {
+      "id": "E13",
+      "regla": "Refresh: se rechaza un Origin ajeno (CSRF)",
+      "archivo": "src/auth/rutas.ts",
+      "buscar": "if (origen !== undefined && origen !== new URL(appUrl).origin) {",
+      "reemplazo": "if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "E14",
+      "regla": "Cuenta bloqueada: no se verifica la contraseña",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "  if (bloqueadaHasta && bloqueadaHasta > ahora) return { tipo: 'bloqueada', hasta: bloqueadaHasta };\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E15",
+      "regla": "Correos inexistentes también se bloquean (sin enumeración)",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "      await fantasma.registrarFallo(e.correo);\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E17",
+      "regla": "Límite de intentos de login por IP",
+      "archivo": "src/auth/rutas.ts",
+      "buscar": "r.post('/sesion', limitarTasa(limInicio, claveIp), async",
+      "reemplazo": "r.post('/sesion', async",
+      "comando": "test"
+    },
+    {
+      "id": "E18",
+      "regla": "Límites fallan cerrado si Redis no responde",
+      "archivo": "src/auth/limites.ts",
+      "buscar": "      next(new ErrorHttp(503, 'limites_no_disponibles', 'Servicio temporalmente no disponible'));\n      return;",
+      "reemplazo": "      next();\n      return;",
+      "comando": "test"
+    },
+    {
+      "id": "E19",
+      "regla": "Bloqueo progresivo (cada fallo duplica)",
+      "archivo": "src/auth/limites.ts",
+      "buscar": "return Math.min(BLOQUEO_BASE_MS * 2 ** (fallos - FALLOS_ANTES_DE_BLOQUEAR), BLOQUEO_MAXIMO_MS);",
+      "reemplazo": "return BLOQUEO_BASE_MS;",
+      "comando": "test"
+    },
+    {
+      "id": "E20",
+      "regla": "Una cuenta con MFA no entra solo con la contraseña",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "  if (mfa?.confirmado_en) return { tipo: 'mfa_requerido' };\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E21",
+      "regla": "Verificación de contraseña completa (tiempo constante)",
+      "archivo": "src/auth/contrasenas.ts",
+      "buscar": "return derivada.length === objetivo.length && timingSafeEqual(derivada, objetivo);",
+      "reemplazo": "return derivada.length === objetivo.length;",
+      "comando": "test"
+    },
+    {
+      "id": "E22",
+      "regla": "Contraseñas de 12+ caracteres",
+      "archivo": "src/auth/contrasenas.ts",
+      "buscar": "export const LARGO_MINIMO = 12;",
+      "reemplazo": "export const LARGO_MINIMO = 8;",
+      "comando": "test"
+    },
+    {
+      "id": "E23",
+      "regla": "Contraseñas comunes rechazadas",
+      "archivo": "src/auth/contrasenas.ts",
+      "buscar": "  if (COMUNES.has(minus)) p.push('es una contraseña demasiado común');\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E24",
+      "regla": "Solo un admin invita",
+      "archivo": "src/invitaciones/rutas.ts",
+      "buscar": "  r.use(requiereSesion(d), requiereRol('admin'));",
+      "reemplazo": "  r.use(requiereSesion(d));",
+      "comando": "test"
+    },
+    {
+      "id": "E25",
+      "regla": "Invitación de 72 h",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "export const VIGENCIA_INVITACION_HORAS = 72;",
+      "reemplazo": "export const VIGENCIA_INVITACION_HORAS = 24;",
+      "comando": "test"
+    },
+    {
+      "id": "E26",
+      "regla": "Completar consume (borra) la invitación",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "    await tx.invitaciones.deleteMany({ where: { usuario_id: u.id } });\n    await tx.usuarios.update",
+      "reemplazo": "    await tx.usuarios.update",
+      "comando": "test"
+    },
+    {
+      "id": "E27",
+      "regla": "Dos completados simultáneos: solo uno gana (FOR UPDATE)",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "    if (vivas.length === 0) throw new ErrorHttp(404, 'invitacion_invalida'",
+      "reemplazo": "    if (false) throw new ErrorHttp(404, 'invitacion_invalida'",
+      "comando": "test"
+    },
+    {
+      "id": "E28",
+      "regla": "Un enlace vencido se rechaza (410)",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "  if (inv.vencida) throw new ErrorHttp(410",
+      "reemplazo": "  if (false) throw new ErrorHttp(410",
+      "comando": "test"
+    },
+    {
+      "id": "E29",
+      "regla": "Completar exige una contraseña que cumpla la política",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "  if (problemas.length > 0) throw new ErrorHttp(400, 'contrasena_debil'",
+      "reemplazo": "  if (false) throw new ErrorHttp(400, 'contrasena_debil'",
+      "comando": "test"
+    },
+    {
+      "id": "E30",
+      "regla": "Una cuenta admin no se completa sin MFA",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "  if (u.rol === 'admin') {",
+      "reemplazo": "  if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "E31",
+      "regla": "Producción exige APP_URL https",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "    if (!c.APP_URL.startsWith('https://')) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "E32",
+      "regla": "Producción exige cookie Secure",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "    if (!c.COOKIE_SECURE) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "E33",
+      "regla": "Producción exige scrypt con costo 15+",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "    if (c.PASSWORD_HASH_COST < COSTO_HASH_MINIMO_PRODUCCION) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test"
+    },
+    {
+      "id": "E34",
+      "regla": "El vencimiento de la invitación lo calcula la base (sin desfase de reloj)",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "now() + make_interval(hours => ${VIGENCIA_INVITACION_HORAS}::int)",
+      "reemplazo": "${new Date(Date.now() + VIGENCIA_INVITACION_HORAS * 3_600_000)}",
+      "comando": "test"
+    },
+    {
+      "id": "E35",
+      "regla": "El vencimiento del correo simulado lo calcula la base (sin desfase de reloj)",
+      "archivo": "src/correo/proveedor.ts",
+      "buscar": "now() + make_interval(days => ${RETENCION_MOCK_DIAS}::int)",
+      "reemplazo": "${new Date(Date.now() + RETENCION_MOCK_DIAS * 86_400_000)}",
+      "comando": "test"
+    },
+    {
+      "id": "E36",
+      "regla": "Las respuestas del API no se guardan en caché (no-store)",
+      "archivo": "src/api.ts",
+      "buscar": "    res.setHeader('Cache-Control', 'no-store');\n",
+      "reemplazo": "",
+      "comando": "test"
+    },
+    {
+      "id": "E37",
+      "regla": "El listado de invitaciones está acotado (máximo 200 por página)",
+      "archivo": "src/http/esquemas.ts",
+      "buscar": "limite: z.coerce.number().int().min(1).max(200).default(50),",
+      "reemplazo": "limite: z.coerce.number().int().min(1).default(50),",
+      "comando": "test"
     }
   ]
 }

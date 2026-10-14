@@ -45,6 +45,7 @@ function urlBd(nombreBd) {
 /** @type {Record<string, () => string>} */
 const generadores = {
   MFA_ENCRYPTION_KEY: () => randomBytes(32).toString('base64'),
+  ACCESS_TOKEN_SECRET: () => randomBytes(32).toString('base64'),
   METRICS_TOKEN: () => randomBytes(32).toString('base64url'),
   DATABASE_URL: () => urlBd(base.get('CUADERNO_DEV_DB') || 'cuaderno'),
   TEST_DATABASE_URL: () => urlBd(base.get('CUADERNO_TEST_DB') || 'cuaderno_test'),

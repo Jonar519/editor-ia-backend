@@ -1,6 +1,6 @@
 // Utilidades de prueba: app con dependencias reales (base de pruebas, Redis db 1) o falsas.
 import { Writable } from 'node:stream';
-import type { Express } from 'express';
+import type { Express, Router } from 'express';
 import { crearApp } from '../src/app.js';
 import type { Comprobacion, EstadoProceso } from '../src/http/salud.js';
 import { crearLogger } from '../src/observabilidad/log.js';
@@ -31,6 +31,7 @@ export interface OpcionesAppPrueba {
   comprobaciones?: Comprobacion[];
   estado?: EstadoProceso;
   tokenMetricas?: string;
+  api?: Router;
   extender?: (app: Express) => void;
 }
 
@@ -44,6 +45,7 @@ export function appDePrueba(o: OpcionesAppPrueba = {}) {
     estado,
     tokenMetricas: o.tokenMetricas,
     trustProxy: false,
+    ...(o.api ? { api: o.api } : {}),
     ...(o.extender ? { extender: o.extender } : {}),
   });
   return { app, lineas, estado };

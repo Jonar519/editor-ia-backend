@@ -9,6 +9,7 @@ const base = {
   DATABASE_URL: 'postgresql://cuaderno_app:clave@127.0.0.1:5435/cuaderno',
   REDIS_URL: 'redis://127.0.0.1:6381/0',
   MFA_ENCRYPTION_KEY: CLAVE,
+  ACCESS_TOKEN_SECRET: randomBytes(32).toString('base64'),
 };
 
 const produccionValida = {
@@ -19,6 +20,8 @@ const produccionValida = {
   AI_PROVIDER: 'anthropic',
   EMAIL_PROVIDER: 'ses',
   GEO_PROVIDER: 'tabla_local',
+  APP_URL: 'https://cuaderno.example.com',
+  SES_REGION: 'us-east-1',
 };
 
 function problemas(env: Record<string, string | undefined>): string[] {
@@ -106,5 +109,34 @@ describe('cargarConfig', () => {
 
   it('desarrollo acepta proveedores mock y Redis sin contraseña', () => {
     expect(problemas({ ...base, NODE_ENV: 'development' })).toEqual([]);
+  });
+  it('sesión y cuentas: valores por defecto seguros', () => {
+    expect(cargarConfig(base)).toMatchObject({ APP_URL: 'http://127.0.0.1:5175', COOKIE_SECURE: true, PASSWORD_HASH_COST: 15, EMAIL_FROM: 'cuaderno@example.com' });
+  });
+
+  it('exige ACCESS_TOKEN_SECRET de 32+ bytes', () => {
+    expect(problemas({ ...base, ACCESS_TOKEN_SECRET: undefined })).toEqual([expect.stringMatching(/^ACCESS_TOKEN_SECRET: falta/)]);
+    expect(problemas({ ...base, ACCESS_TOKEN_SECRET: randomBytes(16).toString('base64') })).toEqual([
+      expect.stringMatching(/^ACCESS_TOKEN_SECRET: debe ser de al menos 32 bytes/),
+    ]);
+  });
+
+  it('APP_URL debe ser solo un origen', () => {
+    expect(problemas({ ...base, APP_URL: 'http://127.0.0.1:5175/app' })).toEqual(['APP_URL: debe ser solo el origen, sin ruta']);
+  });
+
+  it('EMAIL_PROVIDER=ses exige SES_REGION (también fuera de producción)', () => {
+    expect(problemas({ ...base, EMAIL_PROVIDER: 'ses' })).toEqual(['SES_REGION: obligatoria con EMAIL_PROVIDER=ses']);
+    expect(problemas({ ...base, EMAIL_PROVIDER: 'ses', SES_REGION: 'us-east-1' })).toEqual([]);
+  });
+
+  it('producción exige APP_URL https, cookie Secure y scrypt con costo 15+', () => {
+    expect(problemas({ ...produccionValida, APP_URL: 'http://cuaderno.example.com' })).toEqual(['APP_URL: en producción debe usar https://']);
+    expect(problemas({ ...produccionValida, COOKIE_SECURE: 'false' })).toEqual(['COOKIE_SECURE: en producción debe ser true']);
+    expect(problemas({ ...produccionValida, PASSWORD_HASH_COST: '12' })).toEqual(['PASSWORD_HASH_COST: en producción debe ser 15 o más']);
+  });
+
+  it('desarrollo admite costo de hash bajo (las pruebas usan 10)', () => {
+    expect(problemas({ ...base, PASSWORD_HASH_COST: '10' })).toEqual([]);
   });
 });

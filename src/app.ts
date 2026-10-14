@@ -1,7 +1,7 @@
 // Construcción de la app Express. No abre puertos ni conexiones: recibe sus dependencias, así las
 // pruebas la levantan con dependencias reales o falsas sin tocar el entorno.
 import { randomUUID } from 'node:crypto';
-import express, { type Express } from 'express';
+import express, { type Express, type Router } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
@@ -16,6 +16,8 @@ export interface DependenciasApp {
   estado: EstadoProceso;
   tokenMetricas: string | undefined;
   trustProxy: boolean;
+  /** Rutas del API, montadas en /api. */
+  api?: Router;
   /** Solo para pruebas: agrega rutas antes del 404 (por ejemplo, una ruta lenta o que falla). */
   extender?: (app: Express) => void;
 }
@@ -58,6 +60,7 @@ export function crearApp(d: DependenciasApp): Express {
     }),
   );
 
+  if (d.api) app.use('/api', d.api);
   d.extender?.(app);
 
   app.use(noEncontrado);
