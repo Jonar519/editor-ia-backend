@@ -21,9 +21,16 @@ const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 /**
  * @typedef {{
  *   id: string, regla: string, archivo: string, buscar: string, reemplazo: string,
- *   comando: string, equivalente?: string
+ *   comando: string, equivalente?: string, pruebas?: string[]
  * }} Mutacion
  */
+
+/**
+ * Comando a correr para una mutación. Con "pruebas", solo esos archivos (npm run <comando> -- <archivos>):
+ * más rápido y más estricto (la mutación tiene que ser detectada por ESAS pruebas).
+ * @param {Mutacion} m
+ */
+const comandoDe = (m) => (m.pruebas?.length ? `${m.comando} -- ${m.pruebas.join(' ')}` : m.comando);
 
 /** @param {string} texto */
 const sha = (texto) => createHash('sha256').update(texto).digest('hex');
@@ -74,13 +81,13 @@ if (elegidas.length === 0) {
 
 /** @param {string} comando */
 function correr(comando) {
-  const r = spawnSync('npm', ['run', comando], { cwd: RAIZ, shell: true, encoding: 'utf8', timeout: 600_000 });
+  const r = spawnSync('npm', ['run', ...comando.split(' ')], { cwd: RAIZ, shell: true, encoding: 'utf8', timeout: 600_000 });
   return { codigo: r.status ?? 1, salida: `${r.stdout ?? ''}${r.stderr ?? ''}` };
 }
 
 // Corrida base: sin mutaciones, cada comando debe pasar. Si no, un fallo por el entorno
 // (base caída, variable mal puesta) se contaría falsamente como "mutación detectada".
-for (const comando of new Set(elegidas.map((m) => m.comando))) {
+for (const comando of new Set(elegidas.map(comandoDe))) {
   process.stdout.write(`Base sin mutaciones: "npm run ${comando}"… `);
   const base = correr(comando);
   if (base.codigo !== 0) {
@@ -105,13 +112,13 @@ for (const m of elegidas) {
   const hashOriginal = sha(original);
   pendiente = { ruta, original };
   writeFileSync(ruta, original.replace(m.buscar, () => m.reemplazo));
-  process.stdout.write(`${m.id} ${m.regla}\n   corriendo "npm run ${m.comando}"… `);
+  process.stdout.write(`${m.id} ${m.regla}\n   corriendo "npm run ${comandoDe(m)}"… `);
   /** @type {number} */
   let codigo;
   /** @type {string} */
   let salida;
   try {
-    ({ codigo, salida } = correr(m.comando));
+    ({ codigo, salida } = correr(comandoDe(m)));
   } finally {
     restaurar();
   }
@@ -132,7 +139,7 @@ for (const m of elegidas) {
 // cuaderno_test quedaría con el esquema de la ÚLTIMA mutación aplicada (y otros repos que la usan,
 // como el backend, verían un esquema roto). También confirma que todo sigue pasando tras restaurar.
 let finalOk = true;
-for (const comando of new Set(elegidas.map((m) => m.comando))) {
+for (const comando of new Set(elegidas.map(comandoDe))) {
   process.stdout.write(`Final sin mutaciones: "npm run ${comando}"… `);
   const fin = correr(comando);
   finalOk &&= fin.codigo === 0;

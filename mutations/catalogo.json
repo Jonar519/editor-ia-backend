@@ -520,6 +520,259 @@
       "buscar": "limite: z.coerce.number().int().min(1).max(200).default(50),",
       "reemplazo": "limite: z.coerce.number().int().min(1).default(50),",
       "comando": "test"
+    },
+    {
+      "id": "G01",
+      "regla": "Los logs nunca incluyen el cuerpo de la petición (tokens, contraseñas)",
+      "archivo": "src/app.ts",
+      "buscar": "      autoLogging: { ignore: (req) => (req.url === '/health' || req.url === '/ready') },",
+      "reemplazo": "      autoLogging: { ignore: (req) => (req.url === '/health' || req.url === '/ready') },\n      customProps: (req) => ({ cuerpo: (req as unknown as { body?: unknown }).body }),",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/secretos.test.ts"
+      ]
+    },
+    {
+      "id": "G02",
+      "regla": "Los logs redactan cabeceras y campos secretos (pino redact)",
+      "archivo": "src/observabilidad/log.ts",
+      "buscar": "    redact: { paths: RUTAS_REDACTADAS, censor: '[REDACTADO]' },\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/secretos.test.ts"
+      ]
+    },
+    {
+      "id": "G03",
+      "regla": "TOTP: truncamiento dinámico de HOTP (RFC 4226)",
+      "archivo": "src/auth/totp.ts",
+      "buscar": "const desplazamiento = (hmac[hmac.length - 1] ?? 0) & 0x0f;",
+      "reemplazo": "const desplazamiento = 0;",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G04",
+      "regla": "TOTP: tolerancia de ±1 paso, no más",
+      "archivo": "src/auth/totp.ts",
+      "buscar": "for (let p = actual - VENTANA; p <= actual + VENTANA; p++) {",
+      "reemplazo": "for (let p = actual - 2; p <= actual + 2; p++) {",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G05",
+      "regla": "TOTP: anti-replay (solo pasos mayores al último aceptado)",
+      "archivo": "src/auth/totp.ts",
+      "buscar": "(ultimoPaso === null || p > ultimoPaso)",
+      "reemplazo": "true",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G06",
+      "regla": "MFA: el paso aceptado se guarda solo si es mayor (UPDATE condicional atómico)",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "    WHERE usuario_id = ${usuarioId}::uuid AND (ultimo_paso IS NULL OR ultimo_paso < ${paso})`;",
+      "reemplazo": "    WHERE usuario_id = ${usuarioId}::uuid`;",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G07",
+      "regla": "MFA: el secreto se cifra ligado a la cuenta (datos asociados)",
+      "archivo": "src/auth/cifrado.ts",
+      "buscar": "  c.setAAD(Buffer.from(usuarioId, 'utf8'));\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G08",
+      "regla": "Códigos de respaldo: HMAC con subclave (no SHA-256 sin clave)",
+      "archivo": "src/auth/codigos-respaldo.ts",
+      "buscar": "createHmac('sha256', subclave)",
+      "reemplazo": "createHmac('sha256', Buffer.alloc(32))",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G09",
+      "regla": "Desafío MFA de un solo uso (GETDEL)",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "await d.redis.getdel(",
+      "reemplazo": "await d.redis.get(",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G10",
+      "regla": "Desafío MFA vence en 5 minutos",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "'EX', DURACION_DESAFIO_S",
+      "reemplazo": "'EX', 3600",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G11",
+      "regla": "Desafío MFA: en Redis solo su hash",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "`${prefijo}mfa:desafio:${createHash('sha256').update(desafio).digest('hex')}`",
+      "reemplazo": "`${prefijo}mfa:desafio:${desafio}`",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G12",
+      "regla": "Los fallos de MFA en el login suman al bloqueo de la cuenta",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "    await sumarFalloCuenta(d.prisma, u.id);\n    await registrarEvento(d.prisma, 'mfa_fallido', u.id, e.ipRed);\n    return { tipo: 'invalido' };",
+      "reemplazo": "    await registrarEvento(d.prisma, 'mfa_fallido', u.id, e.ipRed);\n    return { tipo: 'invalido' };",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G13",
+      "regla": "Login: una cuenta con MFA no entra solo con la contraseña",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "  if (mfa?.confirmado_en) {",
+      "reemplazo": "  if (false) {",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G14",
+      "regla": "Código de respaldo de un solo uso",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "WHERE usuario_id = ${usuarioId}::uuid AND hash_codigo = ${h} AND usado_en IS NULL`;",
+      "reemplazo": "WHERE usuario_id = ${usuarioId}::uuid AND hash_codigo = ${h}`;",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G15",
+      "regla": "Inscripción previa: al quinto fallo se borra y se reinicia",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "    if (ins.intentos + 1 >= MAX_INTENTOS_INSCRIPCION) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G16",
+      "regla": "Un admin pendiente se completa solo con el primer código TOTP",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "    if (e.codigoTotp === undefined) throw new ErrorHttp(409, 'mfa_requerido'",
+      "reemplazo": "    if (false) throw new ErrorHttp(409, 'mfa_requerido'",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G17",
+      "regla": "Un admin no puede desactivar su MFA",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "  if (u.rol === 'admin') throw new ErrorHttp(409, 'mfa_obligatorio'",
+      "reemplazo": "  if (false) throw new ErrorHttp(409, 'mfa_obligatorio'",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G18",
+      "regla": "Recuperación: se responde ANTES de trabajar (tiempo independiente del correo)",
+      "archivo": "src/auth/rutas.ts",
+      "buscar": "    res.status(202).json({ mensaje: MENSAJE_RECUPERACION });\n    void trabajo();",
+      "reemplazo": "    return trabajo().then(() => {\n      res.status(202).json({ mensaje: MENSAJE_RECUPERACION });\n    });",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G19",
+      "regla": "Recuperación: restablecer cierra TODAS las sesiones",
+      "archivo": "src/auth/recuperacion.ts",
+      "buscar": "      UPDATE sesiones SET revocada_en = now(), motivo_revocacion = 'cambio_contrasena'\n      WHERE usuario_id = ${u.usuario_id}::uuid AND revocada_en IS NULL`;",
+      "reemplazo": "      SELECT 1`;",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G20",
+      "regla": "Recuperación: enlace de un solo uso",
+      "archivo": "src/auth/recuperacion.ts",
+      "buscar": "    await tx.$executeRaw`UPDATE tokens_recuperacion SET usado_en = now() WHERE id = ${id}::uuid`;\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G21",
+      "regla": "Recuperación: pedir otra invalida la anterior",
+      "archivo": "src/auth/recuperacion.ts",
+      "buscar": "    await tx.tokens_recuperacion.deleteMany({ where: { usuario_id: u.id, usado_en: null } });\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G22",
+      "regla": "Recuperación: límite de 3 por correo",
+      "archivo": "src/auth/rutas.ts",
+      "buscar": "recuperacionCorreo: { max: 3,",
+      "reemplazo": "recuperacionCorreo: { max: 30,",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G23",
+      "regla": "Auditoría: el inicio de sesión queda registrado",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "    await registrarEvento(tx, 'inicio_sesion', u.id, e.ipRed);\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auditoria.test.ts"
+      ]
     }
   ]
 }
