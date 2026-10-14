@@ -357,7 +357,7 @@
       "id": "E17",
       "regla": "Límite de intentos de login por IP",
       "archivo": "src/auth/rutas.ts",
-      "buscar": "r.post('/sesion', limitarTasa(limInicio, claveIp), async",
+      "buscar": "r.post('/sesion', limitarTasa(lim('inicio'), claveIp), async",
       "reemplazo": "r.post('/sesion', async",
       "comando": "test"
     },
@@ -379,10 +379,10 @@
     },
     {
       "id": "E20",
-      "regla": "Una cuenta con MFA no entra solo con la contraseña",
+      "regla": "Una cuenta con MFA no entra solo con la contraseña (ni con la sesión marcada como verificada)",
       "archivo": "src/auth/servicio.ts",
-      "buscar": "  if (mfa?.confirmado_en) return { tipo: 'mfa_requerido' };\n",
-      "reemplazo": "",
+      "buscar": "    return { tipo: 'mfa_requerido', desafio };\n",
+      "reemplazo": "    return { tipo: 'ok', ...(await abrirSesion(d, u, { ipRed: e.ipRed, userAgent: e.userAgent, mfaVerificada: true })) };\n",
       "comando": "test"
     },
     {
