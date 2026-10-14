@@ -140,15 +140,17 @@ model espacios {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model invitaciones {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  usuario_id     String   @unique(map: "invitaciones_una_por_cuenta") @db.Uuid
-  estado_usuario String   @default("pendiente")
-  token_hash     Bytes    @unique(map: "invitaciones_token_unico")
-  creado_en      DateTime @default(now()) @db.Timestamptz(6)
-  expira_en      DateTime @db.Timestamptz(6)
-  usuarios       usuarios @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: Cascade, onUpdate: NoAction, map: "invitaciones_usuario_pendiente")
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usuario_id        String             @unique(map: "invitaciones_una_por_cuenta") @db.Uuid
+  estado_usuario    String             @default("pendiente")
+  token_hash        Bytes              @unique(map: "invitaciones_token_unico")
+  creado_en         DateTime           @default(now()) @db.Timestamptz(6)
+  expira_en         DateTime           @db.Timestamptz(6)
+  inscripciones_mfa inscripciones_mfa?
+  usuarios          usuarios           @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: Cascade, onUpdate: NoAction, map: "invitaciones_usuario_pendiente")
 
   @@unique([usuario_id, estado_usuario], map: "invitaciones_usuario_estado_unico")
+  @@unique([id, usuario_id], map: "invitaciones_id_usuario_unico")
   @@index([expira_en], map: "invitaciones_expira_en")
 }
 
@@ -322,6 +324,8 @@ model usuarios {
   documentos                documentos[]
   embeddings                embeddings[]
   espacios                  espacios[]
+  eventos_seguridad         eventos_seguridad[]
+  inscripciones_mfa         inscripciones_mfa?
   invitaciones              invitaciones?
   mfa_totp                  mfa_totp?
   miembros_espacio          miembros_espacio[]
@@ -355,4 +359,36 @@ model versiones {
 
   @@unique([id, documento_id], map: "versiones_id_documento_unico")
   @@unique([documento_id, numero], map: "versiones_numero_unico")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model eventos_seguridad {
+  id         BigInt               @id @default(autoincrement())
+  tipo       String
+  usuario_id String?              @db.Uuid
+  ip_red     Unsupported("cidr")?
+  creado_en  DateTime             @default(now()) @db.Timestamptz(6)
+  usuarios   usuarios?            @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+
+  @@index([creado_en], map: "eventos_seguridad_por_fecha")
+  @@index([usuario_id, creado_en], map: "eventos_seguridad_por_usuario")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model inscripciones_mfa {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invitacion_id   String       @db.Uuid
+  usuario_id      String       @db.Uuid
+  estado_usuario  String       @default("pendiente")
+  secreto_cifrado Bytes
+  iv              Bytes
+  etiqueta        Bytes
+  intentos        Int          @default(0)
+  creado_en       DateTime     @default(now()) @db.Timestamptz(6)
+  expira_en       DateTime     @db.Timestamptz(6)
+  invitaciones    invitaciones @relation(fields: [invitacion_id, usuario_id], references: [id, usuario_id], onDelete: Cascade, onUpdate: NoAction, map: "inscripciones_mfa_de_su_invitacion")
+  usuarios        usuarios     @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: Cascade, onUpdate: NoAction, map: "inscripciones_mfa_usuario_pendiente")
+
+  @@unique([usuario_id, estado_usuario], map: "inscripciones_mfa_una_por_cuenta")
+  @@unique([invitacion_id, usuario_id], map: "inscripciones_mfa_una_por_invitacion")
 }

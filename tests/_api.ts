@@ -3,9 +3,11 @@
 import { randomBytes } from 'node:crypto';
 import type pg from 'pg';
 import { crearApi } from '../src/api.js';
+import { cifrarSecreto } from '../src/auth/cifrado.js';
 import { crearSenuelo, hashearContrasena } from '../src/auth/contrasenas.js';
 import { crearSesion } from '../src/auth/sesiones.js';
 import { emitirAcceso } from '../src/auth/tokens.js';
+import { hotp, pasoDe } from '../src/auth/totp.js';
 import type { MensajeCorreo, ProveedorCorreo } from '../src/correo/proveedor.js';
 import type { DependenciasApi } from '../src/dependencias.js';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
@@ -54,6 +56,7 @@ export async function entornoApi(cambios: Partial<DependenciasApi> = {}): Promis
     redis,
     correo: buzon,
     claveAcceso: randomBytes(32),
+    claveMfa: randomBytes(32),
     appUrl: APP_URL,
     cookieSegura: true,
     costoHash: COSTO_PRUEBAS,
@@ -76,7 +79,23 @@ export async function entornoApi(cambios: Partial<DependenciasApi> = {}): Promis
 
 /** Cada app de prueba usa su propio prefijo de Redis: sus límites no se mezclan con los de otra prueba. */
 export function appApi(deps: DependenciasApi) {
-  return appDePrueba({ api: crearApi({ ...deps, prefijoRedis: `prueba:${randomBytes(6).toString('hex')}:` }) }).app;
+  return appApiConLog(deps).app;
+}
+
+/** Igual que appApi, pero devuelve también las líneas de log (pino) para inspeccionarlas. */
+export function appApiConLog(deps: DependenciasApi) {
+  return appDePrueba({ api: crearApi({ ...deps, prefijoRedis: `prueba:${randomBytes(6).toString('hex')}:` }) });
+}
+
+/** Espera hasta que llegue un correo (los de recuperación se envían en segundo plano). */
+export async function esperarCorreo(buzon: Buzon, para: string, plantilla: string, ms = 5000): Promise<MensajeCorreo> {
+  const limite = Date.now() + ms;
+  for (;;) {
+    const m = buzon.mensajes.findLast((x) => x.para === para && x.plantilla === plantilla);
+    if (m) return m;
+    if (Date.now() > limite) throw new Error(`no llegó el correo ${plantilla} a ${para}`);
+    await new Promise((r) => setTimeout(r, 25));
+  }
 }
 
 /** Correo ficticio único por prueba (la base de pruebas acumula cuentas: no se pueden borrar activas). */
@@ -87,29 +106,41 @@ export interface CuentaPrueba {
   correo: string;
   nombre: string;
   contrasena: string;
+  /** Secreto TOTP en claro (solo admin), para generar códigos en las pruebas. */
+  secretoMfa: Buffer;
 }
 
 /**
  * Cuenta activa siguiendo el flujo real de la base (nace pendiente, se activa con contraseña). Un admin
- * se activa con MFA confirmado en la misma transacción, como exige la base.
+ * se activa con MFA confirmado en la misma transacción, como exige la base; su secreto se cifra con
+ * claveMfa (pasar la de las dependencias de la prueba para poder verificar códigos).
  */
-export async function cuentaActiva(prisma: PrismaClient, rol: 'admin' | 'editor' | 'lector' = 'editor'): Promise<CuentaPrueba> {
+export async function cuentaActiva(
+  prisma: PrismaClient,
+  rol: 'admin' | 'editor' | 'lector' = 'editor',
+  claveMfa: Buffer = randomBytes(32),
+): Promise<CuentaPrueba> {
   const correo = correoUnico(rol);
   const contrasena = `clave-de-prueba-${randomBytes(4).toString('hex')}`;
   const hash = await hashearContrasena(contrasena, COSTO_PRUEBAS);
   const nombre = 'Persona Ficticia';
+  const secretoMfa = randomBytes(20);
   const id = await prisma.$transaction(async (tx) => {
     const u = await tx.usuarios.create({ data: { correo, nombre, rol }, select: { id: true } });
     await tx.usuarios.update({ where: { id: u.id }, data: { estado: 'activa', hash_contrasena: hash, activada_en: new Date() } });
     if (rol === 'admin') {
+      const c = cifrarSecreto(claveMfa, secretoMfa, u.id);
       await tx.mfa_totp.create({
-        data: { usuario_id: u.id, secreto_cifrado: Uint8Array.from(randomBytes(20)), iv: Uint8Array.from(randomBytes(12)), etiqueta: Uint8Array.from(randomBytes(16)), confirmado_en: new Date() },
+        data: { usuario_id: u.id, secreto_cifrado: c.cifrado, iv: c.iv, etiqueta: c.etiqueta, confirmado_en: new Date() },
       });
     }
     return u.id;
   });
-  return { id, correo, nombre, contrasena };
+  return { id, correo, nombre, contrasena, secretoMfa };
 }
+
+/** Código TOTP válido para un instante (por defecto, ahora). */
+export const codigoTotp = (secreto: Buffer, ms = Date.now()) => hotp(secreto, pasoDe(ms));
 
 /**
  * Access token de una sesión creada directamente. Se usa para el admin, cuyo login real pasa por el

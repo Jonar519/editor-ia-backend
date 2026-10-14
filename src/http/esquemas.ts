@@ -98,3 +98,47 @@ export const InvitacionConsulta = z
 export const CompletarInvitacion = TokenInvitacion.extend({ contrasena: z.string().min(1).max(1000) }).meta({ id: 'CompletarInvitacion' });
 
 export const IdUsuario = z.object({ usuarioId: z.uuid() });
+
+// ─── MFA y recuperación (bloque F) ────────────────────────────────────────────────
+
+const Token43 = z.string().regex(/^[A-Za-z0-9_-]{43}$/, { error: 'token inválido' });
+const CodigoTotp = z.string().regex(/^\d{6}$/, { error: 'el código tiene 6 dígitos' });
+
+export const DesafioMfa = z
+  .object({
+    mfaRequerido: z.literal(true),
+    desafio: Token43.meta({ description: 'Opaco, 5 min, un solo uso (en Redis solo se guarda su hash)' }),
+    metodos: z.array(z.enum(['totp', 'respaldo'])),
+    expiraEnSegundos: z.number().int(),
+  })
+  .meta({ id: 'DesafioMfa', description: 'La cuenta usa MFA: falta el segundo paso (POST /api/auth/mfa).' });
+
+export const MfaSolicitud = z
+  .object({ desafio: Token43, codigo: CodigoTotp.optional(), codigoRespaldo: z.string().min(10).max(20).optional() })
+  .refine((v) => (v.codigo === undefined) !== (v.codigoRespaldo === undefined), { error: 'envía codigo O codigoRespaldo' })
+  .meta({ id: 'MfaSolicitud' });
+
+export const InscripcionMfa = z
+  .object({ secreto: z.string().meta({ description: 'Secreto en base32' }), uri: z.string().meta({ description: 'otpauth:// para el QR' }) })
+  .meta({ id: 'InscripcionMfa' });
+
+export const CodigoMfa = z.object({ codigo: CodigoTotp }).meta({ id: 'CodigoMfa' });
+
+export const CodigosRespaldo = z
+  .object({ codigosRespaldo: z.array(z.string()).meta({ description: 'Se muestran UNA sola vez; en la base solo queda su HMAC' }) })
+  .meta({ id: 'CodigosRespaldo' });
+
+export const CompletarConMfa = CompletarInvitacion.extend({ codigoTotp: CodigoTotp.optional() }).meta({ id: 'CompletarConMfa' });
+
+export const CompletarRespuesta = SesionRespuesta.extend({ codigosRespaldo: z.array(z.string()).optional() }).meta({
+  id: 'CompletarRespuesta',
+  description: 'Para una cuenta admin incluye los 10 códigos de respaldo (se muestran una sola vez).',
+});
+
+export const RecuperacionSolicitud = z.object({ correo: Correo }).meta({ id: 'RecuperacionSolicitud' });
+
+export const RecuperacionRespuesta = z
+  .object({ mensaje: z.string() })
+  .meta({ id: 'RecuperacionRespuesta', description: 'SIEMPRE la misma respuesta, exista o no el correo.' });
+
+export const RestablecerSolicitud = z.object({ token: Token43, contrasena: z.string().min(1).max(1000) }).meta({ id: 'RestablecerSolicitud' });

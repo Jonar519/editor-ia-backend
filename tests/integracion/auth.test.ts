@@ -139,13 +139,15 @@ describe('POST /api/auth/sesion (login)', () => {
     expect(razon).toBeLessThan(2.5);
   });
 
-  it('una cuenta con MFA no obtiene sesión solo con la contraseña (desafío TOTP: bloque F)', async () => {
+  it('una cuenta con MFA no obtiene sesión solo con la contraseña: 202 con un desafío y sin cookie', async () => {
     const app = appApi(e.deps);
-    const admin = await cuentaActiva(e.prisma, 'admin');
+    const admin = await cuentaActiva(e.prisma, 'admin', e.deps.claveMfa);
     const r = await login(app, admin.correo, admin.contrasena);
-    expect(r.status).toBe(403);
-    expect((r.body as CuerpoError).error.codigo).toBe('mfa_requerido');
+    expect(r.status).toBe(202);
+    expect(r.body).toMatchObject({ mfaRequerido: true, metodos: ['totp', 'respaldo'], expiraEnSegundos: 300 });
+    expect((r.body as { desafio: string }).desafio).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(setCookieRefresco(r.headers)).toBeUndefined();
+    expect(JSON.stringify(r.body)).not.toContain('accessToken');
   });
 
   it('límite por IP: el intento 21 en la ventana recibe 429', async () => {
