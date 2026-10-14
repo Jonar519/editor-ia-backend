@@ -45,13 +45,17 @@ function contar(texto, buscado) {
   return n;
 }
 
+/** Códigos de color de la terminal (en el CI de Linux, Vitest colorea la salida). */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+
 /**
- * Primera línea que identifica la prueba fallida (runner SQL: "FALLA <caso>"; Vitest: "FAIL"/"×"; error general).
+ * Primera línea que identifica la prueba fallida. Se prefiere la que nombra archivo y prueba
+ * (Vitest: "FAIL <archivo> > <prueba>"; runner SQL: "FALLA <caso>"); si no, "×"; si no, un error general.
  * @param {string} salida
  */
 function evidenciaDe(salida) {
-  const lineas = salida.split(/\r?\n/).map((l) => l.trim());
-  const caso = lineas.find((l) => l.startsWith('FALLA') || /^(FAIL|×)\s/.test(l));
+  const lineas = salida.split(/\r?\n/).map((l) => l.replace(ANSI, '').trim());
+  const caso = lineas.find((l) => /^(FAIL|FALLA)\s/.test(l)) ?? lineas.find((l) => /^×\s/.test(l));
   return (caso ?? lineas.find((l) => l.startsWith('ERROR')) ?? '').slice(0, 160);
 }
 
