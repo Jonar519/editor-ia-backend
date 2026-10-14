@@ -5,3 +5,7 @@
 # docs/demo-E.md línea 53: la variable de cmd del paso 3 de la guía de demostración, con un texto de
 # ejemplo donde la persona pega el token de SU buzón simulado. No es un secreto.
 c82344c2d0dc9d3adbc81c1724cd209079fdd75f:docs/demo-E.md:generic-api-key:53
+
+# docs/demo-F.md línea 44: misma situación que en la guía E (variable de cmd con texto de ejemplo
+# donde la persona pega el token de SU buzón simulado). No es un secreto.
+b279c63ab6a37d30ae588ef5a6addad06f60bf40:docs/demo-F.md:generic-api-key:44
