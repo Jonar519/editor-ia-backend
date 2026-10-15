@@ -45,6 +45,7 @@ El API queda en `http://127.0.0.1:4200`. Para revisarlo: `/health`, `/ready` y `
 | `ci.bat` | Corre los mismos pasos que el CI y muestra el código de salida de cada uno. |
 | `invitar.bat --correo .. --nombre ".." --rol ..` | CLI de operador: invita una cuenta (por ejemplo, el primer admin). El enlace va **solo** al correo. |
 | `buzon.bat <correo>` | Buzón simulado (solo desarrollo y solo con el proveedor mock): los correos recibidos por una dirección. |
+| `totp.bat <secreto>` | Código TOTP vigente de un secreto base32, como una app autenticadora (para la demo). No lee la base ni el `.env`. |
 
 ## API
 
@@ -52,7 +53,10 @@ Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesió
 
 | Ruta | Para qué |
 |---|---|
-| `POST /api/auth/sesion` | Iniciar sesión. Devuelve el access token (15 min, solo en memoria) y fija la cookie de refresco. |
+| `POST /api/auth/sesion` | Iniciar sesión. Sin MFA: 201 con el access token (15 min, solo en memoria) y la cookie de refresco. Con MFA: 202 con un desafío (5 min, un solo uso). |
+| `POST /api/auth/mfa` | Segundo paso: desafío + código TOTP o de respaldo. Cualquier fallo responde igual (401 `mfa_invalido`). |
+| `POST /api/auth/recuperacion` | Pedir el enlace de recuperación. Responde 202 y el mismo mensaje exista o no el correo. |
+| `POST /api/auth/recuperacion/completar` | Nueva contraseña con el token del enlace (15 min, un solo uso). Cierra todas las sesiones. |
 | `POST /api/auth/refresco` | Rotar el refresh. Reutilizar uno ya usado revoca la sesión entera. |
 | `DELETE /api/auth/sesion` | Cerrar la sesión. |
 | `GET /api/auth/yo` | Cuenta de la sesión actual. |
@@ -60,7 +64,11 @@ Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesió
 | `POST /api/admin/invitaciones/{id}/reenviar` | Reenviar la invitación con un enlace nuevo. |
 | `DELETE /api/admin/invitaciones/{id}` | Cancelar la invitación. |
 | `POST /api/invitaciones/consultar` | Datos de la invitación. El token va en el cuerpo. |
-| `POST /api/invitaciones/completar` | Elegir contraseña, activar la cuenta y abrir la primera sesión. |
+| `POST /api/invitaciones/mfa` | Admin pendiente: secreto TOTP y `otpauth://` para el QR, antes de completar. |
+| `POST /api/invitaciones/completar` | Elegir contraseña, activar la cuenta y abrir la primera sesión. Un admin envía además `codigoTotp` y recibe sus 10 códigos de respaldo. |
+| `POST /api/cuenta/mfa/iniciar`, `/confirmar` | Activar MFA (editor y lector). Confirmar entrega los códigos de respaldo. |
+| `POST /api/cuenta/mfa/codigos-respaldo` | Regenerar los códigos de respaldo (exige un código TOTP). |
+| `DELETE /api/cuenta/mfa` | Desactivar MFA. Para un admin: 409 `mfa_obligatorio`. |
 
 ## Configuración
 

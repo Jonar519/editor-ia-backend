@@ -5,8 +5,8 @@ import { claveIp, crearLimitador, limitarTasa } from '../auth/limites.js';
 import { requiereRol, requiereSesion, usuarioDe } from '../auth/middleware.js';
 import type { DependenciasApi } from '../dependencias.js';
 import { ponerCookieRefresco } from '../http/cookies.js';
-import { CompletarInvitacion, IdUsuario, InvitacionSolicitud, PaginaListado, TokenInvitacion } from '../http/esquemas.js';
-import { cancelar, completar, consultar, invitar, listarPendientes, reenviar, type Invitado } from './servicio.js';
+import { CompletarConMfa, IdUsuario, InvitacionSolicitud, PaginaListado, TokenInvitacion } from '../http/esquemas.js';
+import { cancelar, completar, consultar, iniciarMfaInvitacion, invitar, listarPendientes, reenviar, type Invitado } from './servicio.js';
 
 export const LIMITES_INVITACION = {
   /** Envíos de invitación por admin. */
@@ -30,18 +30,18 @@ export function rutasAdminInvitaciones(d: DependenciasApi): Router {
 
   r.post('/', porAdmin, async (req, res) => {
     const e = InvitacionSolicitud.parse(req.body);
-    const i = await invitar(d, { invitadaPor: usuarioDe(res).id, ...e });
+    const i = await invitar(d, { invitadaPor: usuarioDe(res).id, ...e, ipRed: truncarIp(req.ip) });
     res.status(201).json(cuerpoInvitado(i));
   });
 
   r.post('/:usuarioId/reenviar', porAdmin, async (req, res) => {
     const { usuarioId } = IdUsuario.parse(req.params);
-    res.json(cuerpoInvitado(await reenviar(d, usuarioId)));
+    res.json(cuerpoInvitado(await reenviar(d, usuarioId, truncarIp(req.ip))));
   });
 
   r.delete('/:usuarioId', async (req, res) => {
     const { usuarioId } = IdUsuario.parse(req.params);
-    await cancelar(d, usuarioId);
+    await cancelar(d, usuarioId, truncarIp(req.ip));
     res.status(204).end();
   });
 
@@ -58,16 +58,23 @@ export function rutasInvitacionPublica(d: DependenciasApi): Router {
     res.json(await consultar(d, token));
   });
 
+  // Admin pendiente: obtiene el secreto TOTP (y el otpauth:// para el QR) ANTES de completar.
+  r.post('/mfa', lim, async (req, res) => {
+    const { token } = TokenInvitacion.parse(req.body);
+    res.json(await iniciarMfaInvitacion(d, token));
+  });
+
   r.post('/completar', lim, async (req, res) => {
-    const { token, contrasena } = CompletarInvitacion.parse(req.body);
-    const { respuesta, sesion } = await completar(d, {
+    const { token, contrasena, codigoTotp } = CompletarConMfa.parse(req.body);
+    const r2 = await completar(d, {
       token,
       contrasena,
+      codigoTotp,
       ipRed: truncarIp(req.ip),
       userAgent: userAgentCorto(req.headers['user-agent']),
     });
-    ponerCookieRefresco(res, sesion.refresh, sesion.expiraEn, d.cookieSegura);
-    res.status(201).json(respuesta);
+    ponerCookieRefresco(res, r2.sesion.refresh, r2.sesion.expiraEn, d.cookieSegura);
+    res.status(201).json(r2.codigosRespaldo ? { ...r2.respuesta, codigosRespaldo: r2.codigosRespaldo } : r2.respuesta);
   });
 
   return r;

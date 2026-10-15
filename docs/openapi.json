@@ -147,6 +147,42 @@
           "rol"
         ]
       },
+      "DesafioMfa": {
+        "type": "object",
+        "properties": {
+          "mfaRequerido": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "desafio": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "description": "Opaco, 5 min, un solo uso (en Redis solo se guarda su hash)"
+          },
+          "metodos": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "totp",
+                "respaldo"
+              ]
+            }
+          },
+          "expiraEnSegundos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "mfaRequerido",
+          "desafio",
+          "metodos",
+          "expiraEnSegundos"
+        ],
+        "description": "La cuenta usa MFA: falta el segundo paso (POST /api/auth/mfa)."
+      },
       "InicioSesionSolicitud": {
         "type": "object",
         "properties": {
@@ -361,7 +397,147 @@
           "token"
         ]
       },
-      "CompletarInvitacion": {
+      "CompletarRespuesta": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT HS256 de 15 min. Guárdalo SOLO en memoria."
+          },
+          "expiraEn": {
+            "type": "integer",
+            "description": "Vencimiento del access token (segundos Unix)"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/UsuarioPublico"
+          },
+          "codigosRespaldo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiraEn",
+          "usuario"
+        ],
+        "description": "Para una cuenta admin incluye los 10 códigos de respaldo (se muestran una sola vez)."
+      },
+      "CompletarConMfa": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "codigoTotp": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "token",
+          "contrasena"
+        ]
+      },
+      "InscripcionMfa": {
+        "type": "object",
+        "properties": {
+          "secreto": {
+            "type": "string",
+            "description": "Secreto en base32"
+          },
+          "uri": {
+            "type": "string",
+            "description": "otpauth:// para el QR"
+          }
+        },
+        "required": [
+          "secreto",
+          "uri"
+        ]
+      },
+      "MfaSolicitud": {
+        "type": "object",
+        "properties": {
+          "desafio": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "codigo": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          },
+          "codigoRespaldo": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 20
+          }
+        },
+        "required": [
+          "desafio"
+        ]
+      },
+      "CodigosRespaldo": {
+        "type": "object",
+        "properties": {
+          "codigosRespaldo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Se muestran UNA sola vez; en la base solo queda su HMAC"
+          }
+        },
+        "required": [
+          "codigosRespaldo"
+        ]
+      },
+      "CodigoMfa": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "codigo"
+        ]
+      },
+      "RecuperacionRespuesta": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mensaje"
+        ],
+        "description": "SIEMPRE la misma respuesta, exista o no el correo."
+      },
+      "RecuperacionSolicitud": {
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          }
+        },
+        "required": [
+          "correo"
+        ]
+      },
+      "RestablecerSolicitud": {
         "type": "object",
         "properties": {
           "token": {
@@ -494,6 +670,16 @@
               }
             }
           },
+          "202": {
+            "description": "La cuenta usa MFA: falta el segundo paso (POST /api/auth/mfa)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesafioMfa"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Datos inválidos",
             "content": {
@@ -506,16 +692,6 @@
           },
           "401": {
             "description": "Correo o contraseña incorrectos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorRespuesta"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "La cuenta usa MFA (desafío TOTP: bloque F)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1085,18 +1261,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CompletarInvitacion"
+                "$ref": "#/components/schemas/CompletarConMfa"
               }
             }
           }
         },
         "responses": {
           "201": {
-            "description": "Cuenta activa y sesión abierta (fija la cookie de refresco)",
+            "description": "Cuenta activa y sesión abierta (fija la cookie de refresco). Un admin recibe sus códigos de respaldo.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SesionRespuesta"
+                  "$ref": "#/components/schemas/CompletarRespuesta"
                 }
               }
             }
@@ -1122,7 +1298,7 @@
             }
           },
           "409": {
-            "description": "Cuenta admin: se completa con MFA (bloque F)",
+            "description": "Cuenta admin sin el primer código TOTP: configurar MFA (POST /api/invitaciones/mfa)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1133,6 +1309,485 @@
           },
           "410": {
             "description": "Enlace vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitaciones/mfa": {
+      "post": {
+        "tags": [
+          "invitaciones"
+        ],
+        "summary": "Admin pendiente: obtener el secreto TOTP para configurar la app ANTES de completar (pedirlo otra vez devuelve el mismo)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenInvitacion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Secreto y otpauth:// (el QR lo dibuja el cliente)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InscripcionMfa"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Enlace inválido o usado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La invitación no es de una cuenta admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Enlace vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/mfa": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Segundo paso del login: código TOTP o de respaldo. El desafío se consume al primer intento.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sesión abierta con MFA verificado (fija la cookie de refresco)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Código inválido o desafío vencido/usado (misma respuesta: no revela si la cuenta existe)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/mfa/iniciar": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Empezar a configurar MFA (opcional para editor y lector)",
+        "responses": {
+          "200": {
+            "description": "Secreto y otpauth://",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InscripcionMfa"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ya está activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/mfa/confirmar": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Confirmar con el primer código: activa MFA y entrega 10 códigos de respaldo (una sola vez)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodigoMfa"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Códigos de respaldo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigosRespaldo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Código inválido (suma al bloqueo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/mfa/codigos-respaldo": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Regenerar los códigos de respaldo (invalida los anteriores)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodigoMfa"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Códigos nuevos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigosRespaldo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Código inválido (suma al bloqueo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/mfa": {
+      "delete": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Desactivar MFA (no permitido para admin)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodigoMfa"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Desactivado"
+          },
+          "400": {
+            "description": "Código inválido (suma al bloqueo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Obligatorio para admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recuperacion": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Pedir un enlace para restablecer la contraseña. Respuesta idéntica e inmediata exista o no el correo.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecuperacionSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Siempre la misma",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecuperacionRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recuperacion/completar": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Restablecer la contraseña con el enlace (15 min, un solo uso). Cierra todas las sesiones.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestablecerSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Contraseña restablecida"
+          },
+          "400": {
+            "description": "Datos inválidos",
             "content": {
               "application/json": {
                 "schema": {

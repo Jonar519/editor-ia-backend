@@ -17,11 +17,14 @@ export interface SesionNueva {
 }
 
 /** Crea sesión y su primer refresh. Llamar dentro de una transacción. */
-export async function crearSesion(tx: Tx, d: { usuarioId: string; ipRed: string | null; userAgent: string | null }): Promise<SesionNueva> {
+export async function crearSesion(
+  tx: Tx,
+  d: { usuarioId: string; ipRed: string | null; userAgent: string | null; mfaVerificada?: boolean },
+): Promise<SesionNueva> {
   // El vencimiento lo calcula la BASE con su reloj (ver insertarInvitacion: mismo motivo).
   const filas = await tx.$queryRaw<{ id: string; expira_en: Date }[]>`
-    INSERT INTO sesiones (usuario_id, expira_en, ip_red, user_agent)
-    VALUES (${d.usuarioId}::uuid, now() + make_interval(days => ${DURACION_SESION_DIAS}::int), ${d.ipRed}::cidr, ${d.userAgent})
+    INSERT INTO sesiones (usuario_id, expira_en, ip_red, user_agent, mfa_verificada)
+    VALUES (${d.usuarioId}::uuid, now() + make_interval(days => ${DURACION_SESION_DIAS}::int), ${d.ipRed}::cidr, ${d.userAgent}, ${d.mfaVerificada ?? false})
     RETURNING id, expira_en`;
   const sesionId = filas[0]?.id;
   const expira = filas[0]?.expira_en;
@@ -57,7 +60,7 @@ export async function validarSesion(db: Tx, sub: string, sid: string): Promise<U
 
 export type ResultadoRotacion =
   | { tipo: 'ok'; usuarioId: string; sesionId: string; refresh: string; expiraEn: Date }
-  | { tipo: 'reutilizado'; sesionId: string }
+  | { tipo: 'reutilizado'; sesionId: string; usuarioId: string }
   | { tipo: 'invalido' };
 
 /**
@@ -82,7 +85,7 @@ export async function rotarRefresco(prisma: PrismaClient, refresh: string): Prom
       await tx.$executeRaw`
         UPDATE sesiones SET revocada_en = now(), motivo_revocacion = 'reutilizacion_refresco'
         WHERE id = ${t.sesion_id}::uuid AND revocada_en IS NULL`;
-      return { tipo: 'reutilizado', sesionId: t.sesion_id };
+      return { tipo: 'reutilizado', sesionId: t.sesion_id, usuarioId: t.usuario_id };
     }
     const ahora = new Date();
     if (t.revocada_en !== null || t.expira_en <= ahora || t.sesion_expira <= ahora || t.estado !== 'activa') {

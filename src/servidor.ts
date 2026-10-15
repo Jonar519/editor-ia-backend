@@ -39,6 +39,7 @@ async function main(): Promise<void> {
     redis,
     correo: crearProveedorCorreo(config, prisma),
     claveAcceso: Buffer.from(config.ACCESS_TOKEN_SECRET, 'base64'),
+    claveMfa: Buffer.from(config.MFA_ENCRYPTION_KEY, 'base64'),
     appUrl: config.APP_URL,
     cookieSegura: config.COOKIE_SECURE,
     costoHash: config.PASSWORD_HASH_COST,

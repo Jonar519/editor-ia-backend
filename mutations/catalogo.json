@@ -6,7 +6,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "if (c[clave] === 'mock') {",
       "reemplazo": "if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "S02",
@@ -14,7 +17,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "if (c.METRICS_TOKEN === undefined) {",
       "reemplazo": "if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "S03",
@@ -22,7 +28,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "if (redis.password === '' && redis.protocol !== 'rediss:') {",
       "reemplazo": "if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "S04",
@@ -30,7 +39,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "Buffer.from(v, 'base64').length === 32",
       "reemplazo": "Buffer.from(v, 'base64').length >= 16",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "S05",
@@ -38,7 +50,10 @@
       "archivo": "src/http/salud.ts",
       "buscar": "if (o.estado.apagando) {",
       "reemplazo": "if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/salud.test.ts"
+      ]
     },
     {
       "id": "S06",
@@ -46,7 +61,10 @@
       "archivo": "src/http/salud.ts",
       "buscar": "res.status(listo ? 200 : 503)",
       "reemplazo": "res.status(200)",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/salud.test.ts"
+      ]
     },
     {
       "id": "S07",
@@ -54,7 +72,10 @@
       "archivo": "src/http/salud.ts",
       "buscar": "await conLimite(c.comprobar(), limite);",
       "reemplazo": "await c.comprobar();",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/salud.test.ts"
+      ]
     },
     {
       "id": "S08",
@@ -62,7 +83,10 @@
       "archivo": "src/http/salud.ts",
       "buscar": "if (o.tokenMetricas !== undefined && !tokenValido(",
       "reemplazo": "if (false && !tokenValido(",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S09",
@@ -70,7 +94,10 @@
       "archivo": "src/http/salud.ts",
       "buscar": "recibido.length === objetivo.length && timingSafeEqual(recibido, objetivo)",
       "reemplazo": "recibido.length === objetivo.length",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S10",
@@ -78,7 +105,10 @@
       "archivo": "src/http/errores.ts",
       "buscar": "res.status(500).json(cuerpo('interno', 'Error interno', solicitud));",
       "reemplazo": "res.status(500).json(cuerpo('interno', err instanceof Error ? err.message : 'Error interno', solicitud));",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S11",
@@ -86,7 +116,10 @@
       "archivo": "src/http/errores.ts",
       "buscar": "err.type === 'entity.parse.failed'",
       "reemplazo": "err.type === 'nunca'",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S12",
@@ -94,7 +127,10 @@
       "archivo": "src/observabilidad/log.ts",
       "buscar": "  'req.headers.authorization',\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S13",
@@ -102,7 +138,10 @@
       "archivo": "src/observabilidad/log.ts",
       "buscar": "  'req.headers.cookie',\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S14",
@@ -110,7 +149,10 @@
       "archivo": "src/app.ts",
       "buscar": "typeof entrante === 'string' && ID_VALIDO.test(entrante)",
       "reemplazo": "typeof entrante === 'string'",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S15",
@@ -118,7 +160,10 @@
       "archivo": "src/app.ts",
       "buscar": "export const LIMITE_CUERPO = '100kb';",
       "reemplazo": "export const LIMITE_CUERPO = '10mb';",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S16",
@@ -126,7 +171,10 @@
       "archivo": "src/app.ts",
       "buscar": "  app.use(helmet());\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S17",
@@ -143,7 +191,10 @@
       "archivo": "src/observabilidad/metricas.ts",
       "buscar": "const ruta = typeof patron === 'string' ? `${req.baseUrl}${patron}` : 'sin_ruta';",
       "reemplazo": "const ruta = req.originalUrl;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/http.test.ts"
+      ]
     },
     {
       "id": "S19",
@@ -151,7 +202,10 @@
       "archivo": "src/apagado.ts",
       "buscar": "      o.estado.apagando = true;\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/apagado.test.ts"
+      ]
     },
     {
       "id": "S20",
@@ -159,7 +213,10 @@
       "archivo": "src/apagado.ts",
       "buscar": "enCurso ??= new Promise",
       "reemplazo": "enCurso = new Promise",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/apagado.test.ts"
+      ]
     },
     {
       "id": "S21",
@@ -167,7 +224,10 @@
       "archivo": "src/apagado.ts",
       "buscar": "        o.servidor.closeAllConnections();\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/apagado.test.ts"
+      ]
     },
     {
       "id": "S22",
@@ -175,7 +235,10 @@
       "archivo": "src/infra/privilegios.ts",
       "buscar": "if (p.tablasPropias > 0)",
       "reemplazo": "if (p.tablasPropias > 100)",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/privilegios.test.ts"
+      ]
     },
     {
       "id": "S23",
@@ -183,7 +246,10 @@
       "archivo": "src/infra/privilegios.ts",
       "buscar": "if (p.superusuario) problemas.push",
       "reemplazo": "if (false) problemas.push",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/privilegios.test.ts"
+      ]
     },
     {
       "id": "S24",
@@ -191,7 +257,10 @@
       "archivo": "src/infra/privilegios.ts",
       "buscar": "return entorno === 'production' ? 'abortar' : 'avisar';",
       "reemplazo": "return 'avisar';",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/privilegios.test.ts"
+      ]
     },
     {
       "id": "S25",
@@ -199,7 +268,10 @@
       "archivo": "src/infra/bd.ts",
       "buscar": "if (version < minimo) throw",
       "reemplazo": "if (false) throw",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/salud.test.ts"
+      ]
     },
     {
       "id": "S26",
@@ -207,7 +279,10 @@
       "archivo": "src/infra/bd.ts",
       "buscar": "    options: '-c statement_timeout=5000',\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/bd.test.ts"
+      ]
     },
     {
       "id": "S27",
@@ -215,7 +290,10 @@
       "archivo": "src/infra/redis.ts",
       "buscar": "  redis.on('error', alError);\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/salud.test.ts"
+      ]
     },
     {
       "id": "E16",
@@ -223,7 +301,10 @@
       "archivo": "src/auth/servicio.ts",
       "buscar": "await verificarContrasena(e.contrasena, u?.hash_contrasena ?? d.senuelo)",
       "reemplazo": "(u?.hash_contrasena ? await verificarContrasena(e.contrasena, u.hash_contrasena) : false)",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "S28",
@@ -231,7 +312,10 @@
       "archivo": "src/infra/redis.ts",
       "buscar": "    maxRetriesPerRequest: 1,\n    connectTimeout: 2000,",
       "reemplazo": "    lazyConnect: true,\n    enableOfflineQueue: false,\n    maxRetriesPerRequest: 1,\n    connectTimeout: 2000,",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E01",
@@ -239,7 +323,10 @@
       "archivo": "src/auth/tokens.ts",
       "buscar": "  if (recibido.length !== esperado.length || !timingSafeEqual(recibido, esperado)) return null;\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E02",
@@ -247,7 +334,10 @@
       "archivo": "src/auth/tokens.ts",
       "buscar": "  if (exp <= Math.floor(ahora / 1000)) return null;\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/tokens.test.ts"
+      ]
     },
     {
       "id": "E03",
@@ -255,7 +345,10 @@
       "archivo": "src/auth/tokens.ts",
       "buscar": "  if (cabecera !== CABECERA) return null;\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/tokens.test.ts"
+      ]
     },
     {
       "id": "E04",
@@ -263,7 +356,10 @@
       "archivo": "src/auth/tokens.ts",
       "buscar": "export const DURACION_ACCESO_S = 15 * 60;",
       "reemplazo": "export const DURACION_ACCESO_S = 60 * 60;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/tokens.test.ts"
+      ]
     },
     {
       "id": "E05",
@@ -271,7 +367,10 @@
       "archivo": "src/auth/sesiones.ts",
       "buscar": "AND s.revocada_en IS NULL AND s.expira_en > now()",
       "reemplazo": "AND s.expira_en > now()",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E06",
@@ -279,7 +378,10 @@
       "archivo": "src/auth/middleware.ts",
       "buscar": "const usuario = reclamos ? await validarSesion(d.prisma, reclamos.sub, reclamos.sid) : null;",
       "reemplazo": "const usuario = reclamos ? { id: reclamos.sub, rol: 'editor' as const, nombre: '', correo: '', sesionId: reclamos.sid } : null;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E07",
@@ -287,7 +389,10 @@
       "archivo": "src/auth/sesiones.ts",
       "buscar": "UPDATE sesiones SET revocada_en = now(), motivo_revocacion = 'reutilizacion_refresco'",
       "reemplazo": "UPDATE sesiones SET ultimo_uso_en = now()",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E08",
@@ -295,7 +400,10 @@
       "archivo": "src/auth/sesiones.ts",
       "buscar": "    if (t.usado_en !== null) {",
       "reemplazo": "    if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E09",
@@ -303,7 +411,10 @@
       "archivo": "src/auth/sesiones.ts",
       "buscar": "    await tx.$executeRaw`UPDATE tokens_refresco SET usado_en = now() WHERE id = ${t.id}::uuid`;\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E10",
@@ -311,7 +422,10 @@
       "archivo": "src/http/cookies.ts",
       "buscar": "    httpOnly: true,\n    secure: segura,\n    sameSite: 'strict',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
       "reemplazo": "    httpOnly: false,\n    secure: segura,\n    sameSite: 'strict',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E11",
@@ -319,7 +433,10 @@
       "archivo": "src/http/cookies.ts",
       "buscar": "    secure: segura,\n    sameSite: 'strict',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
       "reemplazo": "    secure: segura,\n    sameSite: 'lax',\n    path: RUTA_COOKIE_REFRESCO,\n    expires: expira,",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E12",
@@ -327,7 +444,10 @@
       "archivo": "src/http/cookies.ts",
       "buscar": "export const RUTA_COOKIE_REFRESCO = '/api/auth';",
       "reemplazo": "export const RUTA_COOKIE_REFRESCO = '/';",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E13",
@@ -335,7 +455,10 @@
       "archivo": "src/auth/rutas.ts",
       "buscar": "if (origen !== undefined && origen !== new URL(appUrl).origin) {",
       "reemplazo": "if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E14",
@@ -343,7 +466,10 @@
       "archivo": "src/auth/servicio.ts",
       "buscar": "  if (bloqueadaHasta && bloqueadaHasta > ahora) return { tipo: 'bloqueada', hasta: bloqueadaHasta };\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E15",
@@ -351,15 +477,21 @@
       "archivo": "src/auth/servicio.ts",
       "buscar": "      await fantasma.registrarFallo(e.correo);\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E17",
       "regla": "Límite de intentos de login por IP",
       "archivo": "src/auth/rutas.ts",
-      "buscar": "r.post('/sesion', limitarTasa(limInicio, claveIp), async",
+      "buscar": "r.post('/sesion', limitarTasa(lim('inicio'), claveIp), async",
       "reemplazo": "r.post('/sesion', async",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E18",
@@ -367,7 +499,10 @@
       "archivo": "src/auth/limites.ts",
       "buscar": "      next(new ErrorHttp(503, 'limites_no_disponibles', 'Servicio temporalmente no disponible'));\n      return;",
       "reemplazo": "      next();\n      return;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E19",
@@ -375,15 +510,21 @@
       "archivo": "src/auth/limites.ts",
       "buscar": "return Math.min(BLOQUEO_BASE_MS * 2 ** (fallos - FALLOS_ANTES_DE_BLOQUEAR), BLOQUEO_MAXIMO_MS);",
       "reemplazo": "return BLOQUEO_BASE_MS;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/cliente-y-bloqueo.test.ts"
+      ]
     },
     {
       "id": "E20",
-      "regla": "Una cuenta con MFA no entra solo con la contraseña",
+      "regla": "Una cuenta con MFA no entra solo con la contraseña (ni con la sesión marcada como verificada)",
       "archivo": "src/auth/servicio.ts",
-      "buscar": "  if (mfa?.confirmado_en) return { tipo: 'mfa_requerido' };\n",
-      "reemplazo": "",
-      "comando": "test"
+      "buscar": "    return { tipo: 'mfa_requerido', desafio };\n",
+      "reemplazo": "    return { tipo: 'ok', ...(await abrirSesion(d, u, { ipRed: e.ipRed, userAgent: e.userAgent, mfaVerificada: true })) };\n",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E21",
@@ -391,7 +532,10 @@
       "archivo": "src/auth/contrasenas.ts",
       "buscar": "return derivada.length === objetivo.length && timingSafeEqual(derivada, objetivo);",
       "reemplazo": "return derivada.length === objetivo.length;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E22",
@@ -399,7 +543,10 @@
       "archivo": "src/auth/contrasenas.ts",
       "buscar": "export const LARGO_MINIMO = 12;",
       "reemplazo": "export const LARGO_MINIMO = 8;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/contrasenas.test.ts"
+      ]
     },
     {
       "id": "E23",
@@ -407,7 +554,10 @@
       "archivo": "src/auth/contrasenas.ts",
       "buscar": "  if (COMUNES.has(minus)) p.push('es una contraseña demasiado común');\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/contrasenas.test.ts"
+      ]
     },
     {
       "id": "E24",
@@ -415,7 +565,10 @@
       "archivo": "src/invitaciones/rutas.ts",
       "buscar": "  r.use(requiereSesion(d), requiereRol('admin'));",
       "reemplazo": "  r.use(requiereSesion(d));",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E25",
@@ -423,7 +576,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "export const VIGENCIA_INVITACION_HORAS = 72;",
       "reemplazo": "export const VIGENCIA_INVITACION_HORAS = 24;",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E26",
@@ -431,7 +587,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "    await tx.invitaciones.deleteMany({ where: { usuario_id: u.id } });\n    await tx.usuarios.update",
       "reemplazo": "    await tx.usuarios.update",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E27",
@@ -439,7 +598,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "    if (vivas.length === 0) throw new ErrorHttp(404, 'invitacion_invalida'",
       "reemplazo": "    if (false) throw new ErrorHttp(404, 'invitacion_invalida'",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E28",
@@ -447,7 +609,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "  if (inv.vencida) throw new ErrorHttp(410",
       "reemplazo": "  if (false) throw new ErrorHttp(410",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E29",
@@ -455,7 +620,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "  if (problemas.length > 0) throw new ErrorHttp(400, 'contrasena_debil'",
       "reemplazo": "  if (false) throw new ErrorHttp(400, 'contrasena_debil'",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E30",
@@ -463,7 +631,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "  if (u.rol === 'admin') {",
       "reemplazo": "  if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
     },
     {
       "id": "E31",
@@ -471,7 +642,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "    if (!c.APP_URL.startsWith('https://')) {",
       "reemplazo": "    if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "E32",
@@ -479,7 +653,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "    if (!c.COOKIE_SECURE) {",
       "reemplazo": "    if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "E33",
@@ -487,7 +664,10 @@
       "archivo": "src/config/entorno.ts",
       "buscar": "    if (c.PASSWORD_HASH_COST < COSTO_HASH_MINIMO_PRODUCCION) {",
       "reemplazo": "    if (false) {",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/config.test.ts"
+      ]
     },
     {
       "id": "E34",
@@ -495,7 +675,10 @@
       "archivo": "src/invitaciones/servicio.ts",
       "buscar": "now() + make_interval(hours => ${VIGENCIA_INVITACION_HORAS}::int)",
       "reemplazo": "${new Date(Date.now() + VIGENCIA_INVITACION_HORAS * 3_600_000)}",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
     },
     {
       "id": "E35",
@@ -503,7 +686,10 @@
       "archivo": "src/correo/proveedor.ts",
       "buscar": "now() + make_interval(days => ${RETENCION_MOCK_DIAS}::int)",
       "reemplazo": "${new Date(Date.now() + RETENCION_MOCK_DIAS * 86_400_000)}",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/reloj.test.ts"
+      ]
     },
     {
       "id": "E36",
@@ -511,7 +697,10 @@
       "archivo": "src/api.ts",
       "buscar": "    res.setHeader('Cache-Control', 'no-store');\n",
       "reemplazo": "",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auth.test.ts"
+      ]
     },
     {
       "id": "E37",
@@ -519,7 +708,263 @@
       "archivo": "src/http/esquemas.ts",
       "buscar": "limite: z.coerce.number().int().min(1).max(200).default(50),",
       "reemplazo": "limite: z.coerce.number().int().min(1).default(50),",
-      "comando": "test"
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/invitaciones.test.ts"
+      ]
+    },
+    {
+      "id": "G01",
+      "regla": "Los logs nunca incluyen el cuerpo de la petición (tokens, contraseñas)",
+      "archivo": "src/app.ts",
+      "buscar": "      autoLogging: { ignore: (req) => (req.url === '/health' || req.url === '/ready') },",
+      "reemplazo": "      autoLogging: { ignore: (req) => (req.url === '/health' || req.url === '/ready') },\n      customProps: (req) => ({ cuerpo: (req as unknown as { body?: unknown }).body }),",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/secretos.test.ts"
+      ]
+    },
+    {
+      "id": "G02",
+      "regla": "Los logs redactan cabeceras y campos secretos (pino redact)",
+      "archivo": "src/observabilidad/log.ts",
+      "buscar": "    redact: { paths: RUTAS_REDACTADAS, censor: '[REDACTADO]' },\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/secretos.test.ts"
+      ]
+    },
+    {
+      "id": "G03",
+      "regla": "TOTP: truncamiento dinámico de HOTP (RFC 4226)",
+      "archivo": "src/auth/totp.ts",
+      "buscar": "const desplazamiento = (hmac[hmac.length - 1] ?? 0) & 0x0f;",
+      "reemplazo": "const desplazamiento = 0;",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G04",
+      "regla": "TOTP: tolerancia de ±1 paso, no más",
+      "archivo": "src/auth/totp.ts",
+      "buscar": "for (let p = actual - VENTANA; p <= actual + VENTANA; p++) {",
+      "reemplazo": "for (let p = actual - 2; p <= actual + 2; p++) {",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G05",
+      "regla": "TOTP: anti-replay (solo pasos mayores al último aceptado)",
+      "archivo": "src/auth/totp.ts",
+      "buscar": "(ultimoPaso === null || p > ultimoPaso)",
+      "reemplazo": "true",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G06",
+      "regla": "MFA: el paso aceptado se guarda solo si es mayor (UPDATE condicional atómico)",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "    WHERE usuario_id = ${usuarioId}::uuid AND (ultimo_paso IS NULL OR ultimo_paso < ${paso})`;",
+      "reemplazo": "    WHERE usuario_id = ${usuarioId}::uuid`;",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G07",
+      "regla": "MFA: el secreto se cifra ligado a la cuenta (datos asociados)",
+      "archivo": "src/auth/cifrado.ts",
+      "buscar": "  c.setAAD(Buffer.from(usuarioId, 'utf8'));\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G08",
+      "regla": "Códigos de respaldo: HMAC con subclave (no SHA-256 sin clave)",
+      "archivo": "src/auth/codigos-respaldo.ts",
+      "buscar": "createHmac('sha256', subclave)",
+      "reemplazo": "createHmac('sha256', Buffer.alloc(32))",
+      "comando": "test",
+      "pruebas": [
+        "tests/unitarias/totp.test.ts"
+      ]
+    },
+    {
+      "id": "G09",
+      "regla": "Desafío MFA de un solo uso (GETDEL)",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "await d.redis.getdel(",
+      "reemplazo": "await d.redis.get(",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G10",
+      "regla": "Desafío MFA vence en 5 minutos",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "'EX', DURACION_DESAFIO_S",
+      "reemplazo": "'EX', 3600",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G11",
+      "regla": "Desafío MFA: en Redis solo su hash",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "`${prefijo}mfa:desafio:${createHash('sha256').update(desafio).digest('hex')}`",
+      "reemplazo": "`${prefijo}mfa:desafio:${desafio}`",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G12",
+      "regla": "Los fallos de MFA en el login suman al bloqueo de la cuenta",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "    await sumarFalloCuenta(d.prisma, u.id);\n    await registrarEvento(d.prisma, 'mfa_fallido', u.id, e.ipRed);\n    return { tipo: 'invalido' };",
+      "reemplazo": "    await registrarEvento(d.prisma, 'mfa_fallido', u.id, e.ipRed);\n    return { tipo: 'invalido' };",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G13",
+      "regla": "Login: una cuenta con MFA no entra solo con la contraseña",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "  if (mfa?.confirmado_en) {",
+      "reemplazo": "  if (false) {",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G14",
+      "regla": "Código de respaldo de un solo uso",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "WHERE usuario_id = ${usuarioId}::uuid AND hash_codigo = ${h} AND usado_en IS NULL`;",
+      "reemplazo": "WHERE usuario_id = ${usuarioId}::uuid AND hash_codigo = ${h}`;",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G15",
+      "regla": "Inscripción previa: al quinto fallo se borra y se reinicia",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "    if (ins.intentos + 1 >= MAX_INTENTOS_INSCRIPCION) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G16",
+      "regla": "Un admin pendiente se completa solo con el primer código TOTP",
+      "archivo": "src/invitaciones/servicio.ts",
+      "buscar": "    if (e.codigoTotp === undefined) throw new ErrorHttp(409, 'mfa_requerido'",
+      "reemplazo": "    if (false) throw new ErrorHttp(409, 'mfa_requerido'",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G17",
+      "regla": "Un admin no puede desactivar su MFA",
+      "archivo": "src/auth/mfa.ts",
+      "buscar": "  if (u.rol === 'admin') throw new ErrorHttp(409, 'mfa_obligatorio'",
+      "reemplazo": "  if (false) throw new ErrorHttp(409, 'mfa_obligatorio'",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/mfa.test.ts"
+      ]
+    },
+    {
+      "id": "G18",
+      "regla": "Recuperación: se responde ANTES de trabajar (tiempo independiente del correo)",
+      "archivo": "src/auth/rutas.ts",
+      "buscar": "    res.status(202).json({ mensaje: MENSAJE_RECUPERACION });\n    void trabajo();",
+      "reemplazo": "    return trabajo().then(() => {\n      res.status(202).json({ mensaje: MENSAJE_RECUPERACION });\n    });",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G19",
+      "regla": "Recuperación: restablecer cierra TODAS las sesiones",
+      "archivo": "src/auth/recuperacion.ts",
+      "buscar": "      UPDATE sesiones SET revocada_en = now(), motivo_revocacion = 'cambio_contrasena'\n      WHERE usuario_id = ${u.usuario_id}::uuid AND revocada_en IS NULL`;",
+      "reemplazo": "      SELECT 1`;",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G20",
+      "regla": "Recuperación: enlace de un solo uso",
+      "archivo": "src/auth/recuperacion.ts",
+      "buscar": "    await tx.$executeRaw`UPDATE tokens_recuperacion SET usado_en = now() WHERE id = ${id}::uuid`;\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G21",
+      "regla": "Recuperación: pedir otra invalida la anterior",
+      "archivo": "src/auth/recuperacion.ts",
+      "buscar": "    await tx.tokens_recuperacion.deleteMany({ where: { usuario_id: u.id, usado_en: null } });\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G22",
+      "regla": "Recuperación: límite de 3 por correo",
+      "archivo": "src/auth/rutas.ts",
+      "buscar": "recuperacionCorreo: { max: 3,",
+      "reemplazo": "recuperacionCorreo: { max: 30,",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/recuperacion.test.ts"
+      ]
+    },
+    {
+      "id": "G23",
+      "regla": "Auditoría: el inicio de sesión queda registrado",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "    await registrarEvento(tx, 'inicio_sesion', u.id, e.ipRed);\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": [
+        "tests/integracion/auditoria.test.ts"
+      ]
     }
   ]
 }

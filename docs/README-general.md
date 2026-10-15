@@ -41,6 +41,13 @@ La tabla crece con cada bloque. **Demo** indica el archivo `docs/demo-<fase>.md`
 | Sesión viva en cada petición | `requiereSesion` | Cerrar sesión y usar el access token viejo: 401 | backend: E |
 | Bloqueo progresivo sin enumeración de cuentas | `src/auth/servicio.ts`, `limites.ts` | 5 fallos con un correo real y con uno inexistente: mismo 429 | backend: E |
 | Límites de intentos con Redis (fallan cerrado) | `limitarTasa` | Prueba `limites.test.ts`; mutación E18 | backend: E |
+| MFA TOTP sin librería (RFC 6238/4226) | `src/auth/totp.ts`, vectores del RFC en `totp.test.ts` | Admin: completar la invitación exige el primer código; login en dos pasos | backend: F |
+| Secreto MFA cifrado y ligado a la cuenta | AES-256-GCM con la cuenta como datos asociados (`cifrado.ts`) | Mutación G07 | backend: F |
+| Anti-replay de códigos | `verificarTotp` + UPDATE condicional + trigger de la base (0016) | Mismo código dos veces: 401; mutaciones G05, G06 y F15 | backend: F, database: F |
+| Códigos de respaldo de un solo uso | 10 códigos, en la base solo su HMAC con subclave | Usar el mismo dos veces: 401 | backend: F |
+| Recuperación sin enumeración | `src/auth/recuperacion.ts`: responde antes de trabajar | Correo real e inexistente: misma respuesta y mismo tiempo | backend: F |
+| Auditoría de seguridad | `eventos_seguridad`: solo inserción, IP truncada, sin texto libre (0015) | Paso 9 de la demo F; mutaciones F08–F14 y G23 | backend: F, database: F |
+| Ningún token en logs ni en la base | `secretos.test.ts`: captura de logs + barrido de todas las tablas | Mutaciones G01 y G02 | backend: F |
 | Pruebas de mutación | `mutations/catalogo.json` en cada repo | `scripts\mutar.bat` | todos |
 | CI | `.github/workflows/ci.yml` en cada repo | Pestaña Actions de cada PR | todos |
 
@@ -77,5 +84,9 @@ Además, producción se niega a arrancar si:
 - **Pruebas de mutación en serie.** Su tiempo en el CI se reevalúa en el bloque R.
 - **Versiones fijadas por compatibilidad.** TypeScript 6.0.3 en el backend (por `typescript-eslint`) y Prisma 7.10.0 (`latest` es una versión candidata). `overrides` de `deepmerge-ts` y `mysql2` por vulnerabilidades del CLI de Prisma.
 - **Dos contraseñas en el `.env` del repo de base.** `PGPASSWORD` es del dueño de las tablas (migraciones y pruebas). `CUADERNO_APP_PASSWORD` es del rol del backend.
-- **Primer admin.** Se invita con la CLI de operador (`invitar.bat`), y el enlace va a su correo. Completarlo exige MFA, que llega en el bloque F.
+- **Primer admin.** Se invita con la CLI de operador (`invitar.bat`), y el enlace va a su correo. Completarlo exige configurar MFA y enviar el primer código (bloque F).
+- **MFA.** Obligatorio para admin (la base lo exige), opcional para editor y lector. La inscripción pendiente de un admin vive en `inscripciones_mfa`, vence con la invitación y se borra con ella. El desafío del segundo paso vive en Redis (solo su hash, 5 min, un solo uso). Los fallos de MFA suman al bloqueo de la cuenta.
+- **Auditoría.** `eventos_seguridad` guarda cuenta, IP truncada y tipo de evento, nunca tokens ni contraseñas. Retención de 180 días (se aplica en el bloque G). Al eliminar una cuenta se anonimizan sus filas (bloque G).
+- **gRPC solo entre servicios internos** (confirmado con el profesor). El navegador habla REST/JSON y WebSocket. El bloque P se divide en P1 (servicio gRPC), P2 (embeddings, búsqueda, inyección y gateway) y P3 (informe REST/JSON vs gRPC), con un job `grpc` aparte en el CI. El ADR de comunicación va en el bloque K.
+- **Si hay que recortar tiempo**, LaTeX y Mermaid se recortan primero.
 - **Eliminación de cuenta (bloque G).** Se bloquea con 409 mientras la persona sea propietaria de documentos con otros colaboradores sin haber transferido la propiedad. Solo se borran los documentos sin colaboradores.

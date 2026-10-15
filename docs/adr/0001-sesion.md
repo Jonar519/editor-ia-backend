@@ -60,4 +60,12 @@ Esto cuesta una consulta por petición, indexada por la clave primaria de la ses
 
 - Recargar la página pierde el access token y el cliente pide uno nuevo con la cookie (`/api/auth/refresco`). El frontend debe hacer **un solo refresco a la vez** (single-flight): dos refrescos simultáneos con la misma cookie cuentan como reutilización y cierran la sesión.
 - Cambiar `ACCESS_TOKEN_SECRET` invalida todos los access tokens. Los refresh siguen sirviendo.
-- Una cuenta con MFA no obtiene sesión solo con la contraseña. El desafío TOTP llega en el bloque F.
+- Una cuenta con MFA no obtiene sesión solo con la contraseña.
+
+## Actualización (bloque F): segundo paso MFA
+
+- Con MFA confirmado, `POST /api/auth/sesion` responde **202** con un desafío opaco (32 bytes). En Redis solo se guarda su SHA-256, con 5 minutos de vida, y se consume con `GETDEL` al primer intento, acierte o no.
+- `POST /api/auth/mfa` recibe el desafío y un código TOTP o uno de respaldo. Desafío inexistente, vencido, usado o código incorrecto: **la misma** respuesta 401, así que no revela si la cuenta existe.
+- TOTP: RFC 6238 (SHA-1, 6 dígitos, 30 s) con tolerancia de ±1 paso. Solo se acepta un paso **mayor** al último aceptado: el código y la base lo exigen (UPDATE condicional y trigger), también bajo carrera.
+- Los fallos de MFA suman a `fallos_login` y al bloqueo progresivo. El contador vuelve a cero solo al superar el segundo paso.
+- La sesión resultante queda con `mfa_verificada`.

@@ -9,6 +9,8 @@ export interface DependenciasApi {
   correo: ProveedorCorreo;
   /** Clave HMAC de los access tokens (ACCESS_TOKEN_SECRET decodificada). */
   claveAcceso: Buffer;
+  /** Clave AES-256-GCM de los secretos TOTP (MFA_ENCRYPTION_KEY decodificada). */
+  claveMfa: Buffer;
   /** Origen del frontend: enlaces de correo y verificación de Origin. */
   appUrl: string;
   cookieSegura: boolean;
