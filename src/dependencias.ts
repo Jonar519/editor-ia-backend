@@ -1,12 +1,15 @@
 import type { Redis } from 'ioredis';
 import type { ProveedorCorreo } from './correo/proveedor.js';
 import type { PrismaClient } from './generated/prisma/client.js';
+import type { ProveedorGeo } from './geo/proveedor.js';
 
 /** Lo que necesitan las rutas del API. Las pruebas lo arman con la base y el Redis de pruebas. */
 export interface DependenciasApi {
   prisma: PrismaClient;
   redis: Redis;
   correo: ProveedorCorreo;
+  /** Ubicación aproximada de una red truncada (lista de sesiones). */
+  geo: ProveedorGeo;
   /** Clave HMAC de los access tokens (ACCESS_TOKEN_SECRET decodificada). */
   claveAcceso: Buffer;
   /** Clave AES-256-GCM de los secretos TOTP (MFA_ENCRYPTION_KEY decodificada). */

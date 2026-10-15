@@ -6,6 +6,7 @@ import { crearSenuelo } from './auth/contrasenas.js';
 import { crearProveedorCorreo } from './correo/proveedor.js';
 import { crearApp } from './app.js';
 import { cargarConfigOSalir } from './config/entorno.js';
+import { crearProveedorGeo } from './geo/proveedor.js';
 import { comprobacionBd, comprobacionEsquema, crearPool, crearPrisma } from './infra/bd.js';
 import { accionPorPrivilegios, leerPrivilegios, problemasDePrivilegios } from './infra/privilegios.js';
 import { comprobacionRedis, crearRedis } from './infra/redis.js';
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
     prisma,
     redis,
     correo: crearProveedorCorreo(config, prisma),
+    geo: crearProveedorGeo(config, prisma),
     claveAcceso: Buffer.from(config.ACCESS_TOKEN_SECRET, 'base64'),
     claveMfa: Buffer.from(config.MFA_ENCRYPTION_KEY, 'base64'),
     appUrl: config.APP_URL,

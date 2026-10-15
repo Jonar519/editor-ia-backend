@@ -42,10 +42,11 @@ async function abrirSesion(
   u: { id: string; nombre: string | null; correo: string | null; rol: string },
   e: { ipRed: string | null; userAgent: string | null; mfaVerificada: boolean },
 ): Promise<{ respuesta: SesionRespuesta; sesion: SesionNueva }> {
+  const ubicacion = await d.geo.ubicar(e.ipRed);
   const sesion = await d.prisma.$transaction(async (tx) => {
     await tx.usuarios.update({ where: { id: u.id }, data: { fallos_login: 0, bloqueada_hasta: null } });
     await registrarEvento(tx, 'inicio_sesion', u.id, e.ipRed);
-    return crearSesion(tx, { usuarioId: u.id, ipRed: e.ipRed, userAgent: e.userAgent, mfaVerificada: e.mfaVerificada });
+    return crearSesion(tx, { usuarioId: u.id, ipRed: e.ipRed, userAgent: e.userAgent, ubicacion, mfaVerificada: e.mfaVerificada });
   });
   const respuesta = respuestaSesion(d, { id: u.id, nombre: u.nombre ?? '', correo: u.correo ?? '', rol: u.rol as Rol }, sesion.sesionId);
   return { respuesta, sesion };

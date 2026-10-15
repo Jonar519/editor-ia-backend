@@ -188,6 +188,7 @@ export async function completar(
     mfa = await verificarInscripcion(d, { invitacionId: u.invitacion_id, usuarioId: u.id }, e.codigoTotp);
   }
   const hash = await hashearContrasena(e.contrasena, d.costoHash);
+  const ubicacion = await d.geo.ubicar(e.ipRed);
 
   const { sesion, codigosRespaldo } = await d.prisma.$transaction(async (tx) => {
     // FOR UPDATE: dos envíos simultáneos del mismo enlace no pueden completar la cuenta dos veces.
@@ -212,7 +213,7 @@ export async function completar(
       await registrarEvento(tx, 'mfa_activado', u.id, e.ipRed);
     }
     await registrarEvento(tx, 'invitacion_completada', u.id, e.ipRed);
-    const s = await crearSesion(tx, { usuarioId: u.id, ipRed: e.ipRed, userAgent: e.userAgent, mfaVerificada: mfa !== undefined });
+    const s = await crearSesion(tx, { usuarioId: u.id, ipRed: e.ipRed, userAgent: e.userAgent, ubicacion, mfaVerificada: mfa !== undefined });
     return { sesion: s, codigosRespaldo: codigos };
   });
   const respuesta = respuestaSesion(d, { id: u.id, nombre: u.nombre ?? '', correo: u.correo ?? '', rol: u.rol }, sesion.sesionId);
