@@ -19,12 +19,12 @@ export interface SesionNueva {
 /** Crea sesión y su primer refresh. Llamar dentro de una transacción. */
 export async function crearSesion(
   tx: Tx,
-  d: { usuarioId: string; ipRed: string | null; userAgent: string | null; mfaVerificada?: boolean },
+  d: { usuarioId: string; ipRed: string | null; userAgent: string | null; ubicacion?: string | null; mfaVerificada?: boolean },
 ): Promise<SesionNueva> {
   // El vencimiento lo calcula la BASE con su reloj (ver insertarInvitacion: mismo motivo).
   const filas = await tx.$queryRaw<{ id: string; expira_en: Date }[]>`
-    INSERT INTO sesiones (usuario_id, expira_en, ip_red, user_agent, mfa_verificada)
-    VALUES (${d.usuarioId}::uuid, now() + make_interval(days => ${DURACION_SESION_DIAS}::int), ${d.ipRed}::cidr, ${d.userAgent}, ${d.mfaVerificada ?? false})
+    INSERT INTO sesiones (usuario_id, expira_en, ip_red, user_agent, ubicacion, mfa_verificada)
+    VALUES (${d.usuarioId}::uuid, now() + make_interval(days => ${DURACION_SESION_DIAS}::int), ${d.ipRed}::cidr, ${d.userAgent}, ${d.ubicacion ?? null}, ${d.mfaVerificada ?? false})
     RETURNING id, expira_en`;
   const sesionId = filas[0]?.id;
   const expira = filas[0]?.expira_en;

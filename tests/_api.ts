@@ -11,6 +11,7 @@ import { hotp, pasoDe } from '../src/auth/totp.js';
 import type { MensajeCorreo, ProveedorCorreo } from '../src/correo/proveedor.js';
 import type { DependenciasApi } from '../src/dependencias.js';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
+import { geoMock } from '../src/geo/proveedor.js';
 import { crearPool, crearPrisma } from '../src/infra/bd.js';
 import { crearRedis } from '../src/infra/redis.js';
 import { appDePrueba, urlBdPruebas, urlRedisPruebas } from './_apoyo.js';
@@ -55,6 +56,7 @@ export async function entornoApi(cambios: Partial<DependenciasApi> = {}): Promis
     prisma,
     redis,
     correo: buzon,
+    geo: geoMock(),
     claveAcceso: randomBytes(32),
     claveMfa: randomBytes(32),
     appUrl: APP_URL,

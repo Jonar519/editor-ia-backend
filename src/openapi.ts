@@ -2,13 +2,27 @@
 // `npm run openapi` la escribe en docs/openapi.json; `npm run openapi:check` falla si quedó desactualizada.
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  ActualizarPerfil,
+  AvatarGuardado,
+  CambioContrasena,
+  CambioCorreoRespuesta,
+  CambioCorreoSolicitud,
   CodigoMfa,
   CodigosRespaldo,
   CompletarConMfa,
   CompletarRespuesta,
+  ConfirmarConContrasena,
+  ConfirmarCorreo,
+  CuentaEliminada,
   DesafioMfa,
+  EliminarCuentaSolicitud,
   ErrorRespuesta,
+  IdSesion,
   IdUsuario,
+  ListaSesiones,
+  ErrorPropiedadCompartida,
+  Perfil,
+  SesionesCerradas,
   InicioSesionSolicitud,
   InscripcionMfa,
   InvitacionConsulta,
@@ -149,6 +163,140 @@ function registrarInvitaciones(registro: OpenAPIRegistry): void {
   });
 }
 
+function registrarPerfilYDatos(registro: OpenAPIRegistry): void {
+  const cuenta = { tags: ['cuenta'], security: [{ acceso: [] }] };
+  const sinSesion = { 401: error('Sin sesión viva') };
+  const reautenticacion = {
+    403: error('Contraseña (o código MFA) incorrecta: suma al bloqueo de la cuenta'),
+    429: error('Demasiados intentos o cuenta bloqueada'),
+  };
+  registro.registerPath({
+    method: 'get',
+    path: '/api/cuenta',
+    ...cuenta,
+    summary: 'Perfil de la cuenta',
+    responses: { 200: { description: 'Perfil', ...json(Perfil) }, ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'patch',
+    path: '/api/cuenta',
+    ...cuenta,
+    summary: 'Cambiar nombre o teléfono',
+    request: { body: json(ActualizarPerfil) },
+    responses: { 200: { description: 'Perfil actualizado', ...json(Perfil) }, 400: error('Datos inválidos'), ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/cuenta/correo',
+    ...cuenta,
+    summary: 'Pedir el cambio de correo: enlace al correo NUEVO y aviso al anterior. Misma respuesta esté o no en uso.',
+    request: { body: json(CambioCorreoSolicitud) },
+    responses: { 202: { description: 'Pedido recibido', ...json(CambioCorreoRespuesta) }, 400: error('Es el mismo correo'), ...reautenticacion, ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/cuenta/correo/confirmar',
+    tags: ['cuenta'],
+    summary: 'Confirmar el correo nuevo con el token del enlace (sin sesión; un solo uso)',
+    request: { body: json(ConfirmarCorreo) },
+    responses: { 204: { description: 'Correo cambiado; se avisa al anterior' }, 400: error('Enlace inválido, usado o vencido'), 409: error('La dirección ya tiene cuenta') },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/cuenta/contrasena',
+    ...cuenta,
+    summary: 'Cambiar la contraseña: cierra las DEMÁS sesiones y avisa por correo',
+    request: { body: json(CambioContrasena) },
+    responses: { 200: { description: 'Sesiones cerradas', ...json(SesionesCerradas) }, 400: error('No cumple la política'), ...reautenticacion, ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/cuenta/sesiones',
+    ...cuenta,
+    summary: 'Sesiones activas: IP truncada, ubicación aproximada, user-agent corto',
+    responses: { 200: { description: 'Sesiones', ...json(ListaSesiones) }, ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/cuenta/sesiones/{id}',
+    ...cuenta,
+    summary: 'Cerrar una sesión de la cuenta',
+    request: { params: IdSesion },
+    responses: { 204: { description: 'Cerrada' }, 404: error('No hay una sesión activa con ese id en tu cuenta'), ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/cuenta/sesiones/cerrar-otras',
+    ...cuenta,
+    summary: 'Cerrar todas las sesiones menos la actual',
+    responses: { 200: { description: 'Cuántas se cerraron', ...json(SesionesCerradas) }, ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'put',
+    path: '/api/cuenta/avatar',
+    ...cuenta,
+    summary: 'Subir el avatar (JPEG o PNG, 1 MiB). Se guarda SIN metadatos; un archivo no analizable no se guarda.',
+    request: { body: { content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } }, 'image/png': { schema: { type: 'string', format: 'binary' } } } } },
+    responses: {
+      200: { description: 'Guardado (ya limpio)', ...json(AvatarGuardado) },
+      413: error('Más de 1 MiB'),
+      415: error('Content-Type distinto de image/jpeg o image/png'),
+      422: error('No es un JPEG o PNG analizable'),
+      ...sinSesion,
+    },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/cuenta/avatar',
+    ...cuenta,
+    summary: 'Borrar el avatar',
+    responses: { 204: { description: 'Borrado' }, ...sinSesion },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/usuarios/{usuarioId}/avatar',
+    ...cuenta,
+    tags: ['usuarios'],
+    summary: 'Avatar de una cuenta (con ETag; CSP sin nada permitido)',
+    request: { params: IdUsuario },
+    responses: {
+      200: { description: 'La imagen', content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } }, 'image/png': { schema: { type: 'string', format: 'binary' } } } },
+      304: { description: 'Sin cambios (If-None-Match)' },
+      404: error('Sin avatar'),
+      ...sinSesion,
+    },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/cuenta/exportacion',
+    ...cuenta,
+    summary: 'Exportar los datos de la cuenta en JSON (sin secretos). Exige la contraseña.',
+    request: { body: json(ConfirmarConContrasena) },
+    responses: {
+      200: {
+        description: 'Archivo JSON (Content-Disposition: attachment), formato cuaderno-exportacion/v1',
+        content: { 'application/json': { schema: { type: 'object' } } },
+      },
+      ...reautenticacion,
+      ...sinSesion,
+    },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/cuenta',
+    ...cuenta,
+    summary: 'Eliminar la cuenta (lápida). Exige contraseña y, con MFA, un código.',
+    request: { body: json(EliminarCuentaSolicitud) },
+    responses: {
+      200: { description: 'Eliminada; borra la cookie de refresco', ...json(CuentaEliminada) },
+      400: error('Falta el código MFA'),
+      409: { description: 'Propietaria de contenido con colaboradores: error.detalles lista qué transferir', ...json(ErrorPropiedadCompartida) },
+      ...reautenticacion,
+      ...sinSesion,
+    },
+  });
+}
+
 function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
   registro.registerPath({
     method: 'post',
@@ -253,6 +401,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
   registrarAuth(registro);
   registrarInvitaciones(registro);
   registrarMfaYRecuperacion(registro);
+  registrarPerfilYDatos(registro);
 
   return new OpenApiGeneratorV31(registro.definitions).generateDocument({
     openapi: '3.1.0',

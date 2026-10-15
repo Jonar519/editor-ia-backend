@@ -142,3 +142,91 @@ export const RecuperacionRespuesta = z
   .meta({ id: 'RecuperacionRespuesta', description: 'SIEMPRE la misma respuesta, exista o no el correo.' });
 
 export const RestablecerSolicitud = z.object({ token: Token43, contrasena: z.string().min(1).max(1000) }).meta({ id: 'RestablecerSolicitud' });
+
+// ─── Perfil, sesiones y datos (bloque G) ──────────────────────────────────────────
+
+const Contrasena = z.string().min(1).max(1000);
+/** Teléfono E.164 (+ y de 7 a 15 dígitos), lo mismo que exige la base. */
+const Telefono = z.string().regex(/^\+[1-9][0-9]{6,14}$/, { error: 'teléfono en formato internacional: +521234567890' });
+
+export const Perfil = z
+  .object({
+    id: z.uuid(),
+    nombre: z.string(),
+    correo: z.string(),
+    telefono: z.string().nullable(),
+    rol: Rol,
+    creadaEn: z.iso.datetime(),
+    activadaEn: z.iso.datetime().nullable(),
+    mfaActivo: z.boolean(),
+    avatar: z.object({ tipo: z.enum(['image/jpeg', 'image/png']), ancho: z.number().int(), alto: z.number().int(), hash: z.string() }).nullable(),
+    cambioCorreoPendiente: z
+      .object({ correoNuevo: z.string(), expiraEn: z.iso.datetime() })
+      .nullable()
+      .meta({ description: 'Cambio de correo pedido y aún sin confirmar desde la dirección nueva' }),
+  })
+  .meta({ id: 'Perfil' });
+
+export const ActualizarPerfil = z
+  .object({ nombre: z.string().trim().min(1).max(80).optional(), telefono: Telefono.nullable().optional() })
+  .refine((v) => v.nombre !== undefined || v.telefono !== undefined, { error: 'envía nombre o telefono' })
+  .meta({ id: 'ActualizarPerfil' });
+
+export const CambioCorreoSolicitud = z.object({ correoNuevo: Correo, contrasena: Contrasena }).meta({ id: 'CambioCorreoSolicitud' });
+
+export const CambioCorreoRespuesta = z
+  .object({ mensaje: z.string() })
+  .meta({ id: 'CambioCorreoRespuesta', description: 'SIEMPRE la misma respuesta, esté o no en uso la dirección nueva.' });
+
+export const ConfirmarCorreo = z.object({ token: Token43 }).meta({ id: 'ConfirmarCorreo' });
+
+export const CambioContrasena = z.object({ actual: Contrasena, nueva: Contrasena }).meta({ id: 'CambioContrasena' });
+
+export const SesionActiva = z
+  .object({
+    id: z.uuid(),
+    actual: z.boolean().meta({ description: 'Es la sesión de esta petición' }),
+    creadaEn: z.iso.datetime(),
+    ultimoUsoEn: z.iso.datetime(),
+    expiraEn: z.iso.datetime(),
+    ipRed: z.string().nullable().meta({ description: 'Red truncada: /24 en IPv4, /48 en IPv6. Nunca la IP completa.' }),
+    ubicacion: z.string().nullable().meta({ description: 'Aproximada, a partir de la red truncada' }),
+    userAgent: z.string().nullable().meta({ example: 'Firefox · Windows' }),
+    mfaVerificada: z.boolean(),
+  })
+  .meta({ id: 'SesionActiva' });
+
+export const ListaSesiones = z.object({ sesiones: z.array(SesionActiva) }).meta({ id: 'ListaSesiones' });
+
+export const IdSesion = z.object({ id: z.uuid() });
+
+export const SesionesCerradas = z.object({ cerradas: z.number().int() }).meta({ id: 'SesionesCerradas' });
+
+export const AvatarGuardado = z
+  .object({ tipo: z.enum(['image/jpeg', 'image/png']), ancho: z.number().int(), alto: z.number().int(), bytes: z.number().int(), hash: z.string() })
+  .meta({ id: 'AvatarGuardado', description: 'Ya sin metadatos (EXIF, GPS, XMP, ICC, comentarios).' });
+
+export const ConfirmarConContrasena = z.object({ contrasena: Contrasena }).meta({ id: 'ConfirmarConContrasena' });
+
+export const EliminarCuentaSolicitud = z
+  .object({ contrasena: Contrasena, codigo: CodigoTotp.optional().meta({ description: 'Obligatorio si la cuenta tiene MFA' }) })
+  .meta({ id: 'EliminarCuentaSolicitud' });
+
+export const CuentaEliminada = z
+  .object({ espaciosBorrados: z.number().int(), documentosBorrados: z.number().int() })
+  .meta({ id: 'CuentaEliminada', description: 'Espacios donde era el único miembro y sus documentos (sin colaboradores).' });
+
+export const PropiedadCompartida = z
+  .object({ tipo: z.enum(['documento', 'espacio']), id: z.uuid(), nombre: z.string() })
+  .meta({ id: 'PropiedadCompartida', description: 'Lo que hay que transferir antes de eliminar la cuenta.' });
+
+export const ErrorPropiedadCompartida = z
+  .object({
+    error: z.object({
+      codigo: z.literal('propiedad_compartida'),
+      mensaje: z.string(),
+      solicitud: z.string(),
+      detalles: z.array(PropiedadCompartida),
+    }),
+  })
+  .meta({ id: 'ErrorPropiedadCompartida' });

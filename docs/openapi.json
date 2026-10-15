@@ -554,6 +554,416 @@
           "token",
           "contrasena"
         ]
+      },
+      "Perfil": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "lector"
+            ]
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activadaEn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "mfaActivo": {
+            "type": "boolean"
+          },
+          "avatar": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "tipo": {
+                "type": "string",
+                "enum": [
+                  "image/jpeg",
+                  "image/png"
+                ]
+              },
+              "ancho": {
+                "type": "integer"
+              },
+              "alto": {
+                "type": "integer"
+              },
+              "hash": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "tipo",
+              "ancho",
+              "alto",
+              "hash"
+            ]
+          },
+          "cambioCorreoPendiente": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "correoNuevo": {
+                "type": "string"
+              },
+              "expiraEn": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "correoNuevo",
+              "expiraEn"
+            ],
+            "description": "Cambio de correo pedido y aún sin confirmar desde la dirección nueva"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "telefono",
+          "rol",
+          "creadaEn",
+          "activadaEn",
+          "mfaActivo",
+          "avatar",
+          "cambioCorreoPendiente"
+        ]
+      },
+      "ActualizarPerfil": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "telefono": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\+[1-9][0-9]{6,14}$"
+          }
+        }
+      },
+      "CambioCorreoRespuesta": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mensaje"
+        ],
+        "description": "SIEMPRE la misma respuesta, esté o no en uso la dirección nueva."
+      },
+      "CambioCorreoSolicitud": {
+        "type": "object",
+        "properties": {
+          "correoNuevo": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "correoNuevo",
+          "contrasena"
+        ]
+      },
+      "ConfirmarCorreo": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "SesionesCerradas": {
+        "type": "object",
+        "properties": {
+          "cerradas": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cerradas"
+        ]
+      },
+      "CambioContrasena": {
+        "type": "object",
+        "properties": {
+          "actual": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "nueva": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "actual",
+          "nueva"
+        ]
+      },
+      "ListaSesiones": {
+        "type": "object",
+        "properties": {
+          "sesiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SesionActiva"
+            }
+          }
+        },
+        "required": [
+          "sesiones"
+        ]
+      },
+      "SesionActiva": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actual": {
+            "type": "boolean",
+            "description": "Es la sesión de esta petición"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimoUsoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ipRed": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Red truncada: /24 en IPv4, /48 en IPv6. Nunca la IP completa."
+          },
+          "ubicacion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Aproximada, a partir de la red truncada"
+          },
+          "userAgent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "Firefox · Windows"
+          },
+          "mfaVerificada": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "actual",
+          "creadaEn",
+          "ultimoUsoEn",
+          "expiraEn",
+          "ipRed",
+          "ubicacion",
+          "userAgent",
+          "mfaVerificada"
+        ]
+      },
+      "AvatarGuardado": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png"
+            ]
+          },
+          "ancho": {
+            "type": "integer"
+          },
+          "alto": {
+            "type": "integer"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "ancho",
+          "alto",
+          "bytes",
+          "hash"
+        ],
+        "description": "Ya sin metadatos (EXIF, GPS, XMP, ICC, comentarios)."
+      },
+      "ConfirmarConContrasena": {
+        "type": "object",
+        "properties": {
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "contrasena"
+        ]
+      },
+      "CuentaEliminada": {
+        "type": "object",
+        "properties": {
+          "espaciosBorrados": {
+            "type": "integer"
+          },
+          "documentosBorrados": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "espaciosBorrados",
+          "documentosBorrados"
+        ],
+        "description": "Espacios donde era el único miembro y sus documentos (sin colaboradores)."
+      },
+      "ErrorPropiedadCompartida": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "codigo": {
+                "type": "string",
+                "enum": [
+                  "propiedad_compartida"
+                ]
+              },
+              "mensaje": {
+                "type": "string"
+              },
+              "solicitud": {
+                "type": "string"
+              },
+              "detalles": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PropiedadCompartida"
+                }
+              }
+            },
+            "required": [
+              "codigo",
+              "mensaje",
+              "solicitud",
+              "detalles"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "PropiedadCompartida": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "documento",
+              "espacio"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tipo",
+          "id",
+          "nombre"
+        ],
+        "description": "Lo que hay que transferir antes de eliminar la cuenta."
+      },
+      "EliminarCuentaSolicitud": {
+        "type": "object",
+        "properties": {
+          "contrasena": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "codigo": {
+            "type": "string",
+            "pattern": "^\\d{6}$",
+            "description": "Obligatorio si la cuenta tiene MFA"
+          }
+        },
+        "required": [
+          "contrasena"
+        ]
       }
     },
     "parameters": {}
@@ -1808,6 +2218,721 @@
           },
           "503": {
             "description": "Límites no disponibles (falla cerrado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta": {
+      "get": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Perfil de la cuenta",
+        "responses": {
+          "200": {
+            "description": "Perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Perfil"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Cambiar nombre o teléfono",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPerfil"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Perfil"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Eliminar la cuenta (lápida). Exige contraseña y, con MFA, un código.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EliminarCuentaSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Eliminada; borra la cookie de refresco",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaEliminada"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falta el código MFA",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Contraseña (o código MFA) incorrecta: suma al bloqueo de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Propietaria de contenido con colaboradores: error.detalles lista qué transferir",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorPropiedadCompartida"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos o cuenta bloqueada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/correo": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Pedir el cambio de correo: enlace al correo NUEVO y aviso al anterior. Misma respuesta esté o no en uso.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioCorreoSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Pedido recibido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CambioCorreoRespuesta"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Es el mismo correo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Contraseña (o código MFA) incorrecta: suma al bloqueo de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos o cuenta bloqueada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/correo/confirmar": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "summary": "Confirmar el correo nuevo con el token del enlace (sin sesión; un solo uso)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarCorreo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Correo cambiado; se avisa al anterior"
+          },
+          "400": {
+            "description": "Enlace inválido, usado o vencido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "La dirección ya tiene cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/contrasena": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Cambiar la contraseña: cierra las DEMÁS sesiones y avisa por correo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioContrasena"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesiones cerradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionesCerradas"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No cumple la política",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Contraseña (o código MFA) incorrecta: suma al bloqueo de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos o cuenta bloqueada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/sesiones": {
+      "get": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Sesiones activas: IP truncada, ubicación aproximada, user-agent corto",
+        "responses": {
+          "200": {
+            "description": "Sesiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaSesiones"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/sesiones/{id}": {
+      "delete": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Cerrar una sesión de la cuenta",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cerrada"
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No hay una sesión activa con ese id en tu cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/sesiones/cerrar-otras": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Cerrar todas las sesiones menos la actual",
+        "responses": {
+          "200": {
+            "description": "Cuántas se cerraron",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionesCerradas"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/avatar": {
+      "put": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Subir el avatar (JPEG o PNG, 1 MiB). Se guarda SIN metadatos; un archivo no analizable no se guarda.",
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Guardado (ya limpio)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarGuardado"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Más de 1 MiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type distinto de image/jpeg o image/png",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No es un JPEG o PNG analizable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Borrar el avatar",
+        "responses": {
+          "204": {
+            "description": "Borrado"
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios/{usuarioId}/avatar": {
+      "get": {
+        "tags": [
+          "usuarios"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Avatar de una cuenta (con ETag; CSP sin nada permitido)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "usuarioId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "La imagen",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Sin cambios (If-None-Match)"
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sin avatar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cuenta/exportacion": {
+      "post": {
+        "tags": [
+          "cuenta"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Exportar los datos de la cuenta en JSON (sin secretos). Exige la contraseña.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmarConContrasena"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Archivo JSON (Content-Disposition: attachment), formato cuaderno-exportacion/v1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Contraseña (o código MFA) incorrecta: suma al bloqueo de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados intentos o cuenta bloqueada",
             "content": {
               "application/json": {
                 "schema": {

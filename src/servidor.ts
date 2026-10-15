@@ -6,11 +6,13 @@ import { crearSenuelo } from './auth/contrasenas.js';
 import { crearProveedorCorreo } from './correo/proveedor.js';
 import { crearApp } from './app.js';
 import { cargarConfigOSalir } from './config/entorno.js';
+import { crearProveedorGeo } from './geo/proveedor.js';
 import { comprobacionBd, comprobacionEsquema, crearPool, crearPrisma } from './infra/bd.js';
 import { accionPorPrivilegios, leerPrivilegios, problemasDePrivilegios } from './infra/privilegios.js';
 import { comprobacionRedis, crearRedis } from './infra/redis.js';
 import { crearLogger } from './observabilidad/log.js';
 import { crearMetricas } from './observabilidad/metricas.js';
+import { iniciarRetencion, PATRON_RETENCION } from './trabajos/retencion.js';
 
 async function main(): Promise<void> {
   const config = cargarConfigOSalir(process.env);
@@ -38,6 +40,7 @@ async function main(): Promise<void> {
     prisma,
     redis,
     correo: crearProveedorCorreo(config, prisma),
+    geo: crearProveedorGeo(config, prisma),
     claveAcceso: Buffer.from(config.ACCESS_TOKEN_SECRET, 'base64'),
     claveMfa: Buffer.from(config.MFA_ENCRYPTION_KEY, 'base64'),
     appUrl: config.APP_URL,
@@ -60,12 +63,26 @@ async function main(): Promise<void> {
     log.info({ host: config.HOST, puerto: config.PORT, entorno: config.NODE_ENV }, 'Cuaderno API escuchando');
   });
 
+  // Retención diaria (BullMQ). Arranca después de escuchar: si Redis tarda, el API no espera por ella.
+  const retencion = iniciarRetencion({ redisUrl: config.REDIS_URL, prefijo: 'cuaderno:bull', prisma, log }).then(
+    (r) => {
+      log.info({ patron: PATRON_RETENCION, zona: 'UTC' }, 'retención diaria agendada');
+      return r;
+    },
+    (err: unknown) => {
+      log.error({ err }, 'retención diaria: no se pudo agendar');
+      return undefined;
+    },
+  );
+
   const apagar = crearApagado({
     servidor,
     estado,
     log,
     limiteMs: config.SHUTDOWN_TIMEOUT_MS,
     cerrarRecursos: async () => {
+      // Primero el worker: espera al job en curso (si lo hay) antes de cerrar la base.
+      await (await retencion)?.cerrar();
       await prisma.$disconnect();
       await pool.end();
       redis.disconnect();

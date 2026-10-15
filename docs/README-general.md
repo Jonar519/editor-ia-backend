@@ -48,6 +48,12 @@ La tabla crece con cada bloque. **Demo** indica el archivo `docs/demo-<fase>.md`
 | Recuperación sin enumeración | `src/auth/recuperacion.ts`: responde antes de trabajar | Correo real e inexistente: misma respuesta y mismo tiempo | backend: F |
 | Auditoría de seguridad | `eventos_seguridad`: solo inserción, IP truncada, sin texto libre (0015) | Paso 9 de la demo F; mutaciones F08–F14 y G23 | backend: F, database: F |
 | Ningún token en logs ni en la base | `secretos.test.ts`: captura de logs + barrido de todas las tablas | Mutaciones G01 y G02 | backend: F |
+| Limpieza de metadatos sin dependencias | `src/imagen/limpiar.ts`: lista blanca de segmentos JPEG y chunks PNG | Subir un JPEG con EXIF/GPS y ver que no queda; mutaciones U01–U11 | backend: G |
+| Cambio de correo con re-verificación | `src/cuenta/perfil.ts`: enlace al correo nuevo, aviso al anterior | Pasos 3–4 de la demo G; mutaciones U12–U17 | backend: G |
+| Sesiones activas y cierre remoto | `GET /api/cuenta/sesiones`, `src/geo` | Cerrar una sesión desde otra y ver el 401 | backend: G |
+| Exportación sin secretos | `src/cuenta/datos.ts` | Mutación U26 (barrido de secretos en el JSON) | backend: G |
+| Eliminación por lápida sin huérfanos | `eliminar_cuenta()` en la base (0018) | 409 con propiedad compartida; mutaciones G09–G15 y U28–U31 | backend: G, database: G |
+| Retención con job agendado | `purgar_retencion()` (0019) + BullMQ (`src/trabajos/retencion.ts`) | [data-retention.md](data-retention.md); mutaciones G16–G20 y U32–U34 | backend: G, database: G |
 | Pruebas de mutación | `mutations/catalogo.json` en cada repo | `scripts\mutar.bat` | todos |
 | CI | `.github/workflows/ci.yml` en cada repo | Pestaña Actions de cada PR | todos |
 
@@ -90,3 +96,12 @@ Además, producción se niega a arrancar si:
 - **gRPC solo entre servicios internos** (confirmado con el profesor). El navegador habla REST/JSON y WebSocket. El bloque P se divide en P1 (servicio gRPC), P2 (embeddings, búsqueda, inyección y gateway) y P3 (informe REST/JSON vs gRPC), con un job `grpc` aparte en el CI. El ADR de comunicación va en el bloque K.
 - **Si hay que recortar tiempo**, LaTeX y Mermaid se recortan primero.
 - **Eliminación de cuenta (bloque G).** Se bloquea con 409 mientras la persona sea propietaria de documentos con otros colaboradores sin haber transferido la propiedad. Solo se borran los documentos sin colaboradores.
+  - Colaborador es cualquier otro miembro del espacio del documento, porque los documentos no tienen privacidad dentro de su espacio.
+  - También da 409 ser propietaria de un espacio con otros miembros: el espacio necesita un propietario.
+  - La hace la base en una transacción (`eliminar_cuenta()`). La cuenta queda como lápida y sus eventos de seguridad se anonimizan.
+- **Retención.** Detalle en [data-retention.md](data-retention.md):
+  - los plazos los fija la base;
+  - el job diario de BullMQ (03:15 UTC) corre dentro del proceso del API;
+  - la purga de invitaciones vencidas queda propuesta, fuera del alcance de G.
+- **Avatar.** Solo JPEG o PNG, 1 MiB y 4096 px como máximo. Se guarda en la base, ya limpio. Se sirve a cualquier sesión válida (presencia, comentarios) con `Content-Security-Policy: default-src 'none'; sandbox`.
+- **Acciones sensibles de la cuenta.** Cambiar correo o contraseña, exportar y eliminar exigen la contraseña. Eliminar exige además el código MFA si la cuenta lo tiene. Los fallos suman al mismo bloqueo progresivo que el login.

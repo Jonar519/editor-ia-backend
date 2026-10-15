@@ -319,6 +319,7 @@ model usuarios {
   activada_en               DateTime?                   @db.Timestamptz(6)
   eliminada_en              DateTime?                   @db.Timestamptz(6)
   actualizaciones_documento actualizaciones_documento[]
+  avatares                  avatares?
   cambios_correo            cambios_correo[]
   comentarios               comentarios[]
   documentos                documentos[]
@@ -391,4 +392,19 @@ model inscripciones_mfa {
 
   @@unique([usuario_id, estado_usuario], map: "inscripciones_mfa_una_por_cuenta")
   @@unique([invitacion_id, usuario_id], map: "inscripciones_mfa_una_por_invitacion")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model avatares {
+  usuario_id     String   @id @db.Uuid
+  estado_usuario String   @default("activa")
+  tipo           String
+  datos          Bytes
+  ancho          Int
+  alto           Int
+  hash           Bytes
+  actualizado_en DateTime @default(now()) @db.Timestamptz(6)
+  usuarios       usuarios @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "avatares_usuario_activo")
+
+  @@unique([usuario_id, estado_usuario], map: "avatares_una_por_cuenta")
 }
