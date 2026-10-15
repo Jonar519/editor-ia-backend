@@ -2,7 +2,7 @@
 
 Qué datos guarda Cuaderno, cuánto tiempo y quién los borra.
 
-**Quién decide los plazos.** Los plazos viven **en la base** (repo `editor-ia-database`, migraciones 0015 y 0019) y se miden con su reloj (`now()`).
+**Quién decide los plazos.** Los plazos viven **en la base** (repo `editor-ia-database`, migraciones 0015, 0019 y 0020) y se miden con su reloj (`now()`).
 
 **Quién ejecuta la purga.** El backend solo decide **cuándo** se ejecuta: un job de BullMQ, todos los días a las **03:15 UTC** (`src/trabajos/retencion.ts`), llama a `purgar_retencion()`.
 
@@ -17,6 +17,7 @@ Qué datos guarda Cuaderno, cuánto tiempo y quién los borra.
 | Cambios de correo | 1 día después de vencer (vencen a los 60 min) | Igual que los de recuperación. | `purgar_retencion()` |
 | Correos simulados (buzón de la demo) | Al vencer (7 días como máximo, lo exige un CHECK) | Solo existen con el proveedor `mock`, que producción no admite. | `purgar_retencion()` |
 | Eventos de seguridad | 180 días | Auditoría: suficiente para investigar incidentes sin guardar historial indefinido. | `purgar_retencion()`; el trigger de solo inserción no deja borrar nada más reciente |
+| Cuentas pendientes con la invitación vencida, con su invitación e inscripción MFA en cascada | 7 días después de vencer la invitación (vence a las 72 h) | Son nombre y correo de alguien que nunca completó el alta. Los 7 días dan margen para que un admin reenvíe la invitación. Sus eventos de seguridad se anonimizan. | `purgar_retencion()` (0020) |
 | Desafíos MFA | 5 minutos (TTL de Redis) | Un solo uso; en Redis solo se guarda su hash. | Redis |
 | Contadores de límites de tasa | El tamaño de su ventana (TTL de Redis) | Solo sirven dentro de la ventana. | Redis |
 
@@ -75,5 +76,4 @@ Efecto conocido: al quitar EXIF también se pierde la orientación, así que una
 
 | Dato | Situación actual |
 |---|---|
-| Invitaciones vencidas y sus cuentas pendientes | Vencen a las 72 h, pero no se borran solas. Un admin las cancela o las reenvía. Purgarlas tiene sentido (son nombre y correo de alguien que no completó el alta) y queda **propuesto**, no implementado: no estaba en el alcance del bloque G. |
 | `rangos_ip_geo` | No son datos personales: es una tabla de rangos de red. |
