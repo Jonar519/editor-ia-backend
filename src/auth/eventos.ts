@@ -20,7 +20,16 @@ export type TipoEvento =
   | 'invitacion_cancelada'
   | 'invitacion_completada'
   | 'recuperacion_solicitada'
-  | 'contrasena_restablecida';
+  | 'contrasena_restablecida'
+  | 'perfil_actualizado'
+  | 'cambio_correo_solicitado'
+  | 'correo_cambiado'
+  | 'contrasena_cambiada'
+  | 'sesion_cerrada'
+  | 'otras_sesiones_cerradas'
+  | 'avatar_actualizado'
+  | 'avatar_eliminado'
+  | 'datos_exportados';
 
 export async function registrarEvento(db: Tx, tipo: TipoEvento, usuarioId: string | null, ipRed: string | null): Promise<void> {
   await db.$executeRaw`
