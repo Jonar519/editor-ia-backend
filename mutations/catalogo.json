@@ -965,6 +965,312 @@
       "pruebas": [
         "tests/integracion/auditoria.test.ts"
       ]
+    },
+    {
+      "id": "U01",
+      "regla": "Avatar JPEG: los segmentos APP (EXIF/GPS, XMP, ICC) y comentarios se descartan",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "      // APP0–APP15 (JFIF, EXIF y GPS, XMP, ICC, IPTC, Adobe...) y comentarios: fuera.\n      i = fin;",
+      "reemplazo": "      partes.push(segmento);\n      i = fin;",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U02",
+      "regla": "Avatar JPEG: lo pegado después de FF D9 se descarta",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "      partes.push(Buffer.from([0xff, EOI])); // lo que venga después de FF D9 se descarta",
+      "reemplazo": "      partes.push(Buffer.from([0xff, EOI]), b.subarray(i));",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U03",
+      "regla": "Avatar JPEG: dimensiones de 1 a 4096 px",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "      dims = { alto: b.readUInt16BE(i + 3), ancho: b.readUInt16BE(i + 5) };\n      validarLados(dims.ancho, dims.alto);",
+      "reemplazo": "      dims = { alto: b.readUInt16BE(i + 3), ancho: b.readUInt16BE(i + 5) };",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U04",
+      "regla": "Avatar PNG: dimensiones de 1 a 4096 px",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "      dims = { ancho: datos.readUInt32BE(0), alto: datos.readUInt32BE(4) };\n      validarLados(dims.ancho, dims.alto);",
+      "reemplazo": "      dims = { ancho: datos.readUInt32BE(0), alto: datos.readUInt32BE(4) };",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U05",
+      "regla": "Avatar PNG: lista blanca de chunks (los de texto se descartan)",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "const PNG_CONSERVAR = new Set(['IHDR', 'PLTE', 'tRNS', 'IDAT', 'IEND']);",
+      "reemplazo": "const PNG_CONSERVAR = new Set(['IHDR', 'PLTE', 'tRNS', 'IDAT', 'IEND', 'tEXt']);",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U06",
+      "regla": "Avatar PNG: lo pegado después de IEND se descarta",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "      partes.push(chunk);\n      break; // lo que venga después de IEND se descarta",
+      "reemplazo": "      partes.push(chunk, b.subarray(fin));\n      break;",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U07",
+      "regla": "Avatar PNG: el CRC de cada chunk se verifica",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "    if (crc32(b.subarray(i + 4, i + 8 + largo)) !== b.readUInt32BE(i + 8 + largo)) throw",
+      "reemplazo": "    if (false) throw",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U08",
+      "regla": "Avatar PNG: un chunk crítico desconocido rechaza el archivo",
+      "archivo": "src/imagen/limpiar.ts",
+      "buscar": "      throw new ErrorImagen(`PNG: chunk crítico no admitido (${tipo})`);",
+      "reemplazo": "      // descartado",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/imagen.test.ts"]
+    },
+    {
+      "id": "U09",
+      "regla": "Avatar: se guarda la versión limpia, nunca el original",
+      "archivo": "src/cuenta/avatar.ts",
+      "buscar": "VALUES (${usuarioId}::uuid, ${limpia.tipo}, ${limpia.datos}, ${limpia.ancho}, ${limpia.alto}, sha256(${limpia.datos}))",
+      "reemplazo": "VALUES (${usuarioId}::uuid, ${limpia.tipo}, ${archivo}, ${limpia.ancho}, ${limpia.alto}, sha256(${archivo}))",
+      "comando": "test",
+      "pruebas": ["tests/integracion/avatar.test.ts"]
+    },
+    {
+      "id": "U10",
+      "regla": "Avatar: un archivo no analizable responde 422",
+      "archivo": "src/cuenta/avatar.ts",
+      "buscar": "if (e instanceof ErrorImagen) throw new ErrorHttp(422,",
+      "reemplazo": "if (false) throw new ErrorHttp(422,",
+      "comando": "test",
+      "pruebas": ["tests/integracion/avatar.test.ts"]
+    },
+    {
+      "id": "U11",
+      "regla": "Avatar: se sirve con CSP sin nada permitido",
+      "archivo": "src/usuarios/rutas.ts",
+      "buscar": "    res.setHeader('Content-Security-Policy', \"default-src 'none'; sandbox\");\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/avatar.test.ts"]
+    },
+    {
+      "id": "U12",
+      "regla": "Cambio de correo: exige la contraseña",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "  await exigirContrasena(d, u.id, e.contrasena, e.ipRed);\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U13",
+      "regla": "Cambio de correo: a una dirección con cuenta no se envía nada",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "  if (enUso) return; // nada que enviar: el correo ya tiene cuenta (y no se dice)\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U14",
+      "regla": "Cambio de correo: se avisa al correo anterior al pedirlo",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "  if (u.correo) await d.correo.enviar(correoAvisoCambioCorreo({ para: u.correo, nombre, correoNuevo, momento: 'solicitado' }));\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U15",
+      "regla": "Cambio de correo: el enlace vence",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "AND c.confirmado_en IS NULL AND c.expira_en > now() AND",
+      "reemplazo": "AND c.confirmado_en IS NULL AND",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U16",
+      "regla": "Cambio de correo: el enlace es de un solo uso",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "AND c.confirmado_en IS NULL AND c.expira_en > now() AND",
+      "reemplazo": "AND c.expira_en > now() AND",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U17",
+      "regla": "Cambio de correo: confirmar invalida los enlaces de recuperación pendientes",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "    await tx.tokens_recuperacion.deleteMany({ where: { usuario_id: c.usuario_id, usado_en: null } });\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U18",
+      "regla": "Cambio de contraseña: exige la actual",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "  await exigirContrasena(d, u.id, e.actual, e.ipRed);\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U19",
+      "regla": "Cambio de contraseña: cierra las demás sesiones",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "UPDATE sesiones SET revocada_en = now(), motivo_revocacion = 'cambio_contrasena'\n      WHERE usuario_id = ${u.id}::uuid AND id <> ${u.sesionId}::uuid AND revocada_en IS NULL",
+      "reemplazo": "SELECT 1 WHERE false",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U20",
+      "regla": "Cambio de contraseña: la sesión actual sigue",
+      "archivo": "src/cuenta/perfil.ts",
+      "buscar": "WHERE usuario_id = ${u.id}::uuid AND id <> ${u.sesionId}::uuid AND revocada_en IS NULL",
+      "reemplazo": "WHERE usuario_id = ${u.id}::uuid AND revocada_en IS NULL",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U21",
+      "regla": "Re-autenticación: una contraseña incorrecta suma al bloqueo de la cuenta",
+      "archivo": "src/cuenta/reautenticar.ts",
+      "buscar": "    await sumarFalloCuenta(d.prisma, usuarioId);\n    await registrarEvento(d.prisma, 'inicio_fallido', usuarioId, ipRed);",
+      "reemplazo": "    await registrarEvento(d.prisma, 'inicio_fallido', usuarioId, ipRed);",
+      "comando": "test",
+      "pruebas": ["tests/integracion/perfil.test.ts"]
+    },
+    {
+      "id": "U22",
+      "regla": "Sesiones: solo se cierra una sesión de la propia cuenta",
+      "archivo": "src/cuenta/sesiones.ts",
+      "buscar": "WHERE id = ${sesionId}::uuid AND usuario_id = ${u.id}::uuid AND",
+      "reemplazo": "WHERE id = ${sesionId}::uuid AND",
+      "comando": "test",
+      "pruebas": ["tests/integracion/sesiones-cuenta.test.ts"]
+    },
+    {
+      "id": "U23",
+      "regla": "Sesiones: cerrar las demás no cierra la actual",
+      "archivo": "src/cuenta/sesiones.ts",
+      "buscar": "WHERE usuario_id = ${u.id}::uuid AND id <> ${u.sesionId}::uuid AND revocada_en IS NULL",
+      "reemplazo": "WHERE usuario_id = ${u.id}::uuid AND revocada_en IS NULL",
+      "comando": "test",
+      "pruebas": ["tests/integracion/sesiones-cuenta.test.ts"]
+    },
+    {
+      "id": "U24",
+      "regla": "Sesiones: la lista muestra solo las vivas",
+      "archivo": "src/cuenta/sesiones.ts",
+      "buscar": "WHERE usuario_id = ${u.id}::uuid AND revocada_en IS NULL AND expira_en > now()\n    ORDER BY",
+      "reemplazo": "WHERE usuario_id = ${u.id}::uuid\n    ORDER BY",
+      "comando": "test",
+      "pruebas": ["tests/integracion/sesiones-cuenta.test.ts"]
+    },
+    {
+      "id": "U25",
+      "regla": "Sesiones: la ubicación aproximada se guarda al iniciar sesión",
+      "archivo": "src/auth/servicio.ts",
+      "buscar": "userAgent: e.userAgent, ubicacion, mfaVerificada: e.mfaVerificada",
+      "reemplazo": "userAgent: e.userAgent, mfaVerificada: e.mfaVerificada",
+      "comando": "test",
+      "pruebas": ["tests/integracion/sesiones-cuenta.test.ts"]
+    },
+    {
+      "id": "U26",
+      "regla": "Exportación: ningún secreto (solo columnas de una lista blanca)",
+      "archivo": "src/cuenta/datos.ts",
+      "buscar": "    cuenta: {\n      id: u.id,",
+      "reemplazo": "    cuenta: {\n      ...(await p.usuarios.findUniqueOrThrow({ where: { id: usuarioId } })),\n      id: u.id,",
+      "comando": "test",
+      "pruebas": ["tests/integracion/datos.test.ts"]
+    },
+    {
+      "id": "U27",
+      "regla": "Exportación: exige la contraseña",
+      "archivo": "src/cuenta/datos.ts",
+      "buscar": "  await exigirContrasena(d, usuarioId, contrasena, ipRed);\n  const p = d.prisma;",
+      "reemplazo": "  const p = d.prisma;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/datos.test.ts"]
+    },
+    {
+      "id": "U28",
+      "regla": "Eliminar cuenta: exige la contraseña",
+      "archivo": "src/cuenta/datos.ts",
+      "buscar": "  await exigirContrasena(d, usuarioId, e.contrasena, e.ipRed);\n  await exigirMfaSiActivo",
+      "reemplazo": "  await exigirMfaSiActivo",
+      "comando": "test",
+      "pruebas": ["tests/integracion/datos.test.ts"]
+    },
+    {
+      "id": "U29",
+      "regla": "Eliminar cuenta: con MFA exige un código válido",
+      "archivo": "src/cuenta/datos.ts",
+      "buscar": "  await exigirMfaSiActivo(d, usuarioId, e.codigo, e.ipRed);\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/datos.test.ts"]
+    },
+    {
+      "id": "U30",
+      "regla": "Eliminar cuenta: si la base detecta propiedad compartida (carrera), 409 y no 500",
+      "archivo": "src/cuenta/datos.ts",
+      "buscar": "    if (sqlstateDe(err) === 'CU409') throw",
+      "reemplazo": "    if (false) throw",
+      "comando": "test",
+      "pruebas": ["tests/integracion/datos.test.ts"]
+    },
+    {
+      "id": "U31",
+      "regla": "Eliminar cuenta: se borra la cookie de refresco",
+      "archivo": "src/cuenta/rutas.ts",
+      "buscar": "    borrarCookieRefresco(res, d.cookieSegura);\n    res.json(resultado);",
+      "reemplazo": "    res.json(resultado);",
+      "comando": "test",
+      "pruebas": ["tests/integracion/datos.test.ts"]
+    },
+    {
+      "id": "U32",
+      "regla": "Retención: agendada todos los días a las 03:15",
+      "archivo": "src/trabajos/retencion.ts",
+      "buscar": "export const PATRON_RETENCION = '15 3 * * *';",
+      "reemplazo": "export const PATRON_RETENCION = '15 3 * * 0';",
+      "comando": "test",
+      "pruebas": ["tests/integracion/retencion.test.ts"]
+    },
+    {
+      "id": "U33",
+      "regla": "Retención: en UTC (no depende de la zona del servidor)",
+      "archivo": "src/trabajos/retencion.ts",
+      "buscar": "{ pattern: PATRON_RETENCION, tz: ZONA_RETENCION }",
+      "reemplazo": "{ pattern: PATRON_RETENCION }",
+      "comando": "test",
+      "pruebas": ["tests/integracion/retencion.test.ts"]
+    },
+    {
+      "id": "U34",
+      "regla": "Retención: el worker ejecuta la purga de la base",
+      "archivo": "src/trabajos/retencion.ts",
+      "buscar": "      const resultado = await ejecutarRetencion(o.prisma);",
+      "reemplazo": "      const resultado = {};",
+      "comando": "test",
+      "pruebas": ["tests/integracion/retencion.test.ts"]
     }
   ]
 }
