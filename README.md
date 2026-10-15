@@ -69,6 +69,16 @@ Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesió
 | `POST /api/cuenta/mfa/iniciar`, `/confirmar` | Activar MFA (editor y lector). Confirmar entrega los códigos de respaldo. |
 | `POST /api/cuenta/mfa/codigos-respaldo` | Regenerar los códigos de respaldo (exige un código TOTP). |
 | `DELETE /api/cuenta/mfa` | Desactivar MFA. Para un admin: 409 `mfa_obligatorio`. |
+| `GET/PATCH /api/cuenta` | Perfil: leer, o cambiar nombre y teléfono. |
+| `POST /api/cuenta/correo` | Pedir el cambio de correo (exige la contraseña). Enlace al correo nuevo y aviso al anterior. Misma respuesta esté o no en uso la dirección. |
+| `POST /api/cuenta/correo/confirmar` | Confirmar el correo nuevo con el token del enlace (sin sesión). Avisa al anterior. |
+| `POST /api/cuenta/contrasena` | Cambiar la contraseña (exige la actual). Cierra las demás sesiones. |
+| `GET /api/cuenta/sesiones` | Sesiones vivas con IP truncada, ubicación aproximada y user-agent corto. |
+| `DELETE /api/cuenta/sesiones/{id}`, `POST /api/cuenta/sesiones/cerrar-otras` | Cerrar una sesión, o todas menos la actual. |
+| `PUT/DELETE /api/cuenta/avatar` | Subir (JPEG o PNG, se guarda sin metadatos) o borrar el avatar. |
+| `GET /api/usuarios/{id}/avatar` | Avatar de una cuenta (con ETag). |
+| `POST /api/cuenta/exportacion` | Exportar los datos en JSON, sin secretos (exige la contraseña). |
+| `DELETE /api/cuenta` | Eliminar la cuenta por lápida (contraseña y, con MFA, un código). 409 si hay propiedad compartida. |
 
 ## Configuración
 
@@ -90,7 +100,8 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | `/health` | Solo responde que el proceso vive; no revisa dependencias. |
 | `/ready` | Revisa base, versión mínima del esquema y Redis, con 2 s por comprobación. Responde 503 si algo falla o si el proceso se está apagando. |
 | `/metrics` | Prometheus con prefijo `cuaderno_`. La duración HTTP se etiqueta con el **patrón** de ruta, nunca con la URL. |
-| Apagado | `SIGTERM`/`SIGINT`: deja de aceptar conexiones, `/ready` pasa a 503, espera las peticiones en curso (hasta `SHUTDOWN_TIMEOUT_MS`) y cierra base y Redis una sola vez. |
+| Apagado | `SIGTERM`/`SIGINT`: deja de aceptar conexiones, `/ready` pasa a 503, espera las peticiones en curso (hasta `SHUTDOWN_TIMEOUT_MS`), cierra el worker de BullMQ (espera el job en curso) y cierra base y Redis una sola vez. |
+| Trabajos | BullMQ. Retención diaria a las 03:15 UTC: llama a `purgar_retencion()` de la base. Ver [docs/data-retention.md](docs/data-retention.md). |
 | Errores | JSON `{ error: { codigo, mensaje, solicitud } }`. Un error inesperado responde 500 genérico: el detalle solo va al log. |
 | Logs | pino en JSON. Nunca registra `Authorization`, cookies, contraseñas ni tokens. |
 | OpenAPI | Generada desde los esquemas zod (`docs/openapi.json`). `npm run openapi:check` falla si quedó desactualizada. |
