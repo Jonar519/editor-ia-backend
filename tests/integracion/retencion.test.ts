@@ -46,7 +46,14 @@ describe('retención diaria', () => {
     try {
       const job = await retencion.cola.add('purgar', {});
       const resultado = (await job.waitUntilFinished(eventos, 10_000)) as Record<string, number>;
-      expect(Object.keys(resultado).sort()).toEqual(['cambios_correo', 'correos_simulados', 'eventos_seguridad', 'sesiones', 'tokens_recuperacion']);
+      expect(Object.keys(resultado).sort()).toEqual([
+        'cambios_correo',
+        'correos_simulados',
+        'cuentas_pendientes',
+        'eventos_seguridad',
+        'sesiones',
+        'tokens_recuperacion',
+      ]);
       expect(lineas.some((l) => l.msg === 'retención diaria ejecutada')).toBe(true);
     } finally {
       await eventos.close();
@@ -82,5 +89,20 @@ describe('retención diaria', () => {
     expect(await e.prisma.sesiones.count({ where: { id: viva[0]?.id ?? '' } })).toBe(1);
     expect(await e.prisma.tokens_recuperacion.count({ where: { usuario_id: c.id } })).toBe(0);
     expect(await e.prisma.correos_simulados.count({ where: { asunto: { in: [`viejo-${marca}`, `nuevo-${marca}`] } } })).toBe(1);
+  });
+
+  it('la purga borra la cuenta pendiente cuya invitación venció hace más de 7 días, con su invitación', async () => {
+    const correo = `pendiente.${randomBytes(5).toString('hex')}@example.com`;
+    const u = await e.prisma.usuarios.create({ data: { correo, nombre: 'Persona Ficticia', rol: 'editor' }, select: { id: true } });
+    await e.prisma.$executeRaw`
+      INSERT INTO invitaciones (usuario_id, token_hash, expira_en) VALUES (${u.id}::uuid, ${hashToken(tokenAleatorio())}, now() + interval '72 hours')`;
+    await e.prisma.$executeRaw`
+      UPDATE invitaciones SET creado_en = now() - interval '11 days', expira_en = now() - interval '8 days' WHERE usuario_id = ${u.id}::uuid`;
+    await e.prisma.$executeRaw`UPDATE usuarios SET creado_en = now() - interval '11 days' WHERE id = ${u.id}::uuid`;
+
+    const r = await ejecutarRetencion(e.prisma);
+    expect(r.cuentas_pendientes).toBeGreaterThanOrEqual(1);
+    expect(await e.prisma.usuarios.count({ where: { id: u.id } })).toBe(0);
+    expect(await e.prisma.invitaciones.count({ where: { usuario_id: u.id } })).toBe(0);
   });
 });
