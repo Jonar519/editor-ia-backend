@@ -250,12 +250,26 @@ describe('miembros', () => {
     expect((await request(app).patch(`/api/espacios/${id}`).set('authorization', ana.auth).send({ nombre: 'X' })).status).toBe(403);
   });
 
-  it('dos altas simultáneas de la misma cuenta: una entra y la otra recibe 409 (no un 500)', async () => {
+  it('tres altas simultáneas de la misma cuenta: una entra y las otras reciben 409 (no un 500)', async () => {
     const ana = await persona();
     const bruno = await persona();
     const id = await nuevoEspacio(ana);
-    const pedir = () => request(app).post(`/api/espacios/${id}/miembros`).set('authorization', ana.auth).send({ correo: bruno.correo, rol: 'lector' });
-    const estados = (await Promise.all([pedir(), pedir(), pedir()])).map((r) => r.status).sort();
-    expect(estados).toEqual([201, 409, 409]);
+    // Para que se SOLAPEN de verdad: otra conexión bloquea la fila de Bruno. La inserción en
+    // miembros_espacio necesita esa fila (clave foránea), así que cada alta queda esperando justo antes de
+    // insertar. Sin el bloqueo del espacio, las tres pasarían la comprobación "ya es miembro" y dos
+    // chocarían con la clave primaria (500); con él, esperan en fila y ven que ya es miembro.
+    const bloqueo = await e.pool.connect();
+    try {
+      await bloqueo.query('BEGIN');
+      await bloqueo.query('SELECT 1 FROM usuarios WHERE id = $1 FOR UPDATE', [bruno.id]);
+      const pedir = () => request(app).post(`/api/espacios/${id}/miembros`).set('authorization', ana.auth).send({ correo: bruno.correo, rol: 'lector' });
+      const enCurso = Promise.all([pedir(), pedir(), pedir()]);
+      await new Promise((r) => setTimeout(r, 500));
+      await bloqueo.query('COMMIT');
+      const estados = (await enCurso).map((r) => r.status).sort();
+      expect(estados).toEqual([201, 409, 409]);
+    } finally {
+      bloqueo.release();
+    }
   });
 });
