@@ -34,7 +34,7 @@ scripts\dev.bat
 curl -s -X POST http://127.0.0.1:4200/api/auth/sesion -H "content-type: application/json" -H "user-agent: Mozilla/5.0 (Windows NT 10.0) Firefox/140.0" -d "{\"correo\":\"luis.demo@example.com\",\"contrasena\":\"una frase larga para la demo\"}"
 set ACCESO=pega-el-accessToken
 curl -s http://127.0.0.1:4200/api/cuenta -H "authorization: Bearer %ACCESO%"
-curl -s -X PATCH http://127.0.0.1:4200/api/cuenta -H "authorization: Bearer %ACCESO%" -H "content-type: application/json" -d "{\"telefono\":\"+525512345678\"}"
+curl -s -X PATCH http://127.0.0.1:4200/api/cuenta -H "authorization: Bearer %ACCESO%" -H "content-type: application/json" -d "{\"telefono\":\"+15550100123\"}"
 ```
 
 **Qué debes ver:** el perfil sin ningún hash ni secreto. Después, el mismo perfil con el teléfono.

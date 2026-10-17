@@ -147,7 +147,7 @@ export const RestablecerSolicitud = z.object({ token: Token43, contrasena: z.str
 
 const Contrasena = z.string().min(1).max(1000);
 /** Teléfono E.164 (+ y de 7 a 15 dígitos), lo mismo que exige la base. */
-const Telefono = z.string().regex(/^\+[1-9][0-9]{6,14}$/, { error: 'teléfono en formato internacional: +521234567890' });
+const Telefono = z.string().regex(/^\+[1-9][0-9]{6,14}$/, { error: 'teléfono en formato internacional: +15550100123' });
 
 export const Perfil = z
   .object({
