@@ -1,6 +1,6 @@
 # ADR 0002 · Comunicación: REST, WebSocket, SSE y gRPC
 
-- **Estado:** propuesta (apertura del tramo 3). Espera aprobación escrita.
+- **Estado:** aceptada (decisiones escritas al abrir el tramo 3; el bloque K se divide en K1 y K2)
 - **Fecha:** 2026-10-17
 - **Relacionados:** [ADR 0001](0001-sesion.md) (sesión), [ADR 0003](0003-crdt.md) (CRDT), [ADR 0004](0004-motor-de-edicion.md) (motor de edición), contrato [`ia.proto`](../../proto/cuaderno/ia/v1/ia.proto) (borrador).
 
@@ -71,7 +71,7 @@ Restricciones ya decididas:
 - Límite de mensajes por conexión (ventana deslizante en memoria) y cierre con 4429 si se pasa.
 - La base repite la verificación al persistir: el trigger `actualizaciones_exigen_escritura` rechaza la actualización de quien no puede escribir. Es la segunda línea, no la primera.
 
-**De dónde sale el rol que verifica el guardia.** **Pregunta abierta, ver "Decisiones que necesito"**: consulta a la base por cada actualización, o rol en memoria invalidado por pub/sub y revalidado cada 30 s.
+**De dónde sale el rol que verifica el guardia.** Del estado de la conexión, en memoria. Se carga al abrir, se invalida por pub/sub y se revalida en la base cada 30 s o en cuanto la base rechaza una escritura. Si cambia, la conexión deja de retransmitirse en el acto (ver "Decisiones tomadas", punto 1).
 
 **Revocación que corta la conexión en curso (Redis pub/sub).** Canal `cuaderno:tiempo-real:revocaciones`. El API publica **después del commit** de cada cambio que puede quitar acceso:
 
@@ -188,17 +188,19 @@ Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto).
 | Origin | `upgrade` con otro `Origin` → 403 sin abrir. |
 | Un lector nunca escribe | Integración con un cliente "manipulado" que manda actualizaciones como lector: el documento no cambia en el servidor ni en los otros clientes, no hay fila nueva en `actualizaciones_documento`, queda el log y la métrica, y a la tercera se cierra con 4403. Mutación que quita el guardia → la prueba falla. |
 | Revocación | Con la conexión abierta: quitar el permiso, cerrar la sesión o borrar el documento → cierre con 4403, 4401 o 4404 en menos de 1 s (se mide). Mutación que no publica → falla. |
+| **Ventana residual (R-01)** | Se quita el permiso **sin** publicar en pub/sub (como si Redis perdiera el aviso). Se mide: (1) cuánto tarda la revalidación periódica en cortar la retransmisión (≤ 30 s, con reloj falso); (2) que la primera escritura rechazada por la base la corte enseguida; (3) cuántas actualizaciones llegaron a los demás en la ventana. Después del corte: **cero**. |
 | Redis caído | Sin Redis, el `upgrade` responde 503. |
 | Límites | Mensaje de 1 MiB + 1 → 1009; ráfaga por encima del límite → 4429. |
 | SSE y cancelación (P2) | Abortar el `fetch` a mitad → la llamada gRPC queda `CANCELLED` y el proveedor mock deja de generar. |
 | Mapeo de errores (P1) | Una prueba por fila de la tabla gRPC → HTTP. |
 | Carga (R) | HTTP con autocannon. WebSocket: autocannon no lo soporta, así que se usa un script propio con `ws` (N clientes, M cambios por segundo, latencia p50/p95/p99 de ida y vuelta). |
 
-## Decisiones que necesito (por escrito)
+## Decisiones tomadas (por escrito, 2026-10-17)
 
-1. **Rol del guardia en cada mensaje.** Recomiendo **(b)**:
-   - **(a) Consulta a la base por cada actualización** (`rol_efectivo_documento`, indexada). Lo más estricto: cero ventana. Cuesta una consulta por cambio; con varias personas escribiendo son decenas por segundo por documento.
-   - **(b) Rol en memoria por conexión**, verificado en cada mensaje, que se invalida al instante por pub/sub y se revalida en la base cada 30 s. La única ventana es "Redis perdió el mensaje y faltan menos de 30 s", y en ese caso la base rechaza igual al persistir (trigger). Así el permiso se verifica en cada mensaje sin una consulta por pulsación.
-2. **Ticket en `Sec-WebSocket-Protocol`** (recomendado) o como primer mensaje.
-3. **Autocompletado por el WebSocket del documento** (recomendado) o por SSE, una petición por pausa de escritura. No cambia nada del bloque K: es del tramo 4.
-4. **SSE sobre `fetch` POST** para resumir y mejorar (recomendado).
+1. **Rol del guardia: en memoria por conexión, verificado en cada mensaje.** Se invalida al instante por pub/sub y se revalida en la base cada 30 s. **Condición:** la ventana no puede dejar que alguien sin permiso siga siendo retransmitido a los demás. Por eso:
+   - cuando la revalidación (periódica o por pub/sub) encuentra un rol distinto, **la retransmisión de esa conexión se corta en el acto**: no se retransmite ni se aplica nada más de ella, se descarta lo que tenga en el búfer y se cierra con 4403;
+   - si la base rechaza al persistir una actualización de esa conexión (el trigger de escritura, `42501`), eso **dispara la revalidación inmediata**, sin esperar a los 30 s;
+   - la ventana que queda es un **riesgo residual** escrito en el [modelo de amenazas](../modelo-amenazas.md) (R-01). Una prueba de K2 la mide.
+2. **Ticket en `Sec-WebSocket-Protocol`.**
+3. **Autocompletado por el WebSocket del documento** (tramo 4).
+4. **SSE sobre `fetch` POST** para resumir y mejorar (tramo 4).

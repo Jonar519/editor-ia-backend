@@ -1,6 +1,6 @@
 # ADR 0004 · Motor de edición: CodeMirror 6 + Yjs, Markdown como fuente y sin HTML embebido
 
-- **Estado:** propuesta (apertura del tramo 3). Espera aprobación escrita. El motor y el "Markdown sin HTML embebido" ya están **decididos por escrito** (decisión A del bloque H1). Este ADR los formaliza y agrega cómo se aplican y cómo se prueban.
+- **Estado:** aceptada (decisiones escritas al abrir el tramo 3). El motor y el "Markdown sin HTML embebido" ya estaban decididos por escrito (decisión A del bloque H1). Este ADR los formaliza y agrega cómo se aplican y cómo se prueban.
 - **Fecha:** 2026-10-17
 - **Relacionados:** [ADR 0003](0003-crdt.md) (Yjs), [ADR 0002](0002-comunicacion.md) (WebSocket), `presupuestos.json` del frontend.
 
@@ -93,8 +93,13 @@ Cuaderno es para **documentación técnica**: títulos, listas, bloques de códi
 | Sin HTML embebido | Batería de cargas XSS escritas en el Markdown (`<script>`, `<img onerror>`, `javascript:`, SVG, `<iframe>`…): se muestran como texto y el DOM no tiene ninguna de esas etiquetas (O). Mutación que activa el HTML → falla. |
 | El Markdown se conserva | Lo que se escribe es lo que se guarda: misma cadena exacta en `versiones.contenido_texto` (N). |
 
-## Decisiones que necesito (por escrito)
+## Decisiones tomadas (por escrito, 2026-10-17)
 
-1. **Que los lectores no descarguen CodeMirror** (solo Yjs y el renderizador). Recomendado.
-2. **Tab no indenta** (sale del editor); se indenta con `Ctrl+]` y `Ctrl+[`. Recomendado por WCAG 2.1.2.
-3. Confirmar que **el violeta queda fuera** de los colores de cursores y que su propuesta llega antes del bloque L (no en K).
+1. **Los lectores no descargan CodeMirror**: solo Yjs y el renderizador.
+2. **Tab sale del editor; `Ctrl+]` y `Ctrl+[` indentan.** Se anuncia en la **ayuda del editor**, visible y alcanzable con el teclado.
+3. **Colores de los cursores, en el bloque L:**
+   - sin violeta;
+   - una paleta de **al menos 6 colores** con contraste medido en los dos temas;
+   - **el nombre siempre visible** junto al cursor: el color nunca es el único medio.
+   
+   Se proponen con su significado, sus usos y sus contrastes antes de aplicarlos, y se espera la respuesta.

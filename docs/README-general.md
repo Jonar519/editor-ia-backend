@@ -18,7 +18,7 @@ Este README general viaja dentro del repo del backend y se va completando bloque
 |---|---|---|
 | 1. Base e identidad (backend) | A–G | Cerrado |
 | 2. Frontend de identidad | H1, H2, I, J | Cerrado (confirmado por escrito al cerrar J) |
-| 3. Editor colaborativo | K–O | Abierto: ADR [0002](adr/0002-comunicacion.md), [0003](adr/0003-crdt.md) y [0004](adr/0004-motor-de-edicion.md) propuestos, esperan aprobación escrita |
+| 3. Editor colaborativo | K1, K2, L–O | Abierto. ADR [0002](adr/0002-comunicacion.md), [0003](adr/0003-crdt.md) y [0004](adr/0004-motor-de-edicion.md) aceptados. K se divide en K1 (CRUD por REST y migraciones) y K2 (WebSocket, guardia, revocación, persistencia y compactación). |
 | 4. IA | P1, P2, P3, Q | Pendiente |
 | 5. Cierre | R | Pendiente |
 
