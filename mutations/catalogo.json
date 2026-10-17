@@ -1271,6 +1271,196 @@
       "reemplazo": "      const resultado = {};",
       "comando": "test",
       "pruebas": ["tests/integracion/retencion.test.ts"]
+    },
+    {
+      "id": "W01",
+      "regla": "Acceso: un rol alcanza el mínimo cuando es IGUAL o mayor (lector < editor < propietario)",
+      "archivo": "src/contenido/acceso.ts",
+      "buscar": "NIVEL[rol] >= NIVEL[minimo]",
+      "reemplazo": "NIVEL[rol] > NIVEL[minimo]",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W02",
+      "regla": "Acceso: un miembro sin el rol necesario recibe 403 (no puede hacer la acción)",
+      "archivo": "src/contenido/acceso.ts",
+      "buscar": "  if (!alcanza(rol, minimo)) throw sinPermiso(mensaje);",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W03",
+      "regla": "Acceso: una cuenta de solo lectura no crea documentos (comprobación explícita del rol de cuenta)",
+      "archivo": "src/contenido/acceso.ts",
+      "buscar": "if (u.rol === 'lector' || !alcanza(rol, 'editor'))",
+      "reemplazo": "if (!alcanza(rol, 'editor'))",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"],
+      "equivalente": "Una cuenta de solo lectura nunca puede ser editora ni propietaria de un espacio (techo de rol de la base y de agregarMiembro), así que !alcanza(rol, 'editor') ya la rechaza. La comprobación del rol de cuenta es defensa en profundidad."
+    },
+    {
+      "id": "W04",
+      "regla": "Acceso: un lector del espacio no crea documentos (403, no un error de la base)",
+      "archivo": "src/contenido/acceso.ts",
+      "buscar": "if (u.rol === 'lector' || !alcanza(rol, 'editor'))",
+      "reemplazo": "if (u.rol === 'lector')",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "W05",
+      "regla": "Acceso: sin rol efectivo sobre el documento (no miembro) no hay acceso",
+      "archivo": "src/contenido/acceso.ts",
+      "buscar": "return f?.rol ? { rol: f.rol, espacioId: f.espacio_id } : null;",
+      "reemplazo": "return f ? { rol: f.rol ?? 'lector', espacioId: f.espacio_id } : null;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "W06",
+      "regla": "Acceso: quien no es miembro recibe 404, igual que un espacio inexistente (no 403)",
+      "archivo": "src/contenido/acceso.ts",
+      "buscar": "  if (!rol) throw espacioNoEncontrado();",
+      "reemplazo": "  if (!rol) throw sinPermiso('no eres miembro');",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W07",
+      "regla": "Espacios: una cuenta de solo lectura no crea espacios (403 claro, no un error de la base)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "  if (u.rol === 'lector') throw new ErrorHttp(403",
+      "reemplazo": "  if (false) throw new ErrorHttp(403",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W08",
+      "regla": "Miembros: una cuenta de solo lectura solo entra como lectora (409 rol_excede_cuenta)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "    if (c.rol === 'lector' && e.rol !== 'lector') throw rolExcedeCuenta();",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W09",
+      "regla": "Miembros: solo se agregan cuentas ACTIVAS (una pendiente responde igual que una inexistente)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "SELECT id, rol FROM usuarios WHERE correo = ${e.correo} AND estado = 'activa'",
+      "reemplazo": "SELECT id, rol FROM usuarios WHERE correo = ${e.correo}",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W10",
+      "regla": "Miembros: la propiedad del espacio no se cambia con un rol (se transfiere)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "    if (o.rol === 'propietario') throw usarTransferencia();",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W11",
+      "regla": "Miembros: no se quita a quien posee documentos del espacio (409 con la lista)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "    if (propios.length > 0) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W12",
+      "regla": "Miembros: salir es solo para uno mismo; quitar a otro exige ser propietario",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "    if (objetivo === usuarioId) {",
+      "reemplazo": "    if (true) {",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W13",
+      "regla": "Espacios: no se borra un espacio con otros miembros (se llevaría documentos ajenos)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "    if ((otros[0]?.n ?? 0) > 0) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W14",
+      "regla": "Espacios: transferir baja al propietario actual a editor (un solo propietario)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "    await tx.$executeRaw`UPDATE miembros_espacio SET rol = 'editor' WHERE espacio_id = ${espacioId}::uuid AND usuario_id = ${usuarioId}::uuid`;",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W15",
+      "regla": "Espacios: cada cambio bloquea la fila del espacio (altas simultáneas: 409, no 500)",
+      "archivo": "src/espacios/servicio.ts",
+      "buscar": "SELECT id FROM espacios WHERE id = ${espacioId}::uuid FOR UPDATE",
+      "reemplazo": "SELECT id FROM espacios WHERE id = ${espacioId}::uuid",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W16",
+      "regla": "Miembros: agregar tiene un límite por cuenta (enumeración de correos)",
+      "archivo": "src/espacios/rutas.ts",
+      "buscar": "agregar_miembro: { max: 30, ventanaMs: 15 * 60_000 },",
+      "reemplazo": "agregar_miembro: { max: 3000, ventanaMs: 15 * 60_000 },",
+      "comando": "test",
+      "pruebas": ["tests/integracion/espacios.test.ts"]
+    },
+    {
+      "id": "W17",
+      "regla": "Permisos: una cuenta de solo lectura no recibe \"editor\" sobre un documento (409)",
+      "archivo": "src/documentos/servicio.ts",
+      "buscar": "    if (o.permiso === 'propietario') throw usarTransferencia();\n    if (o.rolCuenta === 'lector') throw rolExcedeCuenta();",
+      "reemplazo": "    if (o.permiso === 'propietario') throw usarTransferencia();",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "W18",
+      "regla": "Permisos: solo el propietario del documento da permisos",
+      "archivo": "src/documentos/servicio.ts",
+      "buscar": "'propietario', 'Solo el propietario del documento da permisos'",
+      "reemplazo": "'editor', 'Solo el propietario del documento da permisos'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "W19",
+      "regla": "Documentos: solo el propietario del documento lo borra (la propietaria del espacio no)",
+      "archivo": "src/documentos/servicio.ts",
+      "buscar": "'propietario', 'Solo el propietario borra el documento'",
+      "reemplazo": "'editor', 'Solo el propietario borra el documento'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "W20",
+      "regla": "Documentos: un lector no cambia el título",
+      "archivo": "src/documentos/servicio.ts",
+      "buscar": "'editor', 'Un lector no cambia el título'",
+      "reemplazo": "'lector', 'Un lector no cambia el título'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "W21",
+      "regla": "Documentos: transferir deja al propietario anterior como editor (un solo propietario)",
+      "archivo": "src/documentos/servicio.ts",
+      "buscar": "    await tx.$executeRaw`UPDATE permisos_documento SET rol = 'editor' WHERE documento_id = ${documentoId}::uuid AND usuario_id = ${usuarioId}::uuid`;",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/documentos.test.ts"]
     }
   ]
 }
