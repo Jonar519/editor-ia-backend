@@ -172,11 +172,15 @@ describe('miembros', () => {
     expect((await request(app).post(`/api/espacios/${id}/miembros`).set('authorization', ana.auth).send({ correo: carla.correo, rol: 'propietario' })).status).toBe(400);
   });
 
-  it(`agregar tiene límite por cuenta (${String(LIMITES_ESPACIOS.agregar_miembro.max)} en 15 min): después, 429`, async () => {
+  it('agregar tiene límite por cuenta (30 en 15 min): la alta 31, 429', async () => {
+    // La política se fija AQUÍ con su número, no se lee del código que se prueba: si el código cambiara el
+    // límite, esta prueba tiene que fallar.
+    const LIMITE = 30;
+    expect(LIMITES_ESPACIOS.agregar_miembro).toEqual({ max: LIMITE, ventanaMs: 15 * 60_000 });
     const ana = await persona();
     const id = await nuevoEspacio(ana);
     const estados: number[] = [];
-    for (let i = 0; i <= LIMITES_ESPACIOS.agregar_miembro.max; i++) {
+    for (let i = 0; i <= LIMITE; i++) {
       estados.push((await request(app).post(`/api/espacios/${id}/miembros`).set('authorization', ana.auth).send({ correo: correoUnico('enumera'), rol: 'lector' })).status);
     }
     expect(estados.slice(0, -1).every((s) => s === 404)).toBe(true);
