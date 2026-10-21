@@ -1354,6 +1354,15 @@
       "pruebas": ["tests/integracion/tiempo-real.test.ts"]
     },
     {
+      "id": "T09",
+      "regla": "Presencia: el nombre que dibuja el editor (user.name) también lo pone el servidor",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "user: { ...user, name: c.nombre }",
+      "reemplazo": "user",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
       "id": "W01",
       "regla": "Acceso: un rol alcanza el mínimo cuando es IGUAL o mayor (lector < editor < propietario)",
       "archivo": "src/contenido/acceso.ts",
