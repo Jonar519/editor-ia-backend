@@ -105,3 +105,16 @@ Además, producción se niega a arrancar si:
   - la purga de invitaciones vencidas queda propuesta, fuera del alcance de G.
 - **Avatar.** Solo JPEG o PNG, 1 MiB y 4096 px como máximo. Se guarda en la base, ya limpio. Se sirve a cualquier sesión válida (presencia, comentarios) con `Content-Security-Policy: default-src 'none'; sandbox`.
 - **Acciones sensibles de la cuenta.** Cambiar correo o contraseña, exportar y eliminar exigen la contraseña. Eliminar exige además el código MFA si la cuenta lo tiene. Los fallos suman al mismo bloqueo progresivo que el login.
+- **Espacios, documentos y permisos (bloque K1).** Quién puede qué está en un solo lugar (`src/contenido/acceso.ts`). El rol sobre un documento lo calcula la base (`rol_efectivo_documento`).
+  - **Sin acceso, 404** (no se distingue de "no existe"). **Con acceso pero sin el rol, 403.**
+  - **Espacio:** lo crea una cuenta que no sea de solo lectura. El propietario lo renombra, agrega miembros por correo, cambia roles, quita miembros y lo transfiere. Cualquiera sale, salvo el propietario.
+  - **Borrar un espacio** solo si el propietario es el único miembro (si no, 409 `espacio_compartido`).
+  - **Documento:** lo crea un editor o el propietario del espacio. Lo renombra un editor efectivo. Lo borran, le dan permisos y lo transfieren solo su propietario.
+  - **La propiedad nunca se cambia ni se quita: se transfiere.** El anterior queda como editor.
+  - **Quitar a quien posee documentos** del espacio responde 409 `propiedad_documentos` con la lista, como el 409 de eliminar la cuenta.
+  - **Un permiso propio solo puede ser "editor"**: el rol efectivo es el mayor, así que "lector" no cambiaría nada.
+  - **Agregar miembros** responde 404 genérico si no hay una cuenta **activa** con ese correo, y tiene un límite de 30 por cuenta cada 15 min contra la enumeración de correos.
+  - Cada cambio bloquea la fila del espacio o del documento antes de comprobar el rol: dos cambios simultáneos se esperan.
+  - **Sin paginar en K1**: las listas de espacios, miembros y documentos devuelven todo. Se pagina si un espacio llega a cientos de documentos.
+  - **Sin auditoría de cambios de permisos** en `eventos_seguridad` (sus tipos los fija un CHECK de la base): queda propuesta.
+- **Compactación del log Yjs (migración 0021).** El backend ya no borra actualizaciones por su cuenta: solo `compactar_documento()`, que escribe el estado y borra en la misma llamada (ADR 0003). La usa la compactación de K2.
