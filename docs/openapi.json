@@ -1313,6 +1313,34 @@
         "required": [
           "rol"
         ]
+      },
+      "TicketTiempoReal": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "description": "Un solo uso. Va en Sec-WebSocket-Protocol como \"ticket.<valor>\", junto a \"cuaderno.v1\"; nunca en la URL."
+          },
+          "expiraEnSegundos": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticket",
+          "expiraEnSegundos"
+        ]
+      },
+      "SolicitudTicket": {
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "documentoId"
+        ]
       }
     },
     "parameters": {}
@@ -4792,6 +4820,80 @@
           },
           "409": {
             "description": "usar_transferencia: la propiedad no se quita",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tiempo-real/tickets": {
+      "post": {
+        "tags": [
+          "tiempo real"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Ticket de un solo uso (30 s) para abrir el WebSocket del documento: GET /api/tiempo-real con Upgrade, Origin del frontend y Sec-WebSocket-Protocol \"cuaderno.v1, ticket.<valor>\"",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitudTicket"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketTiempoReal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados tickets seguidos",
             "content": {
               "application/json": {
                 "schema": {

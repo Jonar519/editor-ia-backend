@@ -12,6 +12,10 @@ import { accionPorPrivilegios, leerPrivilegios, problemasDePrivilegios } from '.
 import { comprobacionRedis, crearRedis } from './infra/redis.js';
 import { crearLogger } from './observabilidad/log.js';
 import { crearMetricas } from './observabilidad/metricas.js';
+import { iniciarAvisos } from './tiempo-real/avisos.js';
+import { iniciarCompactacion } from './tiempo-real/compactacion.js';
+import { LIMITES_PRODUCCION } from './tiempo-real/limites.js';
+import { ServidorTiempoReal } from './tiempo-real/servidor.js';
 import { iniciarRetencion, PATRON_RETENCION } from './trabajos/retencion.js';
 
 async function main(): Promise<void> {
@@ -63,6 +67,38 @@ async function main(): Promise<void> {
     log.info({ host: config.HOST, puerto: config.PORT, entorno: config.NODE_ENV }, 'Cuaderno API escuchando');
   });
 
+  // Tiempo real (bloque K2): WebSocket en el mismo puerto, compactación con BullMQ y avisos de la base
+  // reenviados por Redis. UNA sola instancia (ver src/tiempo-real/servidor.ts).
+  const compactador = iniciarCompactacion({
+    redisUrl: config.REDIS_URL,
+    prefijo: 'cuaderno:bull',
+    prisma,
+    log,
+    inactividadMs: LIMITES_PRODUCCION.compactarInactividadMs,
+  });
+  const tiempoReal = new ServidorTiempoReal({
+    prisma,
+    redis,
+    prefijoRedis: 'cuaderno:',
+    appUrl: config.APP_URL,
+    log,
+    limites: LIMITES_PRODUCCION,
+    pedirCompactacion: compactador.pedir,
+  });
+  tiempoReal.adjuntar(servidor);
+  const avisos = iniciarAvisos({
+    databaseUrl: config.DATABASE_URL,
+    redis,
+    prefijo: 'cuaderno:',
+    log,
+    alAviso: (a) => {
+      tiempoReal.aviso(a);
+    },
+    alReconectar: () => {
+      tiempoReal.revalidarTodas();
+    },
+  });
+
   // Retención diaria (BullMQ). Arranca después de escuchar: si Redis tarda, el API no espera por ella.
   const retencion = iniciarRetencion({ redisUrl: config.REDIS_URL, prefijo: 'cuaderno:bull', prisma, log }).then(
     (r) => {
@@ -81,7 +117,11 @@ async function main(): Promise<void> {
     log,
     limiteMs: config.SHUTDOWN_TIMEOUT_MS,
     cerrarRecursos: async () => {
-      // Primero el worker: espera al job en curso (si lo hay) antes de cerrar la base.
+      // Primero el tiempo real: cierra las conexiones (1001) y guarda lo pendiente de cada documento.
+      await tiempoReal.cerrar();
+      await avisos.cerrar();
+      // Después los workers: esperan al job en curso (si lo hay) antes de cerrar la base.
+      await compactador.cerrar();
       await (await retencion)?.cerrar();
       await prisma.$disconnect();
       await pool.end();

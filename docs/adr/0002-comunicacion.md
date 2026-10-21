@@ -82,7 +82,7 @@ Restricciones ya decididas:
 | Cuenta eliminada, anonimizada o cambio de rol de cuenta | `src/cuenta`, administración | Todas las de esa cuenta: 4401 o 4403. |
 | Documento o espacio borrado | CRUD (K) | Todas las de ese documento: **4404**. |
 
-Con varias instancias del servidor, todas reciben el mensaje y cada una cierra las suyas. Si Redis se cae, el servidor deja de aceptar conexiones nuevas (falla cerrado, igual que los límites del ADR 0001) y revalida en la base las abiertas.
+**Una sola instancia en K2 (decisión escrita).** El documento abierto vive en la memoria del proceso: con dos instancias, dos personas en el mismo documento conectadas a instancias distintas no se verían. Se despliega con una instancia; si hiciera falta más de una, se reenvían los cambios de cada documento por Redis (no implementado). Los avisos sí funcionarían con varias: cada instancia escucha la base y publica, y cerrar dos veces la misma conexión no hace nada. Si Redis se cae, el servidor deja de aceptar conexiones nuevas (falla cerrado, igual que los límites del ADR 0001) y revalida en la base las abiertas.
 
 **Latido.** Ping cada 30 s; sin pong en 10 s, se cierra (4408) y se borra la sesión de edición.
 
@@ -184,11 +184,11 @@ Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto).
 
 | Qué | Prueba |
 |---|---|
-| Ticket de un solo uso | Integración: dos `upgrade` con el mismo ticket a la vez → uno abre y el otro recibe 401. Ticket vencido (31 s, reloj falso) → 401. Ticket de otro documento → 403. En Redis no aparece el ticket en claro (barrido como `secretos.test.ts`). |
+| Ticket de un solo uso | Integración: dos `upgrade` con el mismo ticket a la vez → uno abre y el otro recibe 401. Ticket vencido (emitido con una vigencia corta) → 401. Sin acceso al documento → el ticket mismo se niega (404). En Redis aparece solo el hash del ticket, nunca el ticket. |
 | Origin | `upgrade` con otro `Origin` → 403 sin abrir. |
 | Un lector nunca escribe | Integración con un cliente "manipulado" que manda actualizaciones como lector: el documento no cambia en el servidor ni en los otros clientes, no hay fila nueva en `actualizaciones_documento`, queda el log y la métrica, y a la tercera se cierra con 4403. Mutación que quita el guardia → la prueba falla. |
 | Revocación | Con la conexión abierta: quitar el permiso, cerrar la sesión o borrar el documento → cierre con 4403, 4401 o 4404 en menos de 1 s (se mide). Mutación que no publica → falla. |
-| **Ventana residual (R-01)** | Se quita el permiso **sin** publicar en pub/sub (como si Redis perdiera el aviso). Se mide: (1) cuánto tarda la revalidación periódica en cortar la retransmisión (≤ 30 s, con reloj falso); (2) que la primera escritura rechazada por la base la corte enseguida; (3) cuántas actualizaciones llegaron a los demás en la ventana. Después del corte: **cero**. |
+| **Ventana residual (R-01)** | Se quita el permiso **sin** publicar en pub/sub (como si Redis perdiera el aviso). Se mide **con relojes reales** (con sockets reales, un reloj falso no es fiable) y la revalidación en 300 ms en la prueba; otra prueba fija 30 s como valor de producción: (1) cuánto tarda la revalidación periódica en cortar la retransmisión; (2) que la primera escritura rechazada por la base la corte enseguida; (3) cuántas actualizaciones llegaron a los demás en la ventana. Después del corte: **cero**. |
 | Redis caído | Sin Redis, el `upgrade` responde 503. |
 | Límites | Mensaje de 1 MiB + 1 → 1009; ráfaga por encima del límite → 4429. |
 | SSE y cancelación (P2) | Abortar el `fetch` a mitad → la llamada gRPC queda `CANCELLED` y el proveedor mock deja de generar. |

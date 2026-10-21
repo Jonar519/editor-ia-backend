@@ -302,6 +302,16 @@ export const PermisoDocumento = z
 
 export const ListaPermisos = z.object({ permisos: z.array(PermisoDocumento) }).meta({ id: 'ListaPermisos' });
 
+// ─── Tiempo real (bloque K2) ──────────────────────────────────────────────────────
+
+export const SolicitudTicket = z.object({ documentoId: z.uuid() }).meta({ id: 'SolicitudTicket' });
+export const TicketTiempoReal = z
+  .object({
+    ticket: z.string().meta({ description: 'Un solo uso. Va en Sec-WebSocket-Protocol como "ticket.<valor>", junto a "cuaderno.v1"; nunca en la URL.' }),
+    expiraEnSegundos: z.number().int(),
+  })
+  .meta({ id: 'TicketTiempoReal' });
+
 export const ErrorPropiedadDocumentos = z
   .object({
     error: z.object({
