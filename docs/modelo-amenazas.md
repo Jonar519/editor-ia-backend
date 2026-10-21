@@ -18,14 +18,19 @@ El análisis STRIDE completo se escribe en el bloque R. Este documento se abre e
 - **Lo que queda aunque se corte (integridad):** los cambios que esa conexión mandó **dentro** de la ventana ya llegaron a los demás clientes, y un CRDT no los puede deshacer selectivamente. El servidor no los guarda (la base los rechazó), pero viven en los `Y.Doc` de los demás. Si uno de ellos reconecta, el intercambio de vectores de estado los reenvía y se guardan **con la autoría de quien reconectó**.
   - Acotado: son como mucho 250 ms de escritura de alguien que **tenía** permiso de escritura un momento antes.
   - Queda escrito, no oculto. Se detecta comparando con las versiones (bloque N).
-- **Mitigaciones adicionales:**
-  - los cambios de permiso solo se hacen por el API, que publica después del commit;
-  - si Redis no responde, no se aceptan conexiones nuevas (falla cerrado) y las abiertas se revalidan en la base;
-  - el log `warn` y la métrica de actualizaciones descartadas o rechazadas.
-- **Cómo se mide (prueba de K2):** se quita el permiso **sin** publicar en pub/sub y se mide, con reloj falso:
-  1. el tiempo hasta cortar la retransmisión de un lector que solo recibe (≤ 30 s);
-  2. que la primera escritura rechazada por la base corte la conexión en ese momento;
-  3. cuántas actualizaciones de esa conexión recibieron los demás dentro de la ventana, y que después del corte sean **cero**.
+- **Mitigaciones adicionales (K2):**
+  - **el aviso lo da la base** (migración 0022): todo lo que quita acceso (miembros, permisos, sesiones, cuentas, documentos) avisa al hacer COMMIT, también si el cambio se hizo por SQL directo. Por eso la ventana solo existe si **se pierde** ese aviso;
+  - si se cae la conexión que escucha la base, o la de Redis, al volver se revalidan **todas** las conexiones;
+  - si Redis no responde, no se aceptan conexiones nuevas (falla cerrado) y las abiertas siguen revalidándose en la base cada 30 s;
+  - cada actualización descartada o rechazada queda en el log (`warn`). No hay una métrica de Prometheus para eso.
+- **Cómo se mide:** prueba `tests/integracion/tiempo-real.test.ts` (bloque "R-01"). Quita el permiso **sin** el puente de avisos (como si se perdiera el aviso), con relojes reales y la revalidación en **300 ms**. Otra prueba fija 30 s como valor de producción.
+- **Medido** (tres corridas en Windows, base y Redis de pruebas):
 
-  El número medido se escribe aquí cuando K2 lo produzca.
+| Caso | Corte | En la ventana | Después del corte |
+|---|---|---|---|
+| Revocación **con** aviso (miembro, sesión, documento) | 8–19 ms | — | — |
+| R-01 confidencialidad: quien perdió el acceso y solo recibe (revalidación de 300 ms) | 305–315 ms | recibió 5 cambios (uno cada 50 ms) | 0 |
+| R-01 integridad: un editor rebajado que sigue escribiendo (sin esperar la revalidación) | 240–254 ms (el vaciado de 250 ms) | 7–8 cambios llegaron a los demás (uno cada 20 ms) | 0 |
+
+  En producción, la confidencialidad queda acotada por la revalidación de **30 s** más lo que tarda una consulta. La integridad queda acotada por el vaciado de **250 ms**: no depende de la revalidación.
 - **Estado:** aceptado por escrito al aprobar el ADR 0002, con la condición de cortar la retransmisión en cuanto el rol revalidado cambie.

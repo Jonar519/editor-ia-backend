@@ -99,6 +99,10 @@ Además, producción se niega a arrancar si:
 - `PASSWORD_HASH_COST` es menor que 15;
 - el usuario de base tiene privilegios de más.
 
+**El dueño de las tablas NO puede ser superusuario en producción.** En desarrollo lo es (`cuaderno`, el usuario de la imagen de Postgres), y `compactar_documento()` (`SECURITY DEFINER`, migración 0021) corre con los privilegios de ese dueño. En producción las migraciones se aplican con un rol dueño **sin** superusuario.
+
+**Una sola instancia del API** (bloque K2): el documento abierto en tiempo real vive en la memoria del proceso. Con más de una instancia habría que reenviar los cambios de cada documento por Redis, y eso no está implementado.
+
 `MFA_ENCRYPTION_KEY` se genera **una vez** para producción y no se cambia después: si cambia, los MFA ya configurados dejan de poder verificarse.
 
 ## Decisiones vigentes
@@ -137,3 +141,12 @@ Además, producción se niega a arrancar si:
   - **Sin paginar en K1**: las listas de espacios, miembros y documentos devuelven todo. Se pagina si un espacio llega a cientos de documentos.
   - **Sin auditoría de cambios de permisos** en `eventos_seguridad` (sus tipos los fija un CHECK de la base): queda propuesta.
 - **Compactación del log Yjs (migración 0021).** El backend ya no borra actualizaciones por su cuenta: solo `compactar_documento()`, que escribe el estado y borra en la misma llamada (ADR 0003). La usa la compactación de K2.
+- **Tiempo real (bloque K2).** WebSocket en `/api/tiempo-real`, en el mismo proceso y puerto que el API.
+  - **Entrar:** ticket de un solo uso (`POST /api/tiempo-real/tickets`, en `Sec-WebSocket-Protocol`).
+  - **Guardia:** verifica el permiso en cada mensaje.
+  - **Rol al día:** por los avisos de la base reenviados por Redis (revocación medida: 8–19 ms), por el rechazo de la base al guardar, y revalidándose cada 30 s.
+  - **Persistencia:** directa, con búfer de 250 ms; la compactación va por BullMQ.
+  - **Límites de operación:** en `src/tiempo-real/limites.ts`.
+  - **Una sola instancia.**
+  - **Riesgo residual R-01, medido:** en [modelo-amenazas.md](modelo-amenazas.md).
+- **Auditoría de permisos (bloque K2, migración 0022).** Cada concesión y revocación de miembros, permisos y propiedad queda en `eventos_seguridad`: quién, a quién (`objetivo_id`) y sobre qué (`recurso_id`, solo un id). Las creaciones no se registran.
