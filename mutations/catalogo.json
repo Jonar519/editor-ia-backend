@@ -1282,6 +1282,78 @@
       "pruebas": ["tests/integracion/salud.test.ts"]
     },
     {
+      "id": "T01",
+      "regla": "Guardia: una actualización de quien no puede escribir se descarta (no se aplica ni se retransmite)",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "if (!puedeEscribir(c))",
+      "reemplazo": "if (false)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T02",
+      "regla": "Ticket: un solo uso (GETDEL atómico)",
+      "archivo": "src/tiempo-real/tickets.ts",
+      "buscar": "await redis.getdel(clave(prefijo, ticket))",
+      "reemplazo": "await redis.get(clave(prefijo, ticket))",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T03",
+      "regla": "Entrar: solo desde el Origin del frontend (secuestro de WebSocket entre sitios)",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "if (req.headers.origin !== this.d.appUrl)",
+      "reemplazo": "if (false)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T04",
+      "regla": "Revalidación: si el rol cambió, la conexión se corta en el acto",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "if (acceso.rol !== c.rol) this.cortar(c, CIERRE.sinPermiso, 'el permiso cambió');",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T05",
+      "regla": "R-01: una escritura rechazada por la base dispara la revalidación al instante",
+      "archivo": "src/tiempo-real/documento.ts",
+      "buscar": "          this.o.alRechazoDeEscritura(this.id, autorId);",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T06",
+      "regla": "Avisos: el puente reenvía a Redis cada aviso de la base (revocación en menos de 1 s)",
+      "archivo": "src/tiempo-real/avisos.ts",
+      "buscar": "o.redis.publish(canal, n.payload)",
+      "reemplazo": "Promise.resolve(0)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T07",
+      "regla": "Presencia: el nombre es el de la cuenta autenticada, no el que manda el cliente",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "...estado, usuario: { id: c.usuarioId, nombre: c.nombre }",
+      "reemplazo": "...estado",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "T08",
+      "regla": "Guardia: a la tercera escritura sin permiso en 60 s, la conexión se cierra (4403)",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "if (c.descartadas.length >= this.d.limites.descartadasMax)",
+      "reemplazo": "if (false)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
       "id": "W01",
       "regla": "Acceso: un rol alcanza el mínimo cuando es IGUAL o mayor (lector < editor < propietario)",
       "archivo": "src/contenido/acceso.ts",
