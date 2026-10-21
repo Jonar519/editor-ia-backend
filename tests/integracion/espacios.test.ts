@@ -254,6 +254,23 @@ describe('miembros', () => {
     expect((await request(app).patch(`/api/espacios/${id}`).set('authorization', ana.auth).send({ nombre: 'X' })).status).toBe(403);
   });
 
+  it('auditoría: agregar y quitar a un miembro quedan con quién, a quién y sobre qué espacio (solo ids)', async () => {
+    const ana = await persona();
+    const bruno = await persona();
+    const id = await nuevoEspacio(ana);
+    await agregar(ana, id, bruno, 'lector');
+    expect((await request(app).delete(`/api/espacios/${id}/miembros/${bruno.id}`).set('authorization', ana.auth)).status).toBe(204);
+    const eventos = await e.prisma.eventos_seguridad.findMany({
+      where: { recurso_id: id },
+      orderBy: { id: 'asc' },
+      select: { tipo: true, usuario_id: true, objetivo_id: true },
+    });
+    expect(eventos).toEqual([
+      { tipo: 'miembro_agregado', usuario_id: ana.id, objetivo_id: bruno.id },
+      { tipo: 'miembro_quitado', usuario_id: ana.id, objetivo_id: bruno.id },
+    ]);
+  });
+
   it('tres altas simultáneas de la misma cuenta: una entra y las otras reciben 409 (no un 500)', async () => {
     const ana = await persona();
     const bruno = await persona();

@@ -29,9 +29,30 @@ export type TipoEvento =
   | 'otras_sesiones_cerradas'
   | 'avatar_actualizado'
   | 'avatar_eliminado'
-  | 'datos_exportados';
+  | 'datos_exportados'
+  // Bloque K2: concesión y revocación de miembros, permisos y propiedad (las creaciones no se registran).
+  | 'miembro_agregado'
+  | 'miembro_rol_cambiado'
+  | 'miembro_quitado'
+  | 'espacio_transferido'
+  | 'espacio_eliminado'
+  | 'permiso_documento_dado'
+  | 'permiso_documento_quitado'
+  | 'documento_transferido'
+  | 'documento_eliminado';
 
-export async function registrarEvento(db: Tx, tipo: TipoEvento, usuarioId: string | null, ipRed: string | null): Promise<void> {
+/**
+ * @param extra objetivoId: la cuenta afectada; recursoId: el id del espacio o documento (solo un id,
+ *   nunca nombres ni contenido).
+ */
+export async function registrarEvento(
+  db: Tx,
+  tipo: TipoEvento,
+  usuarioId: string | null,
+  ipRed: string | null,
+  extra: { objetivoId?: string; recursoId?: string } = {},
+): Promise<void> {
   await db.$executeRaw`
-    INSERT INTO eventos_seguridad (tipo, usuario_id, ip_red) VALUES (${tipo}, ${usuarioId}::uuid, ${ipRed}::cidr)`;
+    INSERT INTO eventos_seguridad (tipo, usuario_id, ip_red, objetivo_id, recurso_id)
+    VALUES (${tipo}, ${usuarioId}::uuid, ${ipRed}::cidr, ${extra.objetivoId ?? null}::uuid, ${extra.recursoId ?? null}::uuid)`;
 }

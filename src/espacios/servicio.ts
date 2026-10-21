@@ -5,6 +5,10 @@
 // Cada cambio corre en una transacción que primero bloquea la fila del espacio (FOR UPDATE) y recién
 // entonces comprueba el rol: dos cambios simultáneos sobre el mismo espacio se esperan en vez de decidir
 // con datos viejos.
+//
+// Cada concesión y revocación (miembros, roles, propiedad, borrado) queda en eventos_seguridad, en la misma
+// transacción: quién (usuario_id), a quién (objetivo_id) y sobre qué (recurso_id, solo el id).
+import { registrarEvento } from '../auth/eventos.js';
 import type { UsuarioSesion } from '../auth/sesiones.js';
 import { type Bd, espacioNoEncontrado, exigirEspacio, type RolContenido } from '../contenido/acceso.js';
 import type { DependenciasApi } from '../dependencias.js';
@@ -85,7 +89,7 @@ export async function renombrarEspacio(d: Deps, usuarioId: string, espacioId: st
  * Borrar el espacio con todo su contenido. Solo si el propietario es el ÚNICO miembro: con otros miembros,
  * borrarlo se llevaría documentos ajenos (409; primero hay que sacarlos o transferir el espacio).
  */
-export async function eliminarEspacio(d: Deps, usuarioId: string, espacioId: string): Promise<{ documentosBorrados: number }> {
+export async function eliminarEspacio(d: Deps, usuarioId: string, espacioId: string, ipRed: string | null): Promise<{ documentosBorrados: number }> {
   return d.prisma.$transaction(async (tx) => {
     await bloquearEspacio(tx, espacioId);
     await exigirEspacio(tx, usuarioId, espacioId, 'propietario', 'Solo el propietario borra el espacio');
@@ -96,6 +100,7 @@ export async function eliminarEspacio(d: Deps, usuarioId: string, espacioId: str
     }
     const docs = await tx.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM documentos WHERE espacio_id = ${espacioId}::uuid`;
     await tx.$executeRaw`DELETE FROM espacios WHERE id = ${espacioId}::uuid`;
+    await registrarEvento(tx, 'espacio_eliminado', usuarioId, ipRed, { recursoId: espacioId });
     return { documentosBorrados: docs[0]?.n ?? 0 };
   });
 }
@@ -125,6 +130,7 @@ export async function agregarMiembro(
   usuarioId: string,
   espacioId: string,
   e: { correo: string; rol: 'editor' | 'lector' },
+  ipRed: string | null,
 ): Promise<Miembro> {
   return d.prisma.$transaction(async (tx) => {
     await bloquearEspacio(tx, espacioId);
@@ -138,6 +144,7 @@ export async function agregarMiembro(
     if ((ya[0]?.n ?? 0) > 0) throw new ErrorHttp(409, 'ya_es_miembro', 'Esa cuenta ya es miembro del espacio');
     if (c.rol === 'lector' && e.rol !== 'lector') throw rolExcedeCuenta();
     await tx.$executeRaw`INSERT INTO miembros_espacio (espacio_id, usuario_id, rol) VALUES (${espacioId}::uuid, ${c.id}::uuid, ${e.rol})`;
+    await registrarEvento(tx, 'miembro_agregado', usuarioId, ipRed, { objetivoId: c.id, recursoId: espacioId });
     const [m] = await miembrosDe(tx, espacioId, c.id);
     if (!m) throw new Error('miembro recién agregado no encontrado');
     return m;
@@ -163,6 +170,7 @@ export async function cambiarRolMiembro(
   espacioId: string,
   objetivo: string,
   rol: 'editor' | 'lector',
+  ipRed: string | null,
 ): Promise<Miembro> {
   return d.prisma.$transaction(async (tx) => {
     await bloquearEspacio(tx, espacioId);
@@ -171,6 +179,7 @@ export async function cambiarRolMiembro(
     if (o.rol === 'propietario') throw usarTransferencia();
     if (o.rolCuenta === 'lector' && rol !== 'lector') throw rolExcedeCuenta();
     await tx.$executeRaw`UPDATE miembros_espacio SET rol = ${rol} WHERE espacio_id = ${espacioId}::uuid AND usuario_id = ${objetivo}::uuid`;
+    await registrarEvento(tx, 'miembro_rol_cambiado', usuarioId, ipRed, { objetivoId: objetivo, recursoId: espacioId });
     const [m] = await miembrosDe(tx, espacioId, objetivo);
     if (!m) throw new Error('miembro no encontrado después de cambiar su rol');
     return m;
@@ -190,7 +199,7 @@ async function documentosPropios(tx: Bd, espacioId: string, usuarioId: string): 
  * Quitar a un miembro (el propietario a otro) o salir (cualquier miembro, salvo el propietario). Sus
  * permisos de documento se van en cascada; si posee documentos del espacio, 409 con la lista.
  */
-export async function quitarMiembro(d: Deps, usuarioId: string, espacioId: string, objetivo: string): Promise<void> {
+export async function quitarMiembro(d: Deps, usuarioId: string, espacioId: string, objetivo: string, ipRed: string | null): Promise<void> {
   await d.prisma.$transaction(async (tx) => {
     await bloquearEspacio(tx, espacioId);
     if (objetivo === usuarioId) {
@@ -207,11 +216,12 @@ export async function quitarMiembro(d: Deps, usuarioId: string, espacioId: strin
       throw new ErrorHttp(409, 'propiedad_documentos', 'Es propietaria o propietario de documentos del espacio: transfiérelos antes', propios);
     }
     await tx.$executeRaw`DELETE FROM miembros_espacio WHERE espacio_id = ${espacioId}::uuid AND usuario_id = ${objetivo}::uuid`;
+    await registrarEvento(tx, 'miembro_quitado', usuarioId, ipRed, { objetivoId: objetivo, recursoId: espacioId });
   });
 }
 
 /** Transferir el espacio a otro miembro: el anterior queda como editor. */
-export async function transferirEspacio(d: Deps, usuarioId: string, espacioId: string, objetivo: string): Promise<Miembro[]> {
+export async function transferirEspacio(d: Deps, usuarioId: string, espacioId: string, objetivo: string, ipRed: string | null): Promise<Miembro[]> {
   return d.prisma.$transaction(async (tx) => {
     await bloquearEspacio(tx, espacioId);
     await exigirEspacio(tx, usuarioId, espacioId, 'propietario', 'Solo el propietario transfiere el espacio');
@@ -222,6 +232,7 @@ export async function transferirEspacio(d: Deps, usuarioId: string, espacioId: s
     // base revisa al COMMIT que haya exactamente uno.
     await tx.$executeRaw`UPDATE miembros_espacio SET rol = 'editor' WHERE espacio_id = ${espacioId}::uuid AND usuario_id = ${usuarioId}::uuid`;
     await tx.$executeRaw`UPDATE miembros_espacio SET rol = 'propietario' WHERE espacio_id = ${espacioId}::uuid AND usuario_id = ${objetivo}::uuid`;
+    await registrarEvento(tx, 'espacio_transferido', usuarioId, ipRed, { objetivoId: objetivo, recursoId: espacioId });
     return miembrosDe(tx, espacioId);
   });
 }

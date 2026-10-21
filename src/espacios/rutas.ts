@@ -1,6 +1,7 @@
 // /api/espacios: espacios, sus miembros y crear o listar sus documentos (bloque K1). Todo exige sesión.
 // Quién puede qué está en src/contenido/acceso.ts.
 import { Router } from 'express';
+import { truncarIp } from '../auth/cliente.js';
 import { crearLimitador, limitarTasa } from '../auth/limites.js';
 import { requiereSesion, usuarioDe } from '../auth/middleware.js';
 import type { DependenciasApi } from '../dependencias.js';
@@ -63,13 +64,13 @@ export function rutasEspacios(d: DependenciasApi): Router {
 
   r.delete('/:espacioId', async (req, res) => {
     const { espacioId } = IdEspacio.parse(req.params);
-    res.json(await eliminarEspacio(d, usuarioDe(res).id, espacioId));
+    res.json(await eliminarEspacio(d, usuarioDe(res).id, espacioId, truncarIp(req.ip)));
   });
 
   r.post('/:espacioId/propiedad', async (req, res) => {
     const { espacioId } = IdEspacio.parse(req.params);
     const { usuarioId } = TransferirSolicitud.parse(req.body);
-    res.json({ miembros: await transferirEspacio(d, usuarioDe(res).id, espacioId, usuarioId) });
+    res.json({ miembros: await transferirEspacio(d, usuarioDe(res).id, espacioId, usuarioId, truncarIp(req.ip)) });
   });
 
   // ─── Miembros ─────────────────────────────────────────────────────────────────
@@ -81,18 +82,18 @@ export function rutasEspacios(d: DependenciasApi): Router {
   r.post('/:espacioId/miembros', limAgregar, async (req, res) => {
     const { espacioId } = IdEspacio.parse(req.params);
     const e = AgregarMiembroSolicitud.parse(req.body);
-    res.status(201).json(await agregarMiembro(d, usuarioDe(res).id, espacioId, e));
+    res.status(201).json(await agregarMiembro(d, usuarioDe(res).id, espacioId, e, truncarIp(req.ip)));
   });
 
   r.patch('/:espacioId/miembros/:usuarioId', async (req, res) => {
     const { espacioId, usuarioId } = IdMiembro.parse(req.params);
     const { rol } = CambiarRolSolicitud.parse(req.body);
-    res.json(await cambiarRolMiembro(d, usuarioDe(res).id, espacioId, usuarioId, rol));
+    res.json(await cambiarRolMiembro(d, usuarioDe(res).id, espacioId, usuarioId, rol, truncarIp(req.ip)));
   });
 
   r.delete('/:espacioId/miembros/:usuarioId', async (req, res) => {
     const { espacioId, usuarioId } = IdMiembro.parse(req.params);
-    await quitarMiembro(d, usuarioDe(res).id, espacioId, usuarioId);
+    await quitarMiembro(d, usuarioDe(res).id, espacioId, usuarioId, truncarIp(req.ip));
     res.status(204).end();
   });
 

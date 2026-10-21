@@ -7,6 +7,9 @@
 // lector del espacio, y la propiedad no se da: se transfiere.
 //
 // Cada cambio bloquea la fila del documento (FOR UPDATE) antes de comprobar el rol.
+// Dar o quitar permisos, transferir y borrar quedan en eventos_seguridad en la misma transacción (a quién y
+// sobre qué documento: solo ids).
+import { registrarEvento } from '../auth/eventos.js';
 import type { UsuarioSesion } from '../auth/sesiones.js';
 import {
   type Bd,
@@ -123,11 +126,12 @@ export async function renombrarDocumento(d: Deps, usuarioId: string, documentoId
 }
 
 /** Borrar el documento con su historial (versiones, comentarios, log Yjs). Solo su propietario. */
-export async function eliminarDocumento(d: Deps, usuarioId: string, documentoId: string): Promise<void> {
+export async function eliminarDocumento(d: Deps, usuarioId: string, documentoId: string, ipRed: string | null): Promise<void> {
   await d.prisma.$transaction(async (tx) => {
     await bloquearDocumento(tx, documentoId);
     await exigirDocumento(tx, usuarioId, documentoId, 'propietario', 'Solo el propietario borra el documento');
     await tx.$executeRaw`DELETE FROM documentos WHERE id = ${documentoId}::uuid`;
+    await registrarEvento(tx, 'documento_eliminado', usuarioId, ipRed, { recursoId: documentoId });
   });
 }
 
@@ -166,7 +170,7 @@ const rolExcedeCuenta = () =>
   new ErrorHttp(409, 'rol_excede_cuenta', 'Esa cuenta es de solo lectura: en un espacio o documento solo puede ser lectora');
 
 /** Dar "editor" sobre el documento a un miembro del espacio. Solo el propietario del documento. */
-export async function darPermiso(d: Deps, usuarioId: string, documentoId: string, objetivo: string): Promise<Permiso[]> {
+export async function darPermiso(d: Deps, usuarioId: string, documentoId: string, objetivo: string, ipRed: string | null): Promise<Permiso[]> {
   return d.prisma.$transaction(async (tx) => {
     await bloquearDocumento(tx, documentoId);
     const { espacioId } = await exigirDocumento(tx, usuarioId, documentoId, 'propietario', 'Solo el propietario del documento da permisos');
@@ -176,11 +180,12 @@ export async function darPermiso(d: Deps, usuarioId: string, documentoId: string
     await tx.$executeRaw`
       INSERT INTO permisos_documento (documento_id, espacio_id, usuario_id, rol) VALUES (${documentoId}::uuid, ${espacioId}::uuid, ${objetivo}::uuid, 'editor')
       ON CONFLICT (documento_id, usuario_id) DO UPDATE SET rol = 'editor'`;
+    await registrarEvento(tx, 'permiso_documento_dado', usuarioId, ipRed, { objetivoId: objetivo, recursoId: documentoId });
     return permisosDe(tx, documentoId);
   });
 }
 
-export async function quitarPermiso(d: Deps, usuarioId: string, documentoId: string, objetivo: string): Promise<void> {
+export async function quitarPermiso(d: Deps, usuarioId: string, documentoId: string, objetivo: string, ipRed: string | null): Promise<void> {
   await d.prisma.$transaction(async (tx) => {
     await bloquearDocumento(tx, documentoId);
     await exigirDocumento(tx, usuarioId, documentoId, 'propietario', 'Solo el propietario del documento quita permisos');
@@ -190,11 +195,12 @@ export async function quitarPermiso(d: Deps, usuarioId: string, documentoId: str
     if (!rol) throw new ErrorHttp(404, 'permiso_no_encontrado', 'Esa cuenta no tiene un permiso propio en el documento');
     if (rol === 'propietario') throw usarTransferencia();
     await tx.$executeRaw`DELETE FROM permisos_documento WHERE documento_id = ${documentoId}::uuid AND usuario_id = ${objetivo}::uuid`;
+    await registrarEvento(tx, 'permiso_documento_quitado', usuarioId, ipRed, { objetivoId: objetivo, recursoId: documentoId });
   });
 }
 
 /** Transferir el documento a otro miembro del espacio: el anterior queda con permiso "editor". */
-export async function transferirDocumento(d: Deps, usuarioId: string, documentoId: string, objetivo: string): Promise<Permiso[]> {
+export async function transferirDocumento(d: Deps, usuarioId: string, documentoId: string, objetivo: string, ipRed: string | null): Promise<Permiso[]> {
   return d.prisma.$transaction(async (tx) => {
     await bloquearDocumento(tx, documentoId);
     const { espacioId } = await exigirDocumento(tx, usuarioId, documentoId, 'propietario', 'Solo el propietario transfiere el documento');
@@ -206,6 +212,7 @@ export async function transferirDocumento(d: Deps, usuarioId: string, documentoI
     await tx.$executeRaw`
       INSERT INTO permisos_documento (documento_id, espacio_id, usuario_id, rol) VALUES (${documentoId}::uuid, ${espacioId}::uuid, ${objetivo}::uuid, 'propietario')
       ON CONFLICT (documento_id, usuario_id) DO UPDATE SET rol = 'propietario'`;
+    await registrarEvento(tx, 'documento_transferido', usuarioId, ipRed, { objetivoId: objetivo, recursoId: documentoId });
     return permisosDe(tx, documentoId);
   });
 }

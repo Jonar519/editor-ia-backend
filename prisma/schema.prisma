@@ -304,38 +304,39 @@ model uso_ia_diario {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model usuarios {
-  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  estado                    String                      @default("pendiente")
-  rol                       String
-  correo                    String?                     @unique(map: "usuarios_correo_unico", where: raw("(correo IS NOT NULL)")) @db.Citext
-  nombre                    String?
-  telefono                  String?
-  hash_contrasena           String?
-  fallos_login              Int                         @default(0)
-  bloqueada_hasta           DateTime?                   @db.Timestamptz(6)
-  invitada_por              String?                     @db.Uuid
-  creado_en                 DateTime                    @default(now()) @db.Timestamptz(6)
-  actualizado_en            DateTime                    @default(now()) @db.Timestamptz(6)
-  activada_en               DateTime?                   @db.Timestamptz(6)
-  eliminada_en              DateTime?                   @db.Timestamptz(6)
-  actualizaciones_documento actualizaciones_documento[]
-  avatares                  avatares?
-  cambios_correo            cambios_correo[]
-  comentarios               comentarios[]
-  documentos                documentos[]
-  embeddings                embeddings[]
-  espacios                  espacios[]
-  eventos_seguridad         eventos_seguridad[]
-  inscripciones_mfa         inscripciones_mfa?
-  invitaciones              invitaciones?
-  mfa_totp                  mfa_totp?
-  miembros_espacio          miembros_espacio[]
-  sesiones                  sesiones[]
-  tokens_recuperacion       tokens_recuperacion[]
-  uso_ia_diario             uso_ia_diario[]
-  usuarios                  usuarios?                   @relation("usuariosTousuarios", fields: [invitada_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_usuarios            usuarios[]                  @relation("usuariosTousuarios")
-  versiones                 versiones[]
+  id                                                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  estado                                                    String                      @default("pendiente")
+  rol                                                       String
+  correo                                                    String?                     @unique(map: "usuarios_correo_unico", where: raw("(correo IS NOT NULL)")) @db.Citext
+  nombre                                                    String?
+  telefono                                                  String?
+  hash_contrasena                                           String?
+  fallos_login                                              Int                         @default(0)
+  bloqueada_hasta                                           DateTime?                   @db.Timestamptz(6)
+  invitada_por                                              String?                     @db.Uuid
+  creado_en                                                 DateTime                    @default(now()) @db.Timestamptz(6)
+  actualizado_en                                            DateTime                    @default(now()) @db.Timestamptz(6)
+  activada_en                                               DateTime?                   @db.Timestamptz(6)
+  eliminada_en                                              DateTime?                   @db.Timestamptz(6)
+  actualizaciones_documento                                 actualizaciones_documento[]
+  avatares                                                  avatares?
+  cambios_correo                                            cambios_correo[]
+  comentarios                                               comentarios[]
+  documentos                                                documentos[]
+  embeddings                                                embeddings[]
+  espacios                                                  espacios[]
+  eventos_seguridad_eventos_seguridad_objetivo_idTousuarios eventos_seguridad[]         @relation("eventos_seguridad_objetivo_idTousuarios")
+  eventos_seguridad                                         eventos_seguridad[]
+  inscripciones_mfa                                         inscripciones_mfa?
+  invitaciones                                              invitaciones?
+  mfa_totp                                                  mfa_totp?
+  miembros_espacio                                          miembros_espacio[]
+  sesiones                                                  sesiones[]
+  tokens_recuperacion                                       tokens_recuperacion[]
+  uso_ia_diario                                             uso_ia_diario[]
+  usuarios                                                  usuarios?                   @relation("usuariosTousuarios", fields: [invitada_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_usuarios                                            usuarios[]                  @relation("usuariosTousuarios")
+  versiones                                                 versiones[]
 
   @@unique([id, estado], map: "usuarios_id_estado_unico")
 }
@@ -364,15 +365,19 @@ model versiones {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model eventos_seguridad {
-  id         BigInt               @id @default(autoincrement())
-  tipo       String
-  usuario_id String?              @db.Uuid
-  ip_red     Unsupported("cidr")?
-  creado_en  DateTime             @default(now()) @db.Timestamptz(6)
-  usuarios   usuarios?            @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
+  id                                               BigInt               @id @default(autoincrement())
+  tipo                                             String
+  usuario_id                                       String?              @db.Uuid
+  ip_red                                           Unsupported("cidr")?
+  creado_en                                        DateTime             @default(now()) @db.Timestamptz(6)
+  objetivo_id                                      String?              @db.Uuid
+  recurso_id                                       String?              @db.Uuid
+  usuarios_eventos_seguridad_objetivo_idTousuarios usuarios?            @relation("eventos_seguridad_objetivo_idTousuarios", fields: [objetivo_id], references: [id], onUpdate: NoAction)
+  usuarios                                         usuarios?            @relation(fields: [usuario_id], references: [id], onUpdate: NoAction)
 
   @@index([creado_en], map: "eventos_seguridad_por_fecha")
   @@index([usuario_id, creado_en], map: "eventos_seguridad_por_usuario")
+  @@index([objetivo_id], map: "eventos_seguridad_por_objetivo", where: raw("(objetivo_id IS NOT NULL)"))
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
