@@ -20,6 +20,8 @@ import {
   ListaPermisos,
   Miembro,
   NombreEspacioSolicitud,
+  SolicitudTicket,
+  TicketTiempoReal,
   TituloDocumentoSolicitud,
   TransferirSolicitud,
   AvatarGuardado,
@@ -594,6 +596,25 @@ function registrarEspaciosYDocumentos(registro: OpenAPIRegistry): void {
   });
 }
 
+function registrarTiempoReal(registro: OpenAPIRegistry): void {
+  registro.registerPath({
+    method: 'post',
+    path: '/api/tiempo-real/tickets',
+    tags: ['tiempo real'],
+    security: [{ acceso: [] }],
+    summary:
+      'Ticket de un solo uso (30 s) para abrir el WebSocket del documento: GET /api/tiempo-real con Upgrade, Origin del frontend y Sec-WebSocket-Protocol "cuaderno.v1, ticket.<valor>"',
+    request: { body: json(SolicitudTicket) },
+    responses: {
+      201: { description: 'Ticket', ...json(TicketTiempoReal) },
+      401: error('Sin sesión viva'),
+      404: error('El documento no existe o no tienes acceso (no se distingue)'),
+      429: error('Demasiados tickets seguidos'),
+      400: error('Datos inválidos'),
+    },
+  });
+}
+
 export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocument']> {
   const registro = new OpenAPIRegistry();
 
@@ -637,6 +658,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
   registrarMfaYRecuperacion(registro);
   registrarPerfilYDatos(registro);
   registrarEspaciosYDocumentos(registro);
+  registrarTiempoReal(registro);
 
   return new OpenApiGeneratorV31(registro.definitions).generateDocument({
     openapi: '3.1.0',
