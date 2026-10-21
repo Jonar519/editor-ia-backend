@@ -1273,6 +1273,15 @@
       "pruebas": ["tests/integracion/retencion.test.ts"]
     },
     {
+      "id": "S29",
+      "regla": "/ready acepta una base JUSTO en la versión mínima (no exige una más)",
+      "archivo": "src/infra/bd.ts",
+      "buscar": "if (version < minimo) throw",
+      "reemplazo": "if (version <= minimo) throw",
+      "comando": "test",
+      "pruebas": ["tests/integracion/salud.test.ts"]
+    },
+    {
       "id": "W01",
       "regla": "Acceso: un rol alcanza el mínimo cuando es IGUAL o mayor (lector < editor < propietario)",
       "archivo": "src/contenido/acceso.ts",

@@ -55,11 +55,18 @@ describe('/health y /ready con dependencias reales (base de pruebas, Redis db 1)
     expect((r.body as ListoRespuesta).comprobaciones).toEqual({ bd: 'falla' });
   });
 
-  it('/ready 503 si el esquema está por detrás del mínimo que necesita el backend', async () => {
-    const { app } = appDePrueba({ comprobaciones: [comprobacionEsquema(pool, ESQUEMA_MINIMO + 1)] });
-    const r = await request(app).get('/ready');
-    expect(r.status).toBe(503);
-    expect((r.body as ListoRespuesta).comprobaciones).toEqual({ esquema: 'falla' });
+  it('/ready 503 si el esquema está por detrás del mínimo que necesita el backend (y 200 justo en el mínimo)', async () => {
+    // Contra la versión REAL de la base de pruebas: puede estar por delante de ESQUEMA_MINIMO (por ejemplo,
+    // cuando la base ya tiene una migración que este backend todavía no usa).
+    const { rows } = await pool.query<{ version: number }>('SELECT max(version)::int AS version FROM schema_migrations');
+    const actual = rows[0]?.version ?? 0;
+    expect(actual).toBeGreaterThanOrEqual(ESQUEMA_MINIMO);
+
+    const justo = await request(appDePrueba({ comprobaciones: [comprobacionEsquema(pool, actual)] }).app).get('/ready');
+    expect(justo.status).toBe(200);
+    const atras = await request(appDePrueba({ comprobaciones: [comprobacionEsquema(pool, actual + 1)] }).app).get('/ready');
+    expect(atras.status).toBe(503);
+    expect((atras.body as ListoRespuesta).comprobaciones).toEqual({ esquema: 'falla' });
   });
 
   it('/ready 503 si una dependencia se cuelga (límite por comprobación)', async () => {

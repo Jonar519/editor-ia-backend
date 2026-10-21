@@ -57,7 +57,7 @@ async function nuevoDocumento(p: Persona, espacioId: string, titulo = 'Documento
 }
 
 const rolesDe = (body: unknown) =>
-  Object.fromEntries(((body as { miembros: MiembroCuerpo[] }).miembros ?? []).map((m) => [m.usuarioId, m.rol]));
+  Object.fromEntries((body as { miembros: MiembroCuerpo[] }).miembros.map((m) => [m.usuarioId, m.rol]));
 
 describe('espacios', () => {
   it('crear: quien lo crea queda como propietario y lo ve en su lista', async () => {
