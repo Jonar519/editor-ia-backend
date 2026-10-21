@@ -147,7 +147,7 @@ export const RestablecerSolicitud = z.object({ token: Token43, contrasena: z.str
 
 const Contrasena = z.string().min(1).max(1000);
 /** Teléfono E.164 (+ y de 7 a 15 dígitos), lo mismo que exige la base. */
-const Telefono = z.string().regex(/^\+[1-9][0-9]{6,14}$/, { error: 'teléfono en formato internacional: +521234567890' });
+const Telefono = z.string().regex(/^\+[1-9][0-9]{6,14}$/, { error: 'teléfono en formato internacional: +15550100123' });
 
 export const Perfil = z
   .object({
@@ -230,3 +230,85 @@ export const ErrorPropiedadCompartida = z
     }),
   })
   .meta({ id: 'ErrorPropiedadCompartida' });
+
+// ─── Espacios, documentos y permisos (bloque K1) ──────────────────────────────────
+
+/** Rol de una cuenta en un espacio o documento (no confundir con el rol de CUENTA). */
+export const RolContenido = z.enum(['propietario', 'editor', 'lector']);
+/** Roles que se pueden DAR a un miembro: la propiedad solo se transfiere. */
+export const RolAsignable = z.enum(['editor', 'lector']);
+
+/** Lo mismo que exige la base (espacios_nombre_formato y documentos_titulo_formato). */
+const NombreEspacio = z.string().trim().min(1).max(80);
+const TituloDocumento = z.string().trim().min(1).max(200);
+
+export const IdEspacio = z.object({ espacioId: z.uuid() });
+export const IdDocumento = z.object({ documentoId: z.uuid() });
+export const IdMiembro = z.object({ espacioId: z.uuid(), usuarioId: z.uuid() });
+export const IdPermiso = z.object({ documentoId: z.uuid(), usuarioId: z.uuid() });
+
+export const NombreEspacioSolicitud = z.object({ nombre: NombreEspacio }).meta({ id: 'NombreEspacioSolicitud' });
+export const TituloDocumentoSolicitud = z.object({ titulo: TituloDocumento }).meta({ id: 'TituloDocumentoSolicitud' });
+export const AgregarMiembroSolicitud = z.object({ correo: Correo, rol: RolAsignable }).meta({ id: 'AgregarMiembroSolicitud' });
+export const CambiarRolSolicitud = z.object({ rol: RolAsignable }).meta({ id: 'CambiarRolSolicitud' });
+export const TransferirSolicitud = z
+  .object({ usuarioId: z.uuid().meta({ description: 'Miembro del espacio que recibe la propiedad' }) })
+  .meta({ id: 'TransferirSolicitud' });
+export const DarPermisoSolicitud = z
+  .object({
+    rol: z.literal('editor').meta({
+      description: 'Solo "editor": el rol efectivo es el MAYOR entre el del espacio y el del documento, así que un permiso "lector" no cambiaría nada.',
+    }),
+  })
+  .meta({ id: 'DarPermisoSolicitud' });
+
+export const Espacio = z
+  .object({
+    id: z.uuid(),
+    nombre: z.string(),
+    rol: RolContenido.meta({ description: 'Tu rol en el espacio' }),
+    creadoEn: z.iso.datetime(),
+    miembros: z.number().int(),
+  })
+  .meta({ id: 'Espacio' });
+
+export const ListaEspacios = z.object({ espacios: z.array(Espacio) }).meta({ id: 'ListaEspacios' });
+
+export const EspacioEliminado = z.object({ documentosBorrados: z.number().int() }).meta({ id: 'EspacioEliminado' });
+
+export const Miembro = z
+  .object({ usuarioId: z.uuid(), nombre: z.string(), correo: z.string(), rol: RolContenido, desde: z.iso.datetime() })
+  .meta({ id: 'Miembro' });
+
+export const ListaMiembros = z.object({ miembros: z.array(Miembro) }).meta({ id: 'ListaMiembros' });
+
+export const Documento = z
+  .object({
+    id: z.uuid(),
+    espacioId: z.uuid(),
+    titulo: z.string(),
+    rol: RolContenido.meta({ description: 'Tu rol EFECTIVO en el documento (rol_efectivo_documento de la base)' }),
+    propietario: z.object({ id: z.uuid(), nombre: z.string() }),
+    creadoEn: z.iso.datetime(),
+    actualizadoEn: z.iso.datetime().meta({ description: 'Último cambio de la fila (título o estado compactado), no la última edición del texto' }),
+  })
+  .meta({ id: 'Documento' });
+
+export const ListaDocumentos = z.object({ documentos: z.array(Documento) }).meta({ id: 'ListaDocumentos' });
+
+export const PermisoDocumento = z
+  .object({ usuarioId: z.uuid(), nombre: z.string(), rol: RolContenido })
+  .meta({ id: 'PermisoDocumento', description: 'Permiso PROPIO del documento (además del rol de espacio)' });
+
+export const ListaPermisos = z.object({ permisos: z.array(PermisoDocumento) }).meta({ id: 'ListaPermisos' });
+
+export const ErrorPropiedadDocumentos = z
+  .object({
+    error: z.object({
+      codigo: z.literal('propiedad_documentos'),
+      mensaje: z.string(),
+      solicitud: z.string(),
+      detalles: z.array(PropiedadCompartida),
+    }),
+  })
+  .meta({ id: 'ErrorPropiedadDocumentos', description: 'Documentos del espacio que el miembro posee: hay que transferirlos antes de quitarlo.' });

@@ -41,16 +41,16 @@ describe('perfil', () => {
     expect(r.body).toMatchObject({ id: c.id, correo: c.correo, nombre: c.nombre, telefono: null, rol: 'editor', mfaActivo: false, avatar: null });
     expect(JSON.stringify(r.body)).not.toMatch(/scrypt|hash_contrasena/);
 
-    const p = await request(app).patch('/api/cuenta').set('authorization', `Bearer ${acceso}`).send({ nombre: 'Nombre Nuevo', telefono: '+525512345678' });
+    const p = await request(app).patch('/api/cuenta').set('authorization', `Bearer ${acceso}`).send({ nombre: 'Nombre Nuevo', telefono: '+15550100123' });
     expect(p.status).toBe(200);
-    expect(p.body).toMatchObject({ nombre: 'Nombre Nuevo', telefono: '+525512345678' });
+    expect(p.body).toMatchObject({ nombre: 'Nombre Nuevo', telefono: '+15550100123' });
     expect(await e.prisma.eventos_seguridad.count({ where: { usuario_id: c.id, tipo: 'perfil_actualizado' } })).toBe(1);
   });
 
   it('valida el teléfono (E.164) y que llegue al menos un campo', async () => {
     const app = appApi(e.deps);
     const acceso = await entrar(app, await cuentaActiva(e.prisma));
-    expect((await request(app).patch('/api/cuenta').set('authorization', `Bearer ${acceso}`).send({ telefono: '55 1234 5678' })).status).toBe(400);
+    expect((await request(app).patch('/api/cuenta').set('authorization', `Bearer ${acceso}`).send({ telefono: '555 010 0123' })).status).toBe(400);
     expect((await request(app).patch('/api/cuenta').set('authorization', `Bearer ${acceso}`).send({})).status).toBe(400);
   });
 });

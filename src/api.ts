@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { rutasAuth } from './auth/rutas.js';
 import { rutasCuenta } from './cuenta/rutas.js';
 import type { DependenciasApi } from './dependencias.js';
+import { rutasDocumentos } from './documentos/rutas.js';
+import { rutasEspacios } from './espacios/rutas.js';
 import { rutasAdminInvitaciones, rutasInvitacionPublica } from './invitaciones/rutas.js';
 import { rutasUsuarios } from './usuarios/rutas.js';
 
@@ -18,5 +20,7 @@ export function crearApi(d: DependenciasApi): Router {
   api.use('/cuenta', rutasCuenta(d));
   api.use('/usuarios', rutasUsuarios(d));
   api.use('/admin/invitaciones', rutasAdminInvitaciones(d));
+  api.use('/espacios', rutasEspacios(d));
+  api.use('/documentos', rutasDocumentos(d));
   return api;
 }

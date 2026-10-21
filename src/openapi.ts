@@ -3,6 +3,25 @@
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
   ActualizarPerfil,
+  AgregarMiembroSolicitud,
+  CambiarRolSolicitud,
+  DarPermisoSolicitud,
+  Documento,
+  Espacio,
+  EspacioEliminado,
+  ErrorPropiedadDocumentos,
+  IdDocumento,
+  IdEspacio,
+  IdMiembro,
+  IdPermiso,
+  ListaDocumentos,
+  ListaEspacios,
+  ListaMiembros,
+  ListaPermisos,
+  Miembro,
+  NombreEspacioSolicitud,
+  TituloDocumentoSolicitud,
+  TransferirSolicitud,
   AvatarGuardado,
   CambioContrasena,
   CambioCorreoRespuesta,
@@ -360,6 +379,221 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
   });
 }
 
+function registrarEspaciosYDocumentos(registro: OpenAPIRegistry): void {
+  const espacios = { tags: ['espacios'], security: [{ acceso: [] }] };
+  const documentos = { tags: ['documentos'], security: [{ acceso: [] }] };
+  const comunes = { 401: error('Sin sesión viva'), 400: error('Datos inválidos') };
+  const sinEspacio = { 404: error('El espacio no existe o no eres miembro (no se distingue)') };
+  const sinDocumento = { 404: error('El documento no existe o no tienes acceso (no se distingue)') };
+  const sinRol = { 403: error('Eres miembro, pero tu rol no alcanza') };
+
+  // ─── Espacios ───
+  registro.registerPath({
+    method: 'get',
+    path: '/api/espacios',
+    ...espacios,
+    summary: 'Tus espacios, con tu rol en cada uno',
+    responses: { 200: { description: 'Lista', ...json(ListaEspacios) }, ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/espacios',
+    ...espacios,
+    summary: 'Crear un espacio (quedas como propietario). Una cuenta de solo lectura no puede.',
+    request: { body: json(NombreEspacioSolicitud) },
+    responses: { 201: { description: 'Creado', ...json(Espacio) }, 403: error('Cuenta de solo lectura'), ...comunes },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/espacios/{espacioId}',
+    ...espacios,
+    summary: 'Un espacio',
+    request: { params: IdEspacio },
+    responses: { 200: { description: 'Espacio', ...json(Espacio) }, ...sinEspacio, ...comunes },
+  });
+  registro.registerPath({
+    method: 'patch',
+    path: '/api/espacios/{espacioId}',
+    ...espacios,
+    summary: 'Renombrar (propietario)',
+    request: { params: IdEspacio, body: json(NombreEspacioSolicitud) },
+    responses: { 200: { description: 'Espacio', ...json(Espacio) }, ...sinRol, ...sinEspacio, ...comunes },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/espacios/{espacioId}',
+    ...espacios,
+    summary: 'Borrar con todo su contenido (propietario y único miembro)',
+    request: { params: IdEspacio },
+    responses: {
+      200: { description: 'Borrado', ...json(EspacioEliminado) },
+      409: error('espacio_compartido: tiene otros miembros'),
+      ...sinRol,
+      ...sinEspacio,
+      ...comunes,
+    },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/espacios/{espacioId}/propiedad',
+    ...espacios,
+    summary: 'Transferir el espacio a otro miembro (el anterior queda como editor)',
+    request: { params: IdEspacio, body: json(TransferirSolicitud) },
+    responses: {
+      200: { description: 'Miembros con sus roles nuevos', ...json(ListaMiembros) },
+      404: error('El espacio no existe, no eres miembro, o el destino no es miembro'),
+      409: error('rol_excede_cuenta (cuenta de solo lectura) o ya_es_propietario'),
+      ...sinRol,
+      ...comunes,
+    },
+  });
+
+  // ─── Miembros ───
+  registro.registerPath({
+    method: 'get',
+    path: '/api/espacios/{espacioId}/miembros',
+    ...espacios,
+    summary: 'Miembros del espacio',
+    request: { params: IdEspacio },
+    responses: { 200: { description: 'Miembros', ...json(ListaMiembros) }, ...sinEspacio, ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/espacios/{espacioId}/miembros',
+    ...espacios,
+    summary: 'Agregar una cuenta activa por su correo (propietario; límite por cuenta)',
+    request: { params: IdEspacio, body: json(AgregarMiembroSolicitud) },
+    responses: {
+      201: { description: 'Miembro agregado', ...json(Miembro) },
+      404: error('El espacio no existe, o no hay una cuenta ACTIVA con ese correo (cuenta_no_encontrada, genérico)'),
+      409: error('ya_es_miembro, o rol_excede_cuenta (una cuenta de solo lectura solo puede ser lectora)'),
+      429: error('Demasiadas altas seguidas'),
+      ...sinRol,
+      ...comunes,
+    },
+  });
+  registro.registerPath({
+    method: 'patch',
+    path: '/api/espacios/{espacioId}/miembros/{usuarioId}',
+    ...espacios,
+    summary: 'Cambiar el rol de un miembro (propietario). La propiedad se transfiere aparte.',
+    request: { params: IdMiembro, body: json(CambiarRolSolicitud) },
+    responses: {
+      200: { description: 'Miembro', ...json(Miembro) },
+      404: error('El espacio o el miembro no existe'),
+      409: error('usar_transferencia o rol_excede_cuenta'),
+      ...sinRol,
+      ...comunes,
+    },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/espacios/{espacioId}/miembros/{usuarioId}',
+    ...espacios,
+    summary: 'Quitar a un miembro (propietario) o salir (tu propio id). Sus permisos de documento se van en cascada.',
+    request: { params: IdMiembro },
+    responses: {
+      204: { description: 'Quitado' },
+      404: error('El espacio o el miembro no existe'),
+      409: { description: 'propietario_no_sale, o propiedad_documentos con la lista de documentos que hay que transferir', ...json(ErrorPropiedadDocumentos) },
+      ...sinRol,
+      ...comunes,
+    },
+  });
+
+  // ─── Documentos ───
+  registro.registerPath({
+    method: 'get',
+    path: '/api/espacios/{espacioId}/documentos',
+    ...documentos,
+    summary: 'Documentos del espacio, con tu rol EFECTIVO en cada uno',
+    request: { params: IdEspacio },
+    responses: { 200: { description: 'Documentos', ...json(ListaDocumentos) }, ...sinEspacio, ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/espacios/{espacioId}/documentos',
+    ...documentos,
+    summary: 'Crear un documento (propietario o editor del espacio; quedas como propietario del documento)',
+    request: { params: IdEspacio, body: json(TituloDocumentoSolicitud) },
+    responses: { 201: { description: 'Creado', ...json(Documento) }, ...sinRol, ...sinEspacio, ...comunes },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}',
+    ...documentos,
+    summary: 'Metadatos de un documento (el contenido va por WebSocket, bloque K2)',
+    request: { params: IdDocumento },
+    responses: { 200: { description: 'Documento', ...json(Documento) }, ...sinDocumento, ...comunes },
+  });
+  registro.registerPath({
+    method: 'patch',
+    path: '/api/documentos/{documentoId}',
+    ...documentos,
+    summary: 'Cambiar el título (editor o propietario efectivo)',
+    request: { params: IdDocumento, body: json(TituloDocumentoSolicitud) },
+    responses: { 200: { description: 'Documento', ...json(Documento) }, ...sinRol, ...sinDocumento, ...comunes },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/documentos/{documentoId}',
+    ...documentos,
+    summary: 'Borrar el documento con su historial (propietario del documento)',
+    request: { params: IdDocumento },
+    responses: { 204: { description: 'Borrado' }, ...sinRol, ...sinDocumento, ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/documentos/{documentoId}/propiedad',
+    ...documentos,
+    summary: 'Transferir el documento a otro miembro del espacio (el anterior queda con permiso editor)',
+    request: { params: IdDocumento, body: json(TransferirSolicitud) },
+    responses: {
+      200: { description: 'Permisos propios del documento', ...json(ListaPermisos) },
+      404: error('El documento no existe, no tienes acceso, o el destino no es miembro del espacio'),
+      409: error('rol_excede_cuenta o ya_es_propietario'),
+      ...sinRol,
+      ...comunes,
+    },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}/permisos',
+    ...documentos,
+    summary: 'Permisos propios del documento (además del rol de espacio)',
+    request: { params: IdDocumento },
+    responses: { 200: { description: 'Permisos', ...json(ListaPermisos) }, ...sinDocumento, ...comunes },
+  });
+  registro.registerPath({
+    method: 'put',
+    path: '/api/documentos/{documentoId}/permisos/{usuarioId}',
+    ...documentos,
+    summary: 'Dar "editor" sobre el documento a un miembro del espacio (propietario del documento)',
+    request: { params: IdPermiso, body: json(DarPermisoSolicitud) },
+    responses: {
+      200: { description: 'Permisos', ...json(ListaPermisos) },
+      404: error('El documento no existe, no tienes acceso, o el destino no es miembro del espacio'),
+      409: error('usar_transferencia (es el propietario) o rol_excede_cuenta'),
+      ...sinRol,
+      ...comunes,
+    },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/documentos/{documentoId}/permisos/{usuarioId}',
+    ...documentos,
+    summary: 'Quitar el permiso propio de un miembro (propietario del documento)',
+    request: { params: IdPermiso },
+    responses: {
+      204: { description: 'Quitado' },
+      404: error('El documento no existe, no tienes acceso, o ese permiso no existe'),
+      409: error('usar_transferencia: la propiedad no se quita'),
+      ...sinRol,
+      ...comunes,
+    },
+  });
+}
+
 export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocument']> {
   const registro = new OpenAPIRegistry();
 
@@ -402,6 +636,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
   registrarInvitaciones(registro);
   registrarMfaYRecuperacion(registro);
   registrarPerfilYDatos(registro);
+  registrarEspaciosYDocumentos(registro);
 
   return new OpenApiGeneratorV31(registro.definitions).generateDocument({
     openapi: '3.1.0',
