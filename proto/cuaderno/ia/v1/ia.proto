@@ -1,0 +1,138 @@
+// BORRADOR (ADR 0002, apertura del tramo 3). No se compila ni se usa hasta el bloque P1, donde se revisa.
+//
+// Contrato entre el API (gateway) y el servicio de IA. Solo tráfico INTERNO: el navegador nunca habla
+// gRPC. Reglas del contrato:
+//   - La versión va en el paquete (v1). Un cambio incompatible es v2, en paralelo.
+//   - Un número de campo nunca se reutiliza: al quitar un campo, su número y su nombre van a `reserved`.
+//   - El contenido del documento y la instrucción van en campos SEPARADOS. El servicio trata el
+//     contenido siempre como datos (entre delimitadores), nunca como instrucciones.
+//   - Nada de identidad de la persona más allá de un id opaco: ni correo ni nombre.
+//   - Autenticación entre servicios: metadato `authorization: Bearer <IA_SERVICE_TOKEN>`.
+//   - El API pone SIEMPRE un deadline (ver ADR 0002).
+syntax = "proto3";
+
+package cuaderno.ia.v1;
+
+service Asistente {
+  // Unaria: explica un fragmento seleccionado. Respuesta corta y completa.
+  rpc Explicar(ExplicarSolicitud) returns (Respuesta);
+
+  // Unaria: vector de una consulta de búsqueda semántica (la búsqueda la hace el API con pgvector).
+  rpc EmbeberConsulta(EmbeberConsultaSolicitud) returns (Vector);
+
+  // Streaming del servidor: el texto llega de a poco. El API lo traduce a SSE para el navegador.
+  rpc Resumir(TransformarSolicitud) returns (stream Fragmento);
+  rpc Mejorar(TransformarSolicitud) returns (stream Fragmento);
+
+  // Streaming del cliente: el API manda los fragmentos de un documento (desde un job de BullMQ) y
+  // recibe al final todos sus vectores.
+  rpc IndexarDocumento(stream FragmentoDocumento) returns (DocumentoIndexado);
+
+  // Bidireccional: una corriente por conexión de edición. Entra el contexto en cada pausa de escritura y
+  // salen sugerencias. Un contexto nuevo con otro `pedido_id` cancela la sugerencia anterior.
+  rpc Autocompletar(stream ContextoAutocompletado) returns (stream Sugerencia);
+}
+
+// ─── Comunes ──────────────────────────────────────────────────────────────────
+
+// Quién pide y para qué documento: ids opacos (uuid en texto), para límites y trazas. Nunca datos
+// personales.
+message Origen {
+  string cuenta_id = 1;
+  string documento_id = 2;
+  // Id de la petición del API (el mismo que el campo `solicitud` de los errores), para correlacionar logs.
+  string solicitud_id = 3;
+}
+
+// Tokens consumidos, para el tope diario que aplica el API (uso_ia_diario).
+message Uso {
+  uint32 tokens_entrada = 1;
+  uint32 tokens_salida = 2;
+}
+
+// ─── Explicar ─────────────────────────────────────────────────────────────────
+
+message ExplicarSolicitud {
+  Origen origen = 1;
+  // El fragmento seleccionado: DATOS, nunca instrucciones.
+  string contenido = 2;
+  // Lenguaje del bloque de código, si lo hay ("ts", "sql"…); vacío si es prosa.
+  string lenguaje = 3;
+}
+
+message Respuesta {
+  string texto = 1;
+  Uso uso = 2;
+}
+
+// ─── Resumir y mejorar ────────────────────────────────────────────────────────
+
+message TransformarSolicitud {
+  Origen origen = 1;
+  string contenido = 2;
+  // Qué hacer con el contenido. Un conjunto cerrado: la persona no escribe instrucciones libres al modelo.
+  Estilo estilo = 3;
+
+  enum Estilo {
+    ESTILO_SIN_ESPECIFICAR = 0;
+    ESTILO_CLARO = 1;     // más claro, mismo largo
+    ESTILO_BREVE = 2;     // más corto
+    ESTILO_FORMAL = 3;    // tono de documentación formal
+  }
+}
+
+// Un trozo del texto generado. El último mensaje del stream trae `uso` y `fin = true`.
+message Fragmento {
+  string texto = 1;
+  bool fin = 2;
+  Uso uso = 3;
+}
+
+// ─── Búsqueda e indexado ──────────────────────────────────────────────────────
+
+message EmbeberConsultaSolicitud {
+  Origen origen = 1;
+  string consulta = 2;
+}
+
+message Vector {
+  // 1024 dimensiones (vector(1024) de la base, migración 0011).
+  repeated float valores = 1 [packed = true];
+  Uso uso = 2;
+}
+
+message FragmentoDocumento {
+  // Solo en el primer mensaje del stream.
+  Origen origen = 1;
+  // Posición del fragmento dentro del documento (0, 1, 2…), para guardar cada vector en su lugar.
+  uint32 indice = 2;
+  string contenido = 3;
+}
+
+message DocumentoIndexado {
+  repeated VectorFragmento vectores = 1;
+  Uso uso = 2;
+
+  message VectorFragmento {
+    uint32 indice = 1;
+    Vector vector = 2;
+  }
+}
+
+// ─── Autocompletado ───────────────────────────────────────────────────────────
+
+message ContextoAutocompletado {
+  // Solo en el primer mensaje de la corriente.
+  Origen origen = 1;
+  // Id del pedido dentro de la corriente: la sugerencia vuelve con el mismo id. Uno nuevo cancela el anterior.
+  uint64 pedido_id = 2;
+  // Texto antes y después del cursor (recortado por el API), DATOS.
+  string antes = 3;
+  string despues = 4;
+}
+
+message Sugerencia {
+  uint64 pedido_id = 1;
+  string texto = 2;
+  Uso uso = 3;
+}

@@ -10,7 +10,19 @@ Este README general viaja dentro del repo del backend y se va completando bloque
 |---|---|
 | [editor-ia-database](https://github.com/Jonar519/editor-ia-database) | Esquema PostgreSQL 16 + pgvector: migraciones SQL numeradas, pruebas SQL y rol de aplicación. |
 | [editor-ia-backend](https://github.com/Jonar519/editor-ia-backend) | API Express + TypeScript y servidor en tiempo real. Prisma solo como cliente. |
-| [editor-ia-frontend](https://github.com/Jonar519/editor-ia-frontend) | Interfaz en JavaScript sin framework, con Vite (pendiente, tramo 2). |
+| [editor-ia-frontend](https://github.com/Jonar519/editor-ia-frontend) | Interfaz en JavaScript sin framework, con Vite: router por hash, CSS con tokens, Service Worker. |
+
+## Estado por tramo
+
+| Tramo | Bloques | Estado |
+|---|---|---|
+| 1. Base e identidad (backend) | A–G | Cerrado |
+| 2. Frontend de identidad | H1, H2, I, J | Cerrado (confirmado por escrito al cerrar J) |
+| 3. Editor colaborativo | K1, K2, L–O | Abierto. ADR [0002](adr/0002-comunicacion.md), [0003](adr/0003-crdt.md) y [0004](adr/0004-motor-de-edicion.md) aceptados. K se divide en K1 (CRUD por REST y migraciones) y K2 (WebSocket, guardia, revocación, persistencia y compactación). |
+| 4. IA | P1, P2, P3, Q | Pendiente |
+| 5. Cierre | R | Pendiente |
+
+**Sin medir al cierre del tramo 2** (se revisan en la guía consolidada del bloque R): la recodificación del avatar con fotos reales de cámara en Firefox, Safari, y lo que solo cubren las E2E sin mutación (olvidar la sesión después de eliminar la cuenta, el foco en las confirmaciones).
 
 ## Puertos locales
 
@@ -19,7 +31,7 @@ Este README general viaja dentro del repo del backend y se va completando bloque
 | PostgreSQL | `127.0.0.1:5435` |
 | Redis | `127.0.0.1:6381` (db 0 desarrollo, 1 pruebas, 2 E2E) |
 | API | `127.0.0.1:4200` |
-| Frontend | `127.0.0.1:5175` (pendiente) |
+| Frontend | `127.0.0.1:5175` |
 
 ## Cómo demostrar cada tema de la materia
 
@@ -54,6 +66,13 @@ La tabla crece con cada bloque. **Demo** indica el archivo `docs/demo-<fase>.md`
 | Exportación sin secretos | `src/cuenta/datos.ts` | Mutación U26 (barrido de secretos en el JSON) | backend: G |
 | Eliminación por lápida sin huérfanos | `eliminar_cuenta()` en la base (0018) | 409 con propiedad compartida; mutaciones G09–G15 y U28–U31 | backend: G, database: G |
 | Retención con job agendado | `purgar_retencion()` (0019) + BullMQ (`src/trabajos/retencion.ts`) | [data-retention.md](data-retention.md); mutaciones G16–G20 y U32–U34 | backend: G, database: G |
+| Token solo en memoria y un solo refresco a la vez | `src/api/cliente.js` del frontend (promesa compartida + Web Locks) | Pruebas `cliente.test.mjs`; mutaciones H26–H34 | frontend: H2 |
+| Significado del color auditado y contraste AA medido | `scripts/colores.mjs` y `scripts/contraste.mjs` del frontend | `scripts\revisar.bat`; mutaciones H01–H13, H40 y H41 | frontend: H1 |
+| Presupuestos de peso por rol y por pantalla | `presupuestos.json` + `scripts/presupuestos.mjs` del frontend | `npm run presupuestos`; mutaciones H14–H17, H24, H25 y H64 | frontend: H1, J |
+| Service Worker que nunca cachea el API | `src/sw/sw.js` del frontend | `sw.spec.mjs` sin red; mutaciones H35–H39 | frontend: H2 |
+| Accesibilidad WCAG 2.1 AA en los dos temas | axe en cada pantalla (Playwright, Chromium y Firefox) | `scripts\e2e.bat` | frontend: H1–J |
+| Token de un enlace fuera de la URL antes de usarlo | `src/token-url.js` del frontend | Mutación H42 | frontend: I |
+| Recorte del avatar en el cliente, sin metadatos | `src/vistas/lector/foto.js` y `src/reglas-cuenta.js` | E2E: el PNG subido no trae su trozo de texto; mutaciones H51–H53 | frontend: J |
 | Pruebas de mutación | `mutations/catalogo.json` en cada repo | `scripts\mutar.bat` | todos |
 | CI | `.github/workflows/ci.yml` en cada repo | Pestaña Actions de cada PR | todos |
 
