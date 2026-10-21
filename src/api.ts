@@ -5,6 +5,7 @@ import type { DependenciasApi } from './dependencias.js';
 import { rutasDocumentos } from './documentos/rutas.js';
 import { rutasEspacios } from './espacios/rutas.js';
 import { rutasAdminInvitaciones, rutasInvitacionPublica } from './invitaciones/rutas.js';
+import { rutasTiempoReal } from './tiempo-real/rutas.js';
 import { rutasUsuarios } from './usuarios/rutas.js';
 
 /** Todas las rutas del API bajo /api. */
@@ -22,5 +23,6 @@ export function crearApi(d: DependenciasApi): Router {
   api.use('/admin/invitaciones', rutasAdminInvitaciones(d));
   api.use('/espacios', rutasEspacios(d));
   api.use('/documentos', rutasDocumentos(d));
+  api.use('/tiempo-real', rutasTiempoReal(d));
   return api;
 }

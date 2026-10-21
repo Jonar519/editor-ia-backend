@@ -7,7 +7,7 @@ import type { Comprobacion } from '../http/salud.js';
  * Versión mínima del esquema (editor-ia-database/migrations) que este backend necesita.
  * Si la base está más atrás, /ready responde 503 en vez de fallar con errores raros más tarde.
  */
-export const ESQUEMA_MINIMO = 20;
+export const ESQUEMA_MINIMO = 22;
 
 export function crearPool(url: string): pg.Pool {
   return new pg.Pool({
