@@ -67,4 +67,16 @@ describe('diferencia por líneas', () => {
     const abs = Y.createAbsolutePositionFromRelativePosition(ancla, doc);
     expect(t.toJSON().slice(abs?.index ?? -1)).toBe('tres\n');
   });
+
+  it('en una línea cambiada, lo que no cambió de ESA línea conserva su ancla (prueba en vivo de N)', () => {
+    const doc = new Y.Doc();
+    const t = doc.getText('contenido');
+    t.insert(0, 'Guia de la API v2\nLinea nueva');
+    const inicio = Y.createRelativePositionFromTypeIndex(t, 'Guia de la '.length, 0);
+    const fin = Y.createRelativePositionFromTypeIndex(t, 'Guia de la API'.length, -1);
+    llevarA(t, 'Guia de la API');
+    const a = Y.createAbsolutePositionFromRelativePosition(inicio, doc)?.index ?? -1;
+    const b = Y.createAbsolutePositionFromRelativePosition(fin, doc)?.index ?? -1;
+    expect(t.toJSON().slice(a, b)).toBe('API');
+  });
 });

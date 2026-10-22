@@ -106,9 +106,20 @@ function myers(A: string[], B: string[]): Operacion[] {
  */
 export function llevarA(texto: Y.Text, objetivo: string): void {
   let pos = 0;
-  for (const op of diferenciaPorLineas(texto.toJSON(), objetivo)) {
+  const ops = diferenciaPorLineas(texto.toJSON(), objetivo);
+  for (let i = 0; i < ops.length; i++) {
+    const op = ops[i];
+    if (!op) continue;
     const trozo = op.lineas.join('');
-    if (op.tipo === 'igual') pos += trozo.length;
+    const siguiente = ops[i + 1];
+    if (op.tipo === 'quitar' && siguiente?.tipo === 'agregar') {
+      // Líneas cambiadas: dentro de ellas, solo lo que difiere (así un comentario sobre la parte de la
+      // línea que no cambió conserva su ancla; lo encontró la prueba en vivo de N).
+      const nuevo = siguiente.lineas.join('');
+      reemplazarDiferencia(texto, pos, trozo, nuevo);
+      pos += nuevo.length;
+      i++;
+    } else if (op.tipo === 'igual') pos += trozo.length;
     else if (op.tipo === 'quitar') texto.delete(pos, trozo.length);
     else {
       texto.insert(pos, trozo);
@@ -116,4 +127,16 @@ export function llevarA(texto: Y.Text, objetivo: string): void {
     }
   }
   if (texto.toJSON() !== objetivo) throw new Error('restaurar: el texto resultante no coincide con la versión');
+}
+
+/** En `pos`, cambia `viejo` por `nuevo` tocando solo el medio que difiere (prefijo y sufijo comunes quedan). */
+function reemplazarDiferencia(texto: Y.Text, pos: number, viejo: string, nuevo: string): void {
+  let p = 0;
+  while (p < viejo.length && p < nuevo.length && viejo[p] === nuevo[p]) p++;
+  let s = 0;
+  while (s < viejo.length - p && s < nuevo.length - p && viejo[viejo.length - 1 - s] === nuevo[nuevo.length - 1 - s]) s++;
+  const quitar = viejo.length - p - s;
+  if (quitar > 0) texto.delete(pos + p, quitar);
+  const poner = nuevo.slice(p, nuevo.length - s);
+  if (poner) texto.insert(pos + p, poner);
 }

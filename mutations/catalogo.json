@@ -1598,6 +1598,15 @@
       "pruebas": ["tests/unitarias/lineas.test.ts"]
     },
     {
+      "id": "N11",
+      "regla": "Versiones: en una línea cambiada, restaurar toca solo lo que difiere dentro de ella",
+      "archivo": "src/versiones/lineas.ts",
+      "buscar": "      reemplazarDiferencia(texto, pos, trozo, nuevo);",
+      "reemplazo": "      texto.delete(pos, trozo.length); texto.insert(pos, nuevo);",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/lineas.test.ts"]
+    },
+    {
       "id": "N05",
       "regla": "Versiones: la automática se crea solo si el texto cambió desde la última",
       "archivo": "src/tiempo-real/compactacion.ts",
