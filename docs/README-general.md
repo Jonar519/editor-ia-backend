@@ -157,7 +157,9 @@ Además, producción se niega a arrancar si:
     - el tope de 10 MiB por documento (4413);
     - el disparo de la compactación (200 filas o 5 min de inactividad);
     - la revalidación total al reconectar;
-    - el apagado ordenado.
+    - el apagado ordenado;
+    - (bloque M) el vaciado que falla reintenta sin descartar, y un documento con cambios sin guardar no se descarga de memoria.
     
     Detalle en la sección "Estado de verificación" de los ADR [0002](adr/0002-comunicacion.md) y [0003](adr/0003-crdt.md).
+  - **Convergencia (bloque M), verificada:** prueba con semilla contra el servidor y la base reales, con réplicas, cortes, ediciones sin conexión, duplicados y compactación. Encontró un fallo de K2 que perdía en la base lo que llegaba durante un `INSERT`; corregido (ADR 0003).
 - **Auditoría de permisos (bloque K2, migración 0022).** Cada concesión y revocación de miembros, permisos y propiedad queda en `eventos_seguridad`: quién, a quién (`objetivo_id`) y sobre qué (`recurso_id`, solo un id). Las creaciones no se registran.
