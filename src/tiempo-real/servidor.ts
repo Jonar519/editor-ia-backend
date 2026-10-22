@@ -33,7 +33,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { validarSesion } from '../auth/sesiones.js';
 import { type RolContenido, rolEnDocumento } from '../contenido/acceso.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
-import { DocumentoVivo } from './documento.js';
+import { DocumentoVivo, NOMBRE_TEXTO } from './documento.js';
 import { CIERRE, type LimitesTiempoReal } from './limites.js';
 import { consumirTicket, PROTOCOLO, ticketDeProtocolos } from './tickets.js';
 
@@ -85,6 +85,22 @@ interface Conexion {
 
 const puedeEscribir = (c: Conexion) => !c.cortada && (c.rol === 'editor' || c.rol === 'propietario');
 
+/**
+ * Lo que el API necesita del documento en memoria (bloque N): su estado actual (una versión manual), un
+ * cambio hecho por el servidor en nombre de una persona (restaurar una versión) y avisar a quienes lo
+ * tienen abierto (los comentarios cambiaron). El permiso lo verifica el API ANTES de llamar.
+ */
+export interface ContenidoVivo {
+  estadoActual(documentoId: string): Promise<{ estado: Uint8Array; texto: string }>;
+  cambiar(documentoId: string, autorId: string, cambio: (texto: Y.Text) => void): Promise<{ estado: Uint8Array; texto: string }>;
+  avisarComentarios(documentoId: string): void;
+}
+
+/** Origen de un cambio que hace el servidor en nombre de una persona: se guarda con su autoría y va a TODAS las conexiones. */
+class CambioDelServidor {
+  constructor(readonly autorId: string) {}
+}
+
 /** Una actualización de Yjs sin cambios (sin estructuras ni borrados): la manda cualquier cliente al sincronizar. */
 const esVacia = (u: Uint8Array) => u.length === 2 && u[0] === 0 && u[1] === 0;
 
@@ -93,7 +109,7 @@ function rechazar(socket: Duplex, estado: number, texto: string): void {
   socket.destroy();
 }
 
-export class ServidorTiempoReal {
+export class ServidorTiempoReal implements ContenidoVivo {
   private readonly wss: WebSocketServer;
   private readonly documentos = new Map<string, Promise<DocumentoVivo>>();
   private readonly descargas = new Map<string, ReturnType<typeof setTimeout>>();
@@ -190,6 +206,42 @@ export class ServidorTiempoReal {
     return p;
   }
 
+  // ─── Para el API (bloque N) ─────────────────────────────────────────────────────
+
+  /**
+   * El documento en memoria para una operación del API: si nadie lo tiene abierto, se descarga después
+   * como cualquier otro. Una sola copia en memoria: así un cambio del servidor y las conexiones nunca
+   * divergen.
+   */
+  private async paraElApi<T>(documentoId: string, f: (doc: DocumentoVivo) => T | Promise<T>): Promise<T> {
+    const doc = await this.documento(documentoId);
+    try {
+      return await f(doc);
+    } finally {
+      if (this.delDocumento(documentoId).length === 0) this.programarDescarga(doc);
+    }
+  }
+
+  estadoActual(documentoId: string): Promise<{ estado: Uint8Array; texto: string }> {
+    return this.paraElApi(documentoId, (doc) => ({ estado: Y.encodeStateAsUpdate(doc.ydoc), texto: doc.ydoc.getText(NOMBRE_TEXTO).toJSON() }));
+  }
+
+  cambiar(documentoId: string, autorId: string, cambio: (texto: Y.Text) => void): Promise<{ estado: Uint8Array; texto: string }> {
+    return this.paraElApi(documentoId, async (doc) => {
+      Y.transact(doc.ydoc, () => {
+        cambio(doc.ydoc.getText(NOMBRE_TEXTO));
+      }, new CambioDelServidor(autorId));
+      // Que quede en la base antes de responder (la versión que lo registra va después).
+      await doc.vaciar();
+      return { estado: Y.encodeStateAsUpdate(doc.ydoc), texto: doc.ydoc.getText(NOMBRE_TEXTO).toJSON() };
+    });
+  }
+
+  avisarComentarios(documentoId: string): void {
+    const marco = this.control({ tipo: 'comentarios' });
+    for (const c of this.delDocumento(documentoId)) if (!c.cortada) this.enviar(c, marco);
+  }
+
   private delDocumento(id: string): Conexion[] {
     return [...this.conexiones].filter((c) => c.documentoId === id);
   }
@@ -197,15 +249,15 @@ export class ServidorTiempoReal {
   /** Retransmisión: un cambio aplicado va a las DEMÁS conexiones del documento, y se guarda. */
   private escucharDocumento(doc: DocumentoVivo): void {
     doc.ydoc.on('update', (actualizacion: Uint8Array, origen: unknown) => {
-      if (!this.conexiones.has(origen as Conexion)) return; // cargado de la base
-      const autor = origen as Conexion;
-      doc.guardar(autor.usuarioId, actualizacion);
+      const delServidor = origen instanceof CambioDelServidor;
+      if (!delServidor && !this.conexiones.has(origen as Conexion)) return; // cargado de la base
+      doc.guardar(delServidor ? origen.autorId : (origen as Conexion).usuarioId, actualizacion);
       const e = encoding.createEncoder();
       encoding.writeVarUint(e, MENSAJE.sync);
       encoding.writeVarUint(e, SYNC.actualizacion);
       encoding.writeVarUint8Array(e, actualizacion);
       const marco = encoding.toUint8Array(e);
-      for (const c of this.delDocumento(doc.id)) if (c !== autor && !c.cortada) this.enviar(c, marco);
+      for (const c of this.delDocumento(doc.id)) if (c !== origen && !c.cortada) this.enviar(c, marco);
     });
     doc.awareness.on('update', ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }, origen: unknown) => {
       const cambiados = [...added, ...updated, ...removed];

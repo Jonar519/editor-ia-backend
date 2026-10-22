@@ -2,6 +2,7 @@ import type { Redis } from 'ioredis';
 import type { ProveedorCorreo } from './correo/proveedor.js';
 import type { PrismaClient } from './generated/prisma/client.js';
 import type { ProveedorGeo } from './geo/proveedor.js';
+import type { ContenidoVivo } from './tiempo-real/servidor.js';
 
 /** Lo que necesitan las rutas del API. Las pruebas lo arman con la base y el Redis de pruebas. */
 export interface DependenciasApi {
@@ -23,4 +24,9 @@ export interface DependenciasApi {
   senuelo: string;
   /** Prefijo de las claves de Redis (las pruebas usan uno propio por corrida). */
   prefijoRedis: string;
+  /**
+   * El documento en memoria del servidor de tiempo real (bloque N: versiones y comentarios). Sin él
+   * (pruebas que no levantan el tiempo real), esas rutas responden 503.
+   */
+  contenido?: ContenidoVivo;
 }
