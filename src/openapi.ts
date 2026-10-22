@@ -2,6 +2,16 @@
 // `npm run openapi` la escribe en docs/openapi.json; `npm run openapi:check` falla si quedó desactualizada.
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  CambiarComentarioSolicitud,
+  Comentario,
+  ComentarioSolicitud,
+  IdComentario,
+  IdVersion,
+  ListaComentarios,
+  ListaVersiones,
+  TextoActual,
+  Version,
+  VersionConTexto,
   ActualizarPerfil,
   AgregarMiembroSolicitud,
   CambiarRolSolicitud,
@@ -615,6 +625,111 @@ function registrarTiempoReal(registro: OpenAPIRegistry): void {
   });
 }
 
+function registrarVersionesYComentarios(registro: OpenAPIRegistry): void {
+  const versiones = { tags: ['versiones'], security: [{ acceso: [] }] };
+  const comentarios = { tags: ['comentarios'], security: [{ acceso: [] }] };
+  const comunes = { 401: error('Sin sesión viva'), 400: error('Datos inválidos') };
+  const sinDocumento = { 404: error('El documento no existe o no tienes acceso (no se distingue)') };
+  const sinRol = { 403: error('Tu rol no alcanza') };
+  const sinTiempoReal = { 503: error('El servidor de tiempo real no está disponible') };
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}/texto',
+    ...versiones,
+    summary: 'El texto actual del documento (el de la memoria del servidor; para comparar con una versión)',
+    request: { params: IdDocumento },
+    responses: { 200: { description: 'Texto', ...json(TextoActual) }, ...sinDocumento, ...sinTiempoReal, ...comunes },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}/versiones',
+    ...versiones,
+    summary: 'Historial de versiones (cualquier rol)',
+    request: { params: IdDocumento },
+    responses: { 200: { description: 'Versiones', ...json(ListaVersiones) }, ...sinDocumento, ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/documentos/{documentoId}/versiones',
+    ...versiones,
+    summary: 'Guardar el estado actual como versión manual (editor o propietario)',
+    request: { params: IdDocumento },
+    responses: { 201: { description: 'Versión creada', ...json(Version) }, ...sinRol, ...sinDocumento, 429: error('Demasiadas versiones seguidas'), ...sinTiempoReal, ...comunes },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}/versiones/{numero}',
+    ...versiones,
+    summary: 'Una versión con su texto',
+    request: { params: IdVersion },
+    responses: { 200: { description: 'Versión', ...json(VersionConTexto) }, 404: error('El documento o la versión no existen, o no tienes acceso'), ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/documentos/{documentoId}/versiones/{numero}/restaurar',
+    ...versiones,
+    summary: 'Restaurar una versión como CAMBIO NUEVO (editor o propietario): el historial no se reescribe y queda una versión "restauracion"',
+    request: { params: IdVersion },
+    responses: {
+      201: { description: 'Versión de la restauración', ...json(Version) },
+      404: error('El documento o la versión no existen, o no tienes acceso'),
+      ...sinRol,
+      429: error('Demasiadas versiones seguidas'),
+      ...sinTiempoReal,
+      ...comunes,
+    },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}/comentarios',
+    ...comentarios,
+    summary: 'Comentarios del documento: hilos (con ancla) y respuestas, en orden',
+    request: { params: IdDocumento },
+    responses: { 200: { description: 'Comentarios', ...json(ListaComentarios) }, ...sinDocumento, ...comunes },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/documentos/{documentoId}/comentarios',
+    ...comentarios,
+    summary: 'Abrir un hilo anclado o responder (cualquier rol, también un lector)',
+    request: { params: IdDocumento, body: json(ComentarioSolicitud) },
+    responses: {
+      201: { description: 'Comentario', ...json(Comentario) },
+      400: error('ancla_invalida, falta_ancla, ancla_en_respuesta, respuesta_a_respuesta o datos inválidos'),
+      404: error('El documento o el hilo no existen, o no tienes acceso'),
+      429: error('Demasiados comentarios seguidos'),
+      401: error('Sin sesión viva'),
+    },
+  });
+  registro.registerPath({
+    method: 'patch',
+    path: '/api/comentarios/{comentarioId}',
+    ...comentarios,
+    summary: 'Editar el texto (solo quien lo escribió) o resolver/reabrir un hilo (quien lo abrió, o un editor o propietario)',
+    request: { params: IdComentario, body: json(CambiarComentarioSolicitud) },
+    responses: {
+      200: { description: 'Comentario', ...json(Comentario) },
+      400: error('resolver_respuesta o datos inválidos'),
+      403: error('No es tuyo, o tu rol no alcanza para resolver'),
+      404: error('El comentario no existe o no tienes acceso al documento'),
+      401: error('Sin sesión viva'),
+    },
+  });
+  registro.registerPath({
+    method: 'delete',
+    path: '/api/comentarios/{comentarioId}',
+    ...comentarios,
+    summary: 'Borrar (quien lo escribió, o el propietario del documento); un hilo se lleva sus respuestas',
+    request: { params: IdComentario },
+    responses: {
+      204: { description: 'Borrado' },
+      403: error('No es tuyo ni eres el propietario del documento'),
+      404: error('El comentario no existe o no tienes acceso al documento'),
+      ...comunes,
+    },
+  });
+}
+
 export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocument']> {
   const registro = new OpenAPIRegistry();
 
@@ -659,6 +774,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
   registrarPerfilYDatos(registro);
   registrarEspaciosYDocumentos(registro);
   registrarTiempoReal(registro);
+  registrarVersionesYComentarios(registro);
 
   return new OpenApiGeneratorV31(registro.definitions).generateDocument({
     openapi: '3.1.0',

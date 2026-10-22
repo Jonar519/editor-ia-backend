@@ -1341,6 +1341,267 @@
         "required": [
           "documentoId"
         ]
+      },
+      "TextoActual": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "texto"
+        ]
+      },
+      "ListaVersiones": {
+        "type": "object",
+        "properties": {
+          "versiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Version"
+            }
+          }
+        },
+        "required": [
+          "versiones"
+        ],
+        "description": "Las 200 más nuevas, de la más nueva a la más vieja"
+      },
+      "Version": {
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "integer"
+          },
+          "motivo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "automatica",
+              "restauracion"
+            ]
+          },
+          "autor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombre"
+            ],
+            "description": "null en las automáticas"
+          },
+          "restauradaDe": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Número de la versión que esta restauró"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "caracteres": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "numero",
+          "motivo",
+          "autor",
+          "restauradaDe",
+          "creadaEn",
+          "caracteres"
+        ]
+      },
+      "VersionConTexto": {
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": "integer"
+          },
+          "motivo": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "automatica",
+              "restauracion"
+            ]
+          },
+          "autor": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombre"
+            ],
+            "description": "null en las automáticas"
+          },
+          "restauradaDe": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Número de la versión que esta restauró"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "caracteres": {
+            "type": "integer"
+          },
+          "texto": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "numero",
+          "motivo",
+          "autor",
+          "restauradaDe",
+          "creadaEn",
+          "caracteres",
+          "texto"
+        ]
+      },
+      "ListaComentarios": {
+        "type": "object",
+        "properties": {
+          "comentarios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Comentario"
+            }
+          }
+        },
+        "required": [
+          "comentarios"
+        ]
+      },
+      "Comentario": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "padreId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "autor": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "nombre": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "nombre"
+            ]
+          },
+          "ancla": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cuerpo": {
+            "type": "string"
+          },
+          "resuelto": {
+            "type": "boolean"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editadoEn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "padreId",
+          "autor",
+          "ancla",
+          "cuerpo",
+          "resuelto",
+          "creadoEn",
+          "editadoEn"
+        ]
+      },
+      "ComentarioSolicitud": {
+        "type": "object",
+        "properties": {
+          "cuerpo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "ancla": {
+            "type": "string",
+            "maxLength": 1400,
+            "description": "Hilo nuevo: base64url de dos posiciones relativas de Yjs (inicio y fin del tramo)"
+          },
+          "padreId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Respuesta: el hilo al que responde (sin ancla)"
+          }
+        },
+        "required": [
+          "cuerpo"
+        ]
+      },
+      "CambiarComentarioSolicitud": {
+        "type": "object",
+        "properties": {
+          "cuerpo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "resuelto": {
+            "type": "boolean"
+          }
+        }
       }
     },
     "parameters": {}
@@ -4894,6 +5155,725 @@
           },
           "429": {
             "description": "Demasiados tickets seguidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/texto": {
+      "get": {
+        "tags": [
+          "versiones"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "El texto actual del documento (el de la memoria del servidor; para comparar con una versión)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Texto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextoActual"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El servidor de tiempo real no está disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/versiones": {
+      "get": {
+        "tags": [
+          "versiones"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Historial de versiones (cualquier rol)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versiones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaVersiones"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "versiones"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Guardar el estado actual como versión manual (editor o propietario)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Versión creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tu rol no alcanza",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas versiones seguidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El servidor de tiempo real no está disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/versiones/{numero}": {
+      "get": {
+        "tags": [
+          "versiones"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Una versión con su texto",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "required": true,
+            "name": "numero",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionConTexto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento o la versión no existen, o no tienes acceso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/versiones/{numero}/restaurar": {
+      "post": {
+        "tags": [
+          "versiones"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Restaurar una versión como CAMBIO NUEVO (editor o propietario): el historial no se reescribe y queda una versión \"restauracion\"",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "required": true,
+            "name": "numero",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Versión de la restauración",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tu rol no alcanza",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento o la versión no existen, o no tienes acceso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas versiones seguidas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "El servidor de tiempo real no está disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/comentarios": {
+      "get": {
+        "tags": [
+          "comentarios"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Comentarios del documento: hilos (con ancla) y respuestas, en orden",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comentarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaComentarios"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "comentarios"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Abrir un hilo anclado o responder (cualquier rol, también un lector)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComentarioSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comentario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comentario"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ancla_invalida, falta_ancla, ancla_en_respuesta, respuesta_a_respuesta o datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento o el hilo no existen, o no tienes acceso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados comentarios seguidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/comentarios/{comentarioId}": {
+      "patch": {
+        "tags": [
+          "comentarios"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Editar el texto (solo quien lo escribió) o resolver/reabrir un hilo (quien lo abrió, o un editor o propietario)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "comentarioId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambiarComentarioSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comentario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comentario"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "resolver_respuesta o datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No es tuyo, o tu rol no alcanza para resolver",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El comentario no existe o no tienes acceso al documento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "comentarios"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Borrar (quien lo escribió, o el propietario del documento); un hilo se lleva sus respuestas",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "comentarioId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Borrado"
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No es tuyo ni eres el propietario del documento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El comentario no existe o no tienes acceso al documento",
             "content": {
               "application/json": {
                 "schema": {

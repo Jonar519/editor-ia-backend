@@ -302,6 +302,52 @@ export const PermisoDocumento = z
 
 export const ListaPermisos = z.object({ permisos: z.array(PermisoDocumento) }).meta({ id: 'ListaPermisos' });
 
+// ─── Versiones y comentarios (bloque N) ───────────────────────────────────────────
+
+export const IdVersion = z.object({ documentoId: z.uuid(), numero: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER) });
+export const IdComentario = z.object({ comentarioId: z.uuid() });
+
+export const Version = z
+  .object({
+    numero: z.number().int(),
+    motivo: z.enum(['manual', 'automatica', 'restauracion']),
+    autor: z.object({ id: z.uuid(), nombre: z.string() }).nullable().meta({ description: 'null en las automáticas' }),
+    restauradaDe: z.number().int().nullable().meta({ description: 'Número de la versión que esta restauró' }),
+    creadaEn: z.iso.datetime(),
+    caracteres: z.number().int(),
+  })
+  .meta({ id: 'Version' });
+export const ListaVersiones = z.object({ versiones: z.array(Version) }).meta({ id: 'ListaVersiones', description: 'Las 200 más nuevas, de la más nueva a la más vieja' });
+export const VersionConTexto = Version.extend({ texto: z.string() }).meta({ id: 'VersionConTexto' });
+export const TextoActual = z.object({ texto: z.string() }).meta({ id: 'TextoActual' });
+
+/** Lo mismo que exige la base (comentarios_cuerpo_longitud). */
+const CuerpoComentario = z.string().trim().min(1).max(5000);
+export const ComentarioSolicitud = z
+  .object({
+    cuerpo: CuerpoComentario,
+    ancla: z.string().max(1400).optional().meta({ description: 'Hilo nuevo: base64url de dos posiciones relativas de Yjs (inicio y fin del tramo)' }),
+    padreId: z.uuid().optional().meta({ description: 'Respuesta: el hilo al que responde (sin ancla)' }),
+  })
+  .meta({ id: 'ComentarioSolicitud' });
+export const CambiarComentarioSolicitud = z
+  .object({ cuerpo: CuerpoComentario.optional(), resuelto: z.boolean().optional() })
+  .refine((c) => c.cuerpo !== undefined || c.resuelto !== undefined, { message: 'Indica el cuerpo o si está resuelto' })
+  .meta({ id: 'CambiarComentarioSolicitud' });
+export const Comentario = z
+  .object({
+    id: z.uuid(),
+    padreId: z.uuid().nullable(),
+    autor: z.object({ id: z.uuid(), nombre: z.string() }),
+    ancla: z.string().nullable(),
+    cuerpo: z.string(),
+    resuelto: z.boolean(),
+    creadoEn: z.iso.datetime(),
+    editadoEn: z.iso.datetime().nullable(),
+  })
+  .meta({ id: 'Comentario' });
+export const ListaComentarios = z.object({ comentarios: z.array(Comentario) }).meta({ id: 'ListaComentarios' });
+
 // ─── Tiempo real (bloque K2) ──────────────────────────────────────────────────────
 
 export const SolicitudTicket = z.object({ documentoId: z.uuid() }).meta({ id: 'SolicitudTicket' });

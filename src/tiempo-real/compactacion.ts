@@ -46,6 +46,31 @@ export async function compactarDocumento(prisma: PrismaClient, documentoId: stri
   return Number(r[0]?.n ?? 0);
 }
 
+/**
+ * Versión automática (bloque N): el estado guardado (estado + log) como versión "automatica", SOLO si su
+ * texto difiere del de la última versión (o si no hay ninguna y el texto no está vacío). Devuelve el número
+ * de la versión nueva, o null si no hizo falta. La corre el trabajo de "5 minutos sin cambios".
+ */
+export async function versionAutomatica(prisma: PrismaClient, documentoId: string): Promise<number | null> {
+  const doc = await prisma.$queryRaw<{ estado_yjs: Uint8Array | null }[]>`SELECT estado_yjs FROM documentos WHERE id = ${documentoId}::uuid`;
+  if (doc.length === 0) return null; // se borró
+  const filas = await prisma.$queryRaw<{ actualizacion: Uint8Array }[]>`
+    SELECT actualizacion FROM actualizaciones_documento WHERE documento_id = ${documentoId}::uuid ORDER BY id`;
+  const armado = new Y.Doc();
+  const previo = doc[0]?.estado_yjs;
+  if (previo) Y.applyUpdate(armado, previo);
+  for (const f of filas) Y.applyUpdate(armado, f.actualizacion);
+  const texto = armado.getText(NOMBRE_TEXTO).toJSON();
+  const ultima = await prisma.$queryRaw<{ contenido_texto: string }[]>`
+    SELECT contenido_texto FROM versiones WHERE documento_id = ${documentoId}::uuid ORDER BY numero DESC LIMIT 1`;
+  if (ultima[0] ? ultima[0].contenido_texto === texto : texto === '') return null;
+  const r = await prisma.$queryRaw<{ numero: bigint }[]>`
+    INSERT INTO versiones (documento_id, motivo, estado_yjs, contenido_texto)
+    VALUES (${documentoId}::uuid, 'automatica', ${Buffer.from(Y.encodeStateAsUpdate(armado))}, ${texto})
+    RETURNING numero`;
+  return Number(r[0]?.numero ?? 0);
+}
+
 export interface Compactador {
   /** Pide compactar: `inmediata` al juntar N filas; si no, 5 min después de la última llamada. */
   pedir: (documentoId: string, inmediata: boolean) => Promise<void>;
@@ -64,9 +89,14 @@ export function iniciarCompactacion(o: {
   const worker = new Worker(
     COLA_DOCUMENTOS,
     async (job) => {
-      const { documentoId } = job.data as { documentoId: string };
+      const { documentoId, version } = job.data as { documentoId: string; version?: boolean };
       const borradas = await compactarDocumento(o.prisma, documentoId);
       o.log.info({ documentoId, borradas }, 'documento compactado');
+      // Tras 5 minutos sin cambios (no en la compactación por cantidad de filas): versión automática.
+      if (version) {
+        const numero = await versionAutomatica(o.prisma, documentoId);
+        if (numero !== null) o.log.info({ documentoId, numero }, 'versión automática');
+      }
       return borradas;
     },
     { connection, prefix: o.prefijo, concurrency: 2 },
@@ -82,7 +112,7 @@ export function iniciarCompactacion(o: {
       } else {
         await cola.add(
           'compactar',
-          { documentoId },
+          { documentoId, version: true },
           { ...reintentos, delay: o.inactividadMs, deduplication: { id: `inactivo:${documentoId}`, ttl: o.inactividadMs, extend: true, replace: true } },
         );
       }
