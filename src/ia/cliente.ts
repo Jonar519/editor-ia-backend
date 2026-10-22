@@ -8,7 +8,7 @@
 //   - Token entre servicios en el metadato `authorization` de cada llamada.
 import { readFileSync } from 'node:fs';
 import * as grpc from '@grpc/grpc-js';
-import { paquete, SERVICIO, type AsistenteClient, type ContextoAutocompletado, type FragmentoGrpc, type HealthClient, type SugerenciaGrpc, type UsoGrpc } from './contrato.js';
+import { DIMENSIONES, paquete, SERVICIO, type AsistenteClient, type ContextoAutocompletado, type FragmentoGrpc, type HealthClient, type SugerenciaGrpc, type UsoGrpc } from './contrato.js';
 import type { Estilo, Uso } from './proveedor.js';
 
 export const DEADLINES_MS = { explicar: 15_000, embeber: 15_000, transformar: 60_000, indexar: 120_000, sugerencia: 2_000, salud: 2_000 } as const;
@@ -36,6 +36,23 @@ export interface OpcionesClienteIa {
   /** TLS mutuo en producción; sin esto, texto plano (solo 127.0.0.1). */
   credenciales?: grpc.ChannelCredentials;
   deadlines?: Partial<Deadlines>;
+}
+
+export interface Descripcion {
+  proveedor: string;
+  modelo: string;
+  dimensiones: number;
+}
+
+/** Cuánto se confía en la última respuesta de Describir (la salud la refresca antes). */
+export const MODELO_VIGENTE_MS = 60_000;
+
+/** El servicio no produce vectores de 1024 dimensiones: no se busca ni se indexa (502). */
+export class ModeloIncompatible extends Error {
+  constructor(readonly descripcion: Descripcion) {
+    super(`el modelo de embeddings ${descripcion.modelo} produce ${String(descripcion.dimensiones)} dimensiones; la base espera ${String(DIMENSIONES)}`);
+    this.name = 'ModeloIncompatible';
+  }
 }
 
 /** TLS mutuo del lado del API: su certificado de cliente y la CA que firmó el del servicio (config validada). */
@@ -214,8 +231,41 @@ export class ClienteIa {
     };
   }
 
-  /** Salud estándar (grpc.health.v1): resuelve si el servicio dice SERVING; si no, rechaza. */
-  comprobarSalud(): Promise<void> {
+  /** Qué proveedor y qué modelo de embeddings usa el servicio, y de cuántas dimensiones (P2). */
+  async describir(): Promise<Descripcion> {
+    const r = await this.unaria<{ proveedor: string; modelo_embeddings: string; dimensiones: number }>(undefined, (cb) =>
+      this.asistente.Describir({}, this.metadatos(), this.opciones(this.deadlines.salud), cb),
+    );
+    return { proveedor: r.proveedor, modelo: r.modelo_embeddings, dimensiones: r.dimensiones };
+  }
+
+  private vigente: { d: Descripcion; hasta: number } | null = null;
+
+  /**
+   * El modelo de embeddings con el que se busca y se indexa. Se consulta con Describir y se guarda
+   * `MODELO_VIGENTE_MS`; si el servicio NO produce 1024 dimensiones, lanza ModeloIncompatible y no se
+   * busca ni se escribe ningún vector. Los errores de gRPC (servicio caído) siguen su camino.
+   */
+  async modeloVigente(): Promise<string> {
+    const ahora = Date.now();
+    if (!this.vigente || this.vigente.hasta < ahora) this.vigente = { d: await this.describir(), hasta: ahora + MODELO_VIGENTE_MS };
+    const { d } = this.vigente;
+    if (d.dimensiones !== DIMENSIONES) throw new ModeloIncompatible(d);
+    return d.modelo;
+  }
+
+  /**
+   * Salud para /ready: la estándar (SERVING) y además un modelo de 1024 dimensiones (P2). Refresca el
+   * modelo vigente. Con otro número de dimensiones rechaza: la IA queda en "falla".
+   */
+  async comprobarSalud(): Promise<void> {
+    await this.saludEstandar();
+    this.vigente = null;
+    await this.modeloVigente();
+  }
+
+  /** Salud estándar (grpc.health.v1, sin token): resuelve si el servicio dice SERVING; si no, rechaza. */
+  saludEstandar(): Promise<void> {
     return new Promise((resolver, rechazar) => {
       this.salud.Check({ service: SERVICIO }, this.opciones(this.deadlines.salud), (err, r) => {
         if (err) rechazar(err);

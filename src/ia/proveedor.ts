@@ -22,6 +22,8 @@ export interface ProveedorIa {
   readonly nombre: 'mock' | 'anthropic';
   /** Modelo de embeddings: se guarda en embeddings.modelo para saber con qué se indexó cada fragmento. */
   readonly modeloEmbeddings: string;
+  /** Dimensiones de sus vectores. La base exige 1024: con otro número el API no busca ni indexa (P2). */
+  readonly dimensiones: number;
   explicar(e: { contenido: string; lenguaje: string }, senal: AbortSignal): Promise<{ texto: string; uso: Uso }>;
   /** El texto llega de a poco (cada valor es un fragmento); al terminar, devuelve el uso. */
   transformar(e: { tarea: 'resumir' | 'mejorar'; contenido: string; estilo: Estilo }, senal: AbortSignal): AsyncGenerator<string, Uso>;
