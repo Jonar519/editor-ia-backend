@@ -2,7 +2,7 @@
 
 - **Estado:** aceptada (decisiones escritas al abrir el tramo 3; el bloque K se divide en K1 y K2)
 - **Fecha:** 2026-10-17
-- **Relacionados:** [ADR 0001](0001-sesion.md) (sesión), [ADR 0003](0003-crdt.md) (CRDT), [ADR 0004](0004-motor-de-edicion.md) (motor de edición), contrato [`ia.proto`](../../proto/cuaderno/ia/v1/ia.proto) (borrador).
+- **Relacionados:** [ADR 0001](0001-sesion.md) (sesión), [ADR 0003](0003-crdt.md) (CRDT), [ADR 0004](0004-motor-de-edicion.md) (motor de edición), contrato [`ia.proto`](../../proto/cuaderno/ia/v1/ia.proto) (v1, desde P1).
 
 ## Contexto
 
@@ -148,9 +148,28 @@ event: fin         data: {"tokensEntrada":812,"tokensSalida":140}
 | `UNAUTHENTICATED`, `PERMISSION_DENIED` | 502 `ia_error_interno` (es un error **entre servicios**, no de la persona) |
 | cualquier otro | 502 `ia_error_interno` |
 
-### Contrato `ia.proto` (borrador)
+### Contrato `ia.proto`
 
-Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto). **No se compila ni se usa hasta P1.** Su sintaxis se comprobó con un parser de Protocol Buffers; su diseño se revisa al empezar P1.
+Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto) (módulo `proto/`, con [`buf.yaml`](../../proto/buf.yaml)). Se carga en tiempo de ejecución con `@grpc/proto-loader`; los tipos TypeScript salen de `npm run proto:generate` (`src/generated/ia`, no se versionan, como los de Prisma). El CI corre `npm run proto:check`: `buf lint` (STANDARD, con las excepciones de nombres en español) y `buf breaking` contra `main`. Se probó en Windows y en el contenedor Linux antes de depender de él (ver "Estado de verificación al cerrar P1"). Cambios de P1 respecto del borrador: `Origen.espacio_id` (campo 4) y `DocumentoIndexado.modelo` (campo 3), los dos compatibles.
+
+La salud es la estándar `grpc.health.v1.Health`, copiada sin cambios del proto oficial en `proto/grpc/health/v1/health.proto` (en vez de depender de `grpc-health-check`, que arrastra `@grpc/proto-loader` 0.7).
+
+### Servicio de IA (bloque P1)
+
+Decisiones escritas al aprobar el diseño de P1:
+
+- **Proceso aparte dentro del repo del backend** (`src/ia/`, `npm run ia:dev` / `ia:start`, `scripts\ia.bat`). No tiene base ni Redis: el API verifica sesión, permiso y tope ANTES de llamar, y guarda él mismo los resultados.
+- **La IA caída no pone `/ready` en 503**: se muestra (`"ia": "falla"`) y las rutas de IA responden 503 `ia_no_disponible` por su cuenta. El editor sigue sirviendo sin IA.
+- **Dependencias** exactas: `@grpc/grpc-js` 1.14.6, `@grpc/proto-loader` 0.8.1 y `@bufbuild/buf` 1.73.0 (desarrollo). Las 37 versiones nuevas, con transitivas, tienen 14 días o más.
+- **Proveedor intercambiable** (`ProveedorIa`): el simulado (determinista, sin red) funciona de punta a punta; `ProveedorAnthropic` es un esqueleto que falla con `no_implementado` (502) hasta que se decida el proveedor real. `AI_PROVIDER=anthropic` exige `ANTHROPIC_API_KEY`; en producción el simulado no arranca.
+- **Autenticación**: interceptor del servidor; la salud estándar queda sin token (la consultan los orquestadores y solo dice `SERVING`/`NOT_SERVING`).
+- **Topes del lado del servicio**: además del deadline del API, cada método corta solo al doble de ese deadline, por si un cliente no lo pusiera.
+- **Aislamiento**: el `Origen` va solo en el primer mensaje de una corriente; otro después cierra con `INVALID_ARGUMENT`. Cada llamada se registra con cuenta, espacio y documento, nunca con el contenido.
+- **Tope diario** por cuenta en `uso_ia_diario` (300 pedidos y 300 000 tokens por día UTC), reservado de forma atómica antes de llamar; 429 `tope_diario_ia` con `Retry-After` hasta la medianoche UTC. El autocompletado cuenta solo tokens. Si la persona cancela a mitad, se cobra lo estimado hasta el corte.
+
+### Embeddings: 1024 dimensiones
+
+Los embeddings son de **1024 dimensiones** (`vector(1024)` de la migración 0011, el índice HNSW y `buscar_fragmentos`). **El modelo real tiene que producir exactamente ese tamaño; si produce otro, hará falta una migración** (columna, índice y función) y reindexar todo. El servicio lo hace cumplir: un vector de otro tamaño se rechaza con `INTERNAL` y nunca llega a la base. Además, vectores de modelos distintos no se comparan entre sí: `embeddings.modelo` guarda qué modelo produjo cada fila (lo informa el servicio en `DocumentoIndexado.modelo`), y al cambiar de modelo hay que reindexar.
 
 ## Alternativas descartadas
 
@@ -177,7 +196,9 @@ Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto).
 | Un cliente manipulado manda actualizaciones siendo lector | Se descartan en el guardia, se registran y la conexión se cierra a la tercera; la base las rechaza igual. |
 | Memoria: un documento en memoria por cada uno abierto | Se descarga tras 60 s sin conexiones; tope de tamaño del estado (10 MiB, CHECK de la base). |
 | SSE detrás de un proxy que guarda en búfer | `Cache-Control: no-cache` y `X-Accel-Buffering: no`; comentario de latido cada 15 s. |
-| Cambiar `ia.proto` rompe al otro lado | Versión en el paquete, campos reservados, `buf breaking` o equivalente en el job `grpc` del CI (P1). |
+| Cambiar `ia.proto` rompe al otro lado | Versión en el paquete, campos reservados, `buf breaking` contra `main` en el job `verificar` del CI (`npm run proto:check`, desde P1). |
+| El modelo real de embeddings no es de 1024 dimensiones | El servicio rechaza el vector (`INTERNAL`); cambiar de tamaño exige migración y reindexado (ver "Embeddings: 1024 dimensiones"). |
+| Gasto de IA sin control | Tope diario por cuenta atómico, 30 pedidos por minuto, deadlines en cada llamada y cancelación que corta la generación. |
 | El ticket se filtra | Vale 30 s, una sola vez, ligado a una sesión viva y a un documento; en Redis solo su hash. |
 
 ## Cómo se prueba
@@ -218,6 +239,35 @@ Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto).
 | Revalidar todo al reconectar el puente o Redis | `avisos.ts` |
 | Apagado ordenado (1001, guardar lo pendiente) | `servidor.ts`, `cerrar()` |
 | Mensaje de más de 1 MiB (1009, de la librería `ws`) | `maxPayload` |
+
+## Estado de verificación al cerrar P1
+
+**Verificado** con gRPC real (servicio en un puerto libre con el proveedor simulado), la base de pruebas y sockets reales (`tests/integracion/ia-grpc.test.ts`, `ia-api.test.ts`, `ia-autocompletado.test.ts`, `tests/unitarias/ia-*.test.ts`, `config-ia.test.ts`) y mutaciones P01–P27:
+
+- los cuatro tipos de llamada, con su uso;
+- el interceptor (sin token o con uno equivocado: `UNAUTHENTICATED`, sin llegar al proveedor) y la salud sin token;
+- deadline (`DEADLINE_EXCEEDED` → 504) y cancelación (abortar la señal, dejar de leer la corriente o abortar el `fetch` del navegador): el simulado **deja de generar**, medido con su contador;
+- un pedido nuevo de autocompletado cancela el anterior en el servicio;
+- cada fila de la tabla gRPC → HTTP (unitaria, y de punta a punta las que el simulado produce, más el servicio caído y el token equivocado);
+- vectores de otra dimensión que 1024 rechazados;
+- aislamiento: una corriente no admite un segundo origen; dos corrientes simultáneas de espacios distintos no se mezclan; la búsqueda de un espacio nunca devuelve fragmentos de otro; buscar en un espacio ajeno da 404; quien sale del espacio deja de ver sus fragmentos; indexar un documento ajeno da 404 y el trabajo no llama a la IA ni escribe; la base rechaza un `indexado_por` sin acceso;
+- el tope diario (atómico con 8 pedidos simultáneos, de pedidos y de tokens) y su `Retry-After`;
+- `/ready` con la IA caída: 200 con `"ia": "falla"`; y **en vivo** con los dos procesos compilados (`dist/ia/principal.js` y `dist/servidor.js`, base de pruebas y Redis db 2): caída y recuperación de la IA sin reiniciar el API;
+- `buf lint` y `buf breaking` en Windows y en el contenedor Linux (detecta un campo renumerado).
+
+**Implementado, sin prueba propia:**
+
+| Regla | Código |
+|---|---|
+| TLS mutuo (credenciales del servidor y del cliente) | `src/ia/principal.ts` `credencialesDe()`, `src/ia/cliente.ts` `credencialesIa()` |
+| Apagado ordenado del servicio con SIGTERM (`NOT_SERVING`, espera y corte) | `src/ia/principal.ts`, `servicio.ts` `cerrar()` (en Windows no se puede mandar SIGTERM a un proceso hijo) |
+| Tope propio por método (el doble del deadline del API) | `servicio.ts` `controlador()` |
+| `Health.Watch` | `servicio.ts` `crearSalud()` |
+| Latido SSE cada 15 s y cabeceras contra el búfer de proxies (se prueba `X-Accel-Buffering`, no el latido) | `src/ia/rutas.ts` |
+| Contrapresión en las corrientes del servicio (`drain`) | `servicio.ts` `escribir()` |
+| Autocompletado: un pedido viejo que llega tarde no se responde; la corriente se cierra con la conexión y se reabre si se corta | `tiempo-real/servidor.ts` `controlDelCliente()`, `cliente.ts` `autocompletado()` |
+| 30 pedidos de IA por minuto y cuenta (usa `limitarTasa`, probado en otros bloques) | `src/ia/rutas.ts` |
+| Reintentos del trabajo de indexado y `UnrecoverableError` con el tope diario | `src/ia/indexado.ts` |
 
 ## Decisiones tomadas (por escrito, 2026-10-17)
 
