@@ -129,13 +129,14 @@ model embeddings {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model espacios {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre           String
-  creado_por       String             @db.Uuid
-  creado_en        DateTime           @default(now()) @db.Timestamptz(6)
-  documentos       documentos[]
-  usuarios         usuarios           @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  miembros_espacio miembros_espacio[]
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre                 String
+  creado_por             String                   @db.Uuid
+  creado_en              DateTime                 @default(now()) @db.Timestamptz(6)
+  documentos             documentos[]
+  usuarios               usuarios                 @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  miembros_espacio       miembros_espacio[]
+  uso_ia_indexado_diario uso_ia_indexado_diario[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -412,4 +413,14 @@ model avatares {
   usuarios       usuarios @relation(fields: [usuario_id, estado_usuario], references: [id, estado], onDelete: NoAction, onUpdate: NoAction, map: "avatares_usuario_activo")
 
   @@unique([usuario_id, estado_usuario], map: "avatares_una_por_cuenta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model uso_ia_indexado_diario {
+  espacio_id String   @db.Uuid
+  dia        DateTime @db.Date
+  tokens     BigInt   @default(0)
+  espacios   espacios @relation(fields: [espacio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([espacio_id, dia])
 }
