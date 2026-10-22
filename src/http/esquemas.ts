@@ -21,7 +21,8 @@ export const ListoRespuesta = z
   .object({
     estado: z.enum(['listo', 'no_listo', 'apagando']),
     comprobaciones: z.record(z.string(), EstadoComprobacion).meta({
-      description: 'Resultado de cada dependencia (bd, esquema, redis). Sin detalles internos: el motivo va al log.',
+      description:
+        'Resultado de cada dependencia (bd, esquema, redis, ia). Sin detalles internos: el motivo va al log. "ia" es informativa: su falla no pone /ready en 503.',
     }),
   })
   .meta({ id: 'ListoRespuesta' });
@@ -368,3 +369,61 @@ export const ErrorPropiedadDocumentos = z
     }),
   })
   .meta({ id: 'ErrorPropiedadDocumentos', description: 'Documentos del espacio que el miembro posee: hay que transferirlos antes de quitarlo.' });
+
+// ─── IA (bloque P1) ───────────────────────────────────────────────────────────────
+
+/** Topes de tamaño de lo que manda el navegador (el cuerpo JSON admite hasta 100 kB). */
+export const MAXIMOS_IA = { explicar: 8_000, transformar: 40_000, consulta: 500 } as const;
+
+const ContenidoIa = (maximo: number) =>
+  z
+    .string()
+    .refine((t) => t.trim() !== '', { error: 'vacío' })
+    .refine((t) => t.length <= maximo, { error: `hasta ${String(maximo)} caracteres` });
+
+export const ExplicarSolicitud = z
+  .object({
+    documentoId: z.uuid(),
+    contenido: ContenidoIa(MAXIMOS_IA.explicar).meta({ description: 'El fragmento seleccionado. Se trata como DATOS, nunca como instrucciones.' }),
+    lenguaje: z
+      .string()
+      .regex(/^[A-Za-z0-9+#._-]{0,40}$/)
+      .default('')
+      .meta({ description: 'Lenguaje del bloque de código ("ts", "sql"…); vacío si es prosa' }),
+  })
+  .meta({ id: 'ExplicarSolicitud' });
+
+export const UsoIa = z.object({ tokensEntrada: z.number().int(), tokensSalida: z.number().int() }).meta({ id: 'UsoIa' });
+
+export const RespuestaIa = z.object({ texto: z.string(), uso: UsoIa }).meta({ id: 'RespuestaIa' });
+
+export const TransformarSolicitudHttp = z
+  .object({
+    documentoId: z.uuid(),
+    contenido: ContenidoIa(MAXIMOS_IA.transformar),
+    estilo: z.enum(['claro', 'breve', 'formal']).default('claro').meta({ description: 'Conjunto cerrado: no se escriben instrucciones libres al modelo' }),
+  })
+  .meta({ id: 'TransformarSolicitud' });
+
+export const BusquedaSolicitud = z
+  .object({
+    consulta: z.string().trim().min(1).max(MAXIMOS_IA.consulta),
+    limite: z.number().int().min(1).max(20).default(10),
+  })
+  .meta({ id: 'BusquedaSolicitud' });
+
+export const ResultadosBusqueda = z
+  .object({
+    resultados: z.array(
+      z.object({
+        documentoId: z.uuid(),
+        titulo: z.string(),
+        fragmento: z.number().int().meta({ description: 'Posición del fragmento dentro del documento (0, 1, 2…)' }),
+        texto: z.string(),
+        similitud: z.number().meta({ description: 'Coseno entre la consulta y el fragmento (1 = idénticos)' }),
+      }),
+    ),
+  })
+  .meta({ id: 'ResultadosBusqueda', description: 'Solo del espacio pedido y de documentos a los que tienes acceso HOY' });
+
+export const IndiceEncolado = z.object({ encolado: z.literal(true) }).meta({ id: 'IndiceEncolado' });

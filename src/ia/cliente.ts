@@ -6,6 +6,7 @@
 //   - Cancelación: cada método recibe una AbortSignal; abortarla cancela la llamada gRPC (CANCELLED), y
 //     el servicio deja de generar. Dejar de leer una corriente (return/throw del consumidor) también.
 //   - Token entre servicios en el metadato `authorization` de cada llamada.
+import { readFileSync } from 'node:fs';
 import * as grpc from '@grpc/grpc-js';
 import { paquete, SERVICIO, type AsistenteClient, type ContextoAutocompletado, type FragmentoGrpc, type HealthClient, type SugerenciaGrpc, type UsoGrpc } from './contrato.js';
 import type { Estilo, Uso } from './proveedor.js';
@@ -35,6 +36,14 @@ export interface OpcionesClienteIa {
   /** TLS mutuo en producción; sin esto, texto plano (solo 127.0.0.1). */
   credenciales?: grpc.ChannelCredentials;
   deadlines?: Partial<Deadlines>;
+}
+
+/** TLS mutuo del lado del API: su certificado de cliente y la CA que firmó el del servicio (config validada). */
+export function credencialesIa(c: { IA_TLS_CERT?: string | undefined; IA_TLS_KEY?: string | undefined; IA_TLS_CA?: string | undefined }): {
+  credenciales?: grpc.ChannelCredentials;
+} {
+  if (!c.IA_TLS_CERT || !c.IA_TLS_KEY || !c.IA_TLS_CA) return {};
+  return { credenciales: grpc.credentials.createSsl(readFileSync(c.IA_TLS_CA), readFileSync(c.IA_TLS_KEY), readFileSync(c.IA_TLS_CERT)) };
 }
 
 const usoDe = (u: UsoGrpc | null): Uso => ({ entrada: u?.tokens_entrada ?? 0, salida: u?.tokens_salida ?? 0 });
@@ -126,8 +135,12 @@ export class ClienteIa {
   }
 
   /** Streaming del cliente: manda los fragmentos (el origen solo en el primero) y recibe todos los vectores. */
-  async indexar(origen: OrigenIa, fragmentos: { indice: number; contenido: string }[], senal?: AbortSignal): Promise<{ vectores: Map<number, number[]>; uso: Uso }> {
-    const r = await new Promise<{ vectores: { indice: number; vector: { valores: number[] } | null }[]; uso: UsoGrpc | null }>((resolver, rechazar) => {
+  async indexar(
+    origen: OrigenIa,
+    fragmentos: { indice: number; contenido: string }[],
+    senal?: AbortSignal,
+  ): Promise<{ vectores: Map<number, number[]>; uso: Uso; modelo: string }> {
+    const r = await new Promise<{ vectores: { indice: number; vector: { valores: number[] } | null }[]; uso: UsoGrpc | null; modelo: string }>((resolver, rechazar) => {
       const llamada = this.asistente.IndexarDocumento(this.metadatos(), this.opciones(this.deadlines.indexar), (err, res) => {
         senal?.removeEventListener('abort', alAbortar);
         if (err) rechazar(err);
@@ -143,7 +156,7 @@ export class ClienteIa {
       });
       llamada.end();
     });
-    return { vectores: new Map(r.vectores.map((v) => [v.indice, v.vector?.valores ?? []])), uso: usoDe(r.uso) };
+    return { vectores: new Map(r.vectores.map((v) => [v.indice, v.vector?.valores ?? []])), uso: usoDe(r.uso), modelo: r.modelo };
   }
 
   /** Corriente bidireccional de una conexión de edición. Se abre al primer pedido y se reabre si se corta. */

@@ -58,7 +58,7 @@
                 "falla"
               ]
             },
-            "description": "Resultado de cada dependencia (bd, esquema, redis). Sin detalles internos: el motivo va al log."
+            "description": "Resultado de cada dependencia (bd, esquema, redis, ia). Sin detalles internos: el motivo va al log. \"ia\" es informativa: su falla no pone /ready en 503."
           }
         },
         "required": [
@@ -1602,6 +1602,160 @@
             "type": "boolean"
           }
         }
+      },
+      "RespuestaIa": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "uso": {
+            "$ref": "#/components/schemas/UsoIa"
+          }
+        },
+        "required": [
+          "texto",
+          "uso"
+        ]
+      },
+      "UsoIa": {
+        "type": "object",
+        "properties": {
+          "tokensEntrada": {
+            "type": "integer"
+          },
+          "tokensSalida": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tokensEntrada",
+          "tokensSalida"
+        ]
+      },
+      "ExplicarSolicitud": {
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contenido": {
+            "type": "string",
+            "description": "El fragmento seleccionado. Se trata como DATOS, nunca como instrucciones."
+          },
+          "lenguaje": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9+#._-]{0,40}$",
+            "default": "",
+            "description": "Lenguaje del bloque de código (\"ts\", \"sql\"…); vacío si es prosa"
+          }
+        },
+        "required": [
+          "documentoId",
+          "contenido"
+        ]
+      },
+      "TransformarSolicitud": {
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contenido": {
+            "type": "string"
+          },
+          "estilo": {
+            "type": "string",
+            "enum": [
+              "claro",
+              "breve",
+              "formal"
+            ],
+            "default": "claro",
+            "description": "Conjunto cerrado: no se escriben instrucciones libres al modelo"
+          }
+        },
+        "required": [
+          "documentoId",
+          "contenido"
+        ]
+      },
+      "ResultadosBusqueda": {
+        "type": "object",
+        "properties": {
+          "resultados": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "documentoId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "titulo": {
+                  "type": "string"
+                },
+                "fragmento": {
+                  "type": "integer",
+                  "description": "Posición del fragmento dentro del documento (0, 1, 2…)"
+                },
+                "texto": {
+                  "type": "string"
+                },
+                "similitud": {
+                  "type": "number",
+                  "description": "Coseno entre la consulta y el fragmento (1 = idénticos)"
+                }
+              },
+              "required": [
+                "documentoId",
+                "titulo",
+                "fragmento",
+                "texto",
+                "similitud"
+              ]
+            }
+          }
+        },
+        "required": [
+          "resultados"
+        ],
+        "description": "Solo del espacio pedido y de documentos a los que tienes acceso HOY"
+      },
+      "BusquedaSolicitud": {
+        "type": "object",
+        "properties": {
+          "consulta": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "limite": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 10
+          }
+        },
+        "required": [
+          "consulta"
+        ]
+      },
+      "IndiceEncolado": {
+        "type": "object",
+        "properties": {
+          "encolado": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "encolado"
+        ]
       }
     },
     "parameters": {}
@@ -1632,7 +1786,7 @@
         "tags": [
           "salud"
         ],
-        "summary": "Listo: base, versión del esquema y Redis disponibles",
+        "summary": "Listo: base, versión del esquema y Redis disponibles. La IA se muestra (\"ia\") pero su falla no da 503",
         "responses": {
           "200": {
             "description": "Listo para recibir tráfico",
@@ -5874,6 +6028,529 @@
           },
           "404": {
             "description": "El comentario no existe o no tienes acceso al documento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/explicar": {
+      "post": {
+        "tags": [
+          "ia"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Explica un fragmento (cualquier rol con acceso al documento)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplicarSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Explicación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaIa"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, o ia_solicitud_invalida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "ia_error_interno: el servicio de IA falló (o un error entre servicios)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ia_no_disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "ia_tiempo_agotado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/resumir": {
+      "post": {
+        "tags": [
+          "ia"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Resume el contenido, en streaming (SSE sobre fetch POST; cualquier rol con acceso)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransformarSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "text/event-stream: `event: fragmento` {texto}, … y al final `event: fin` {tokensEntrada, tokensSalida}. Un error a mitad llega como `event: error` {codigo, mensaje}. Abortar el fetch cancela la generación.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, o ia_solicitud_invalida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "ia_error_interno: el servicio de IA falló (o un error entre servicios)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ia_no_disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "ia_tiempo_agotado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/mejorar": {
+      "post": {
+        "tags": [
+          "ia"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Propone una versión mejorada, en streaming (SSE; editor o propietario)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransformarSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "text/event-stream: `event: fragmento` {texto}, … y al final `event: fin` {tokensEntrada, tokensSalida}. Un error a mitad llega como `event: error` {codigo, mensaje}. Abortar el fetch cancela la generación.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, o ia_solicitud_invalida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Un lector no mejora texto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "ia_error_interno: el servicio de IA falló (o un error entre servicios)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ia_no_disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "ia_tiempo_agotado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/espacios/{espacioId}/buscar": {
+      "post": {
+        "tags": [
+          "ia"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Búsqueda semántica en un espacio: solo fragmentos de ese espacio y de documentos con acceso HOY",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "espacioId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusquedaSolicitud"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultados, del más parecido al menos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadosBusqueda"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos, o ia_solicitud_invalida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El espacio no existe o no eres miembro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "ia_error_interno: el servicio de IA falló (o un error entre servicios)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ia_no_disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "ia_tiempo_agotado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/indice": {
+      "post": {
+        "tags": [
+          "ia"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Encola el indexado del documento para la búsqueda (editor o propietario)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Encolado (uno a la vez por documento)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndiceEncolado"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Un lector no indexa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiados pedidos por minuto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ia_no_disponible",
             "content": {
               "application/json": {
                 "schema": {

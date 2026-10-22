@@ -47,19 +47,29 @@ export async function compactarDocumento(prisma: PrismaClient, documentoId: stri
 }
 
 /**
- * Versión automática (bloque N): el estado guardado (estado + log) como versión "automatica", SOLO si su
- * texto difiere del de la última versión (o si no hay ninguna y el texto no está vacío). Devuelve el número
- * de la versión nueva, o null si no hizo falta. La corre el trabajo de "5 minutos sin cambios".
+ * El documento tal como está guardado (estado + log), sin cargarlo en el servidor de tiempo real. null si
+ * ya no existe. Lo usan la versión automática y el indexado de la IA (bloque P1).
  */
-export async function versionAutomatica(prisma: PrismaClient, documentoId: string): Promise<number | null> {
+export async function documentoGuardado(prisma: PrismaClient, documentoId: string): Promise<Y.Doc | null> {
   const doc = await prisma.$queryRaw<{ estado_yjs: Uint8Array | null }[]>`SELECT estado_yjs FROM documentos WHERE id = ${documentoId}::uuid`;
-  if (doc.length === 0) return null; // se borró
+  if (doc.length === 0) return null;
   const filas = await prisma.$queryRaw<{ actualizacion: Uint8Array }[]>`
     SELECT actualizacion FROM actualizaciones_documento WHERE documento_id = ${documentoId}::uuid ORDER BY id`;
   const armado = new Y.Doc();
   const previo = doc[0]?.estado_yjs;
   if (previo) Y.applyUpdate(armado, previo);
   for (const f of filas) Y.applyUpdate(armado, f.actualizacion);
+  return armado;
+}
+
+/**
+ * Versión automática (bloque N): el estado guardado (estado + log) como versión "automatica", SOLO si su
+ * texto difiere del de la última versión (o si no hay ninguna y el texto no está vacío). Devuelve el número
+ * de la versión nueva, o null si no hizo falta. La corre el trabajo de "5 minutos sin cambios".
+ */
+export async function versionAutomatica(prisma: PrismaClient, documentoId: string): Promise<number | null> {
+  const armado = await documentoGuardado(prisma, documentoId);
+  if (!armado) return null; // se borró
   const texto = armado.getText(NOMBRE_TEXTO).toJSON();
   const ultima = await prisma.$queryRaw<{ contenido_texto: string }[]>`
     SELECT contenido_texto FROM versiones WHERE documento_id = ${documentoId}::uuid ORDER BY numero DESC LIMIT 1`;

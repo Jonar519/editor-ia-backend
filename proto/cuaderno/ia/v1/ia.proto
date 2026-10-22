@@ -116,6 +116,9 @@ message FragmentoDocumento {
 message DocumentoIndexado {
   repeated VectorFragmento vectores = 1;
   Uso uso = 2;
+  // Modelo que produjo los vectores (se guarda en embeddings.modelo). Al cambiar de modelo hay que
+  // reindexar todo: vectores de modelos distintos no se comparan.
+  string modelo = 3;
 
   message VectorFragmento {
     uint32 indice = 1;

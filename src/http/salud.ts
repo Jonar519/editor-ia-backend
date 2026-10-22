@@ -10,6 +10,11 @@ import type { ListoRespuesta } from './esquemas.js';
 export interface Comprobacion {
   nombre: string;
   comprobar: () => Promise<void>;
+  /**
+   * Solo se MUESTRA: su falla no pone /ready en 503 (decisión escrita de P1 para la IA: sin IA, el editor
+   * sigue sirviendo; las rutas de IA responden 503 por su cuenta).
+   */
+  informativa?: boolean;
 }
 
 export interface EstadoProceso {
@@ -70,15 +75,15 @@ export function rutasSalud(o: OpcionesSalud): Router {
       o.comprobaciones.map(async (c) => {
         try {
           await conLimite(c.comprobar(), limite);
-          return [c.nombre, 'ok'] as const;
+          return [c.nombre, 'ok', c.informativa === true] as const;
         } catch (err) {
           o.log.warn({ err, comprobacion: c.nombre }, 'dependencia no disponible');
-          return [c.nombre, 'falla'] as const;
+          return [c.nombre, 'falla', c.informativa === true] as const;
         }
       }),
     );
-    const listo = resultados.every(([, e]) => e === 'ok');
-    const cuerpo: ListoRespuesta = { estado: listo ? 'listo' : 'no_listo', comprobaciones: Object.fromEntries(resultados) };
+    const listo = resultados.every(([, e, informativa]) => informativa || e === 'ok');
+    const cuerpo: ListoRespuesta = { estado: listo ? 'listo' : 'no_listo', comprobaciones: Object.fromEntries(resultados.map(([n, e]) => [n, e])) };
     res.status(listo ? 200 : 503).json(cuerpo);
   });
 

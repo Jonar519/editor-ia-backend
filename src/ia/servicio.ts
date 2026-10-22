@@ -314,7 +314,11 @@ export function crearServicioIa(o: OpcionesServicioIa) {
           const vectores = verificarVectores(r.vectores, fragmentos.length);
           ac.abort();
           registrar('IndexarDocumento', origen, inicio, grpc.status.OK);
-          responder(null, { vectores: fragmentos.map((f, i) => ({ indice: f.indice, vector: { valores: vectores[i] ?? [] } })), uso: usoGrpc(r.uso) });
+          responder(null, {
+            vectores: fragmentos.map((f, i) => ({ indice: f.indice, vector: { valores: vectores[i] ?? [] } })),
+            uso: usoGrpc(r.uso),
+            modelo: p.modeloEmbeddings,
+          });
         })().catch((err: unknown) => {
           ac.abort();
           const e = aGrpc(err, 'IndexarDocumento', origen);

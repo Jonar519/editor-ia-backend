@@ -2,6 +2,12 @@
 // `npm run openapi` la escribe en docs/openapi.json; `npm run openapi:check` falla si quedó desactualizada.
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import {
+  BusquedaSolicitud,
+  ExplicarSolicitud,
+  IndiceEncolado,
+  RespuestaIa,
+  ResultadosBusqueda,
+  TransformarSolicitudHttp,
   CambiarComentarioSolicitud,
   Comentario,
   ComentarioSolicitud,
@@ -730,6 +736,74 @@ function registrarVersionesYComentarios(registro: OpenAPIRegistry): void {
   });
 }
 
+function registrarIa(registro: OpenAPIRegistry): void {
+  const ia = { tags: ['ia'], security: [{ acceso: [] }] };
+  // Errores de la IA (mapeo gRPC → HTTP del ADR 0002) y del tope diario.
+  const errores = {
+    400: error('Datos inválidos, o ia_solicitud_invalida'),
+    401: error('Sin sesión viva'),
+    429: error('demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada'),
+    502: error('ia_error_interno: el servicio de IA falló (o un error entre servicios)'),
+    503: error('ia_no_disponible'),
+    504: error('ia_tiempo_agotado'),
+  };
+  const sinDocumento = { 404: error('El documento no existe o no tienes acceso (no se distingue)') };
+  const sse = {
+    200: {
+      description:
+        'text/event-stream: `event: fragmento` {texto}, … y al final `event: fin` {tokensEntrada, tokensSalida}. Un error a mitad llega como `event: error` {codigo, mensaje}. Abortar el fetch cancela la generación.',
+      content: { 'text/event-stream': { schema: { type: 'string' as const } } },
+    },
+  };
+  registro.registerPath({
+    method: 'post',
+    path: '/api/ia/explicar',
+    ...ia,
+    summary: 'Explica un fragmento (cualquier rol con acceso al documento)',
+    request: { body: json(ExplicarSolicitud) },
+    responses: { 200: { description: 'Explicación', ...json(RespuestaIa) }, ...sinDocumento, ...errores },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/ia/resumir',
+    ...ia,
+    summary: 'Resume el contenido, en streaming (SSE sobre fetch POST; cualquier rol con acceso)',
+    request: { body: json(TransformarSolicitudHttp) },
+    responses: { ...sse, ...sinDocumento, ...errores },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/ia/mejorar',
+    ...ia,
+    summary: 'Propone una versión mejorada, en streaming (SSE; editor o propietario)',
+    request: { body: json(TransformarSolicitudHttp) },
+    responses: { ...sse, 403: error('Un lector no mejora texto'), ...sinDocumento, ...errores },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/espacios/{espacioId}/buscar',
+    ...ia,
+    summary: 'Búsqueda semántica en un espacio: solo fragmentos de ese espacio y de documentos con acceso HOY',
+    request: { params: IdEspacio, body: json(BusquedaSolicitud) },
+    responses: { 200: { description: 'Resultados, del más parecido al menos', ...json(ResultadosBusqueda) }, 404: error('El espacio no existe o no eres miembro'), ...errores },
+  });
+  registro.registerPath({
+    method: 'post',
+    path: '/api/documentos/{documentoId}/indice',
+    ...ia,
+    summary: 'Encola el indexado del documento para la búsqueda (editor o propietario)',
+    request: { params: IdDocumento },
+    responses: {
+      202: { description: 'Encolado (uno a la vez por documento)', ...json(IndiceEncolado) },
+      403: error('Un lector no indexa'),
+      ...sinDocumento,
+      401: error('Sin sesión viva'),
+      429: error('Demasiados pedidos por minuto'),
+      503: error('ia_no_disponible'),
+    },
+  });
+}
+
 export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocument']> {
   const registro = new OpenAPIRegistry();
 
@@ -745,7 +819,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
     method: 'get',
     path: '/ready',
     tags: ['salud'],
-    summary: 'Listo: base, versión del esquema y Redis disponibles',
+    summary: 'Listo: base, versión del esquema y Redis disponibles. La IA se muestra ("ia") pero su falla no da 503',
     responses: {
       200: { description: 'Listo para recibir tráfico', content: { 'application/json': { schema: ListoRespuesta } } },
       503: {
@@ -775,6 +849,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
   registrarEspaciosYDocumentos(registro);
   registrarTiempoReal(registro);
   registrarVersionesYComentarios(registro);
+  registrarIa(registro);
 
   return new OpenApiGeneratorV31(registro.definitions).generateDocument({
     openapi: '3.1.0',
