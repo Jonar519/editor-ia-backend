@@ -1551,6 +1551,15 @@
       "reemplazo": "",
       "comando": "test",
       "pruebas": ["tests/integracion/documentos.test.ts"]
+    },
+    {
+      "id": "M01",
+      "regla": "Persistencia: lo que llega mientras se inserta un lote se guarda en el siguiente (el lote es una copia)",
+      "archivo": "src/tiempo-real/documento.ts",
+      "buscar": "const lote = p.actualizaciones.slice();",
+      "reemplazo": "const lote = p.actualizaciones;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/convergencia.test.ts"]
     }
   ]
 }
