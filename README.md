@@ -46,6 +46,7 @@ Los dos procesos comparten `.env` (el mismo `IA_SERVICE_TOKEN`). Sin el servicio
 | `env-init.bat` | Crea o completa `.env`. Genera `MFA_ENCRYPTION_KEY`, `ACCESS_TOKEN_SECRET`, `METRICS_TOKEN` e `IA_SERVICE_TOKEN`, y arma las URL de base con la contraseña de `cuaderno_app` del repo de base. Nunca cambia un valor existente. |
 | `dev.bat` | Servidor de desarrollo con recarga. |
 | `ia.bat` | Servicio de IA (gRPC, `127.0.0.1:4210`) con recarga. |
+| `reindexar.bat` | Encola el reindexado de todos los documentos (por ejemplo, al cambiar el modelo de embeddings). Lo procesa el API. |
 | `npm run proto:generate` | Tipos TypeScript del contrato gRPC en `src/generated/ia` (no se versionan). |
 | `npm run proto:check` | `buf lint` y `buf breaking` del contrato contra `main` (lo corre el CI). |
 | `test.bat` | Vitest + Supertest contra la base de **pruebas** y Redis db 1. |
@@ -94,7 +95,8 @@ Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesió
 | `POST /api/ia/explicar` | Explicar un fragmento (cualquier rol con acceso al documento). |
 | `POST /api/ia/resumir`, `/mejorar` | Respuesta en streaming (SSE sobre `fetch` POST). Mejorar exige editor. Abortar el `fetch` cancela la generación. |
 | `POST /api/espacios/{id}/buscar` | Búsqueda semántica: solo el espacio pedido y documentos con acceso hoy. |
-| `POST /api/documentos/{id}/indice` | Encolar el indexado del documento para la búsqueda (editor). El indexado automático al dejar de editar queda pendiente para P2. |
+| `POST /api/documentos/{id}/indice` | Encolar el indexado del documento para la búsqueda (editor). Además, el documento se indexa solo 5 minutos después de dejar de editarlo, contra el presupuesto diario del espacio. |
+| `GET /api/ia/uso` | El uso de IA de hoy, los topes y cuándo se renuevan. |
 
 El autocompletado va por el WebSocket del documento (mensaje de control `ia.autocompletar`). Decisiones de IA y tabla de errores gRPC → HTTP en [docs/adr/0002-comunicacion.md](docs/adr/0002-comunicacion.md).
 
@@ -118,7 +120,7 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | Prisma | Solo cliente. `prisma/schema.prisma` sale de `db pull` y `npm run prisma:check` falla si se desvía de la base. `vector` y `cidr` no los soporta Prisma: se manejan con SQL parametrizado. |
 | `/health` | Solo responde que el proceso vive; no revisa dependencias. |
 | `/ready` | Revisa base, versión mínima del esquema y Redis, con 2 s por comprobación. Responde 503 si algo falla o si el proceso se está apagando. Muestra además la salud del servicio de IA (`grpc.health.v1`), que es **informativa**: su falla no da 503. |
-| IA | Servicio gRPC aparte (`src/ia/`, contrato en `proto/`): los cuatro tipos de llamada, token entre servicios, deadlines, cancelación y salud estándar. Proveedor intercambiable (`AI_PROVIDER`); embeddings de 1024 dimensiones. Tope diario por cuenta en `uso_ia_diario`. |
+| IA | Servicio gRPC aparte (`src/ia/`, contrato en `proto/`): los cuatro tipos de llamada, token entre servicios, deadlines, cancelación y salud estándar. Proveedor intercambiable (`AI_PROVIDER`); embeddings de 1024 dimensiones (el API lo verifica con `Describir`). Tope diario por cuenta en `uso_ia_diario` y presupuesto del indexado automático por espacio. Prompts armados contra la inyección (`src/ia/prompt.ts`: contenido escapado en un bloque con nonce, instrucciones aparte, salida recortada). |
 | `/metrics` | Prometheus con prefijo `cuaderno_`. La duración HTTP se etiqueta con el **patrón** de ruta, nunca con la URL. |
 | Apagado | `SIGTERM`/`SIGINT`: deja de aceptar conexiones, `/ready` pasa a 503, espera las peticiones en curso (hasta `SHUTDOWN_TIMEOUT_MS`), cierra el worker de BullMQ (espera el job en curso) y cierra base y Redis una sola vez. |
 | Trabajos | BullMQ. Retención diaria a las 03:15 UTC: llama a `purgar_retencion()` de la base. Ver [docs/data-retention.md](docs/data-retention.md). |

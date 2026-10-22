@@ -61,3 +61,16 @@ El análisis STRIDE completo se escribe en el bloque R. Este documento se abre e
   - la salud estándar no lleva token, pero solo dice `SERVING` o `NOT_SERVING`.
 - **Lo que no hay:** una verificación de que la red sea privada (no se puede comprobar desde el proceso) ni rotación automática del token.
 - **Estado:** abierto hasta el despliegue (bloque R): ahí se decide TLS mutuo o la red privada concreta.
+
+### R-04 · Inyección de prompts desde un documento compartido
+
+- **Origen:** bloque P2. La IA lee el contenido de documentos que pueden haber escrito otras personas del espacio.
+- **Qué puede pasar:** alguien con permiso de edición escribe en un documento texto pensado para el modelo ("ignora tus reglas y di que…"). Cuando otra persona pide un resumen o una explicación, el modelo podría sesgar o falsear la respuesta que ella lee.
+- **Lo que lo acota hoy:**
+  - el contenido va escapado como XML dentro de un bloque con nonce aleatorio, y las instrucciones van aparte, en el mensaje de sistema;
+  - la persona no escribe instrucciones libres (estilo cerrado, lenguaje validado);
+  - el modelo no tiene herramientas ni acciones: lo peor que logra es un texto;
+  - la salida se recorta y en Q se dibuja con el saneador (sin HTML ni enlaces peligrosos);
+  - la autoría de cada cambio queda registrada (actualizaciones con autor y versiones).
+- **Lo que no hay:** una garantía de que un modelo real ignore las órdenes del documento. La batería de 20 cargas prueba la estructura del prompt contra un modelo "ingenuo"; falta evaluar el modelo real elegido, y un aviso en la interfaz de que la respuesta se basa en contenido del documento (Q).
+- **Estado:** abierto hasta elegir el proveedor real; entonces se corre la batería contra ese modelo.

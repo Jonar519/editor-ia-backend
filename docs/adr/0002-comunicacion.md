@@ -166,7 +166,30 @@ Decisiones escritas al aprobar el diseño de P1:
 - **Topes del lado del servicio**: además del deadline del API, cada método corta solo al doble de ese deadline, por si un cliente no lo pusiera.
 - **Aislamiento**: el `Origen` va solo en el primer mensaje de una corriente; otro después cierra con `INVALID_ARGUMENT`. Cada llamada se registra con cuenta, espacio y documento, nunca con el contenido.
 - **Tope diario** por cuenta en `uso_ia_diario` (300 pedidos y 300 000 tokens por día UTC), reservado de forma atómica antes de llamar; 429 `tope_diario_ia` con `Retry-After` hasta la medianoche UTC. El autocompletado cuenta solo tokens. Si la persona cancela a mitad, se cobra lo estimado hasta el corte.
-- **Indexado**: en P1 se pide a mano (`POST /api/documentos/:id/indice`, editor o propietario). **El indexado automático al dejar de editar queda pendiente para P2.**
+- **Indexado**: se pide a mano (`POST /api/documentos/:id/indice`, editor o propietario, contra su tope) y, desde P2, **automático al dejar de editar** (ver "Búsqueda e indexado automático").
+
+### Búsqueda e indexado automático (bloque P2)
+
+Decisiones escritas de P2:
+
+- **Indexado automático**: el mismo trabajo de "5 minutos sin cambios" que hace la versión automática encola el indexado. Va en nombre de la **última persona que editó** (el autor del último cambio guardado viaja en el trabajo); si ya no tiene acceso, en nombre del propietario del documento. Si el texto, los fragmentos y el modelo no cambiaron, no se llama a la IA.
+- **Presupuesto por espacio**: el automático no gasta la cuota de nadie: va contra un presupuesto diario de **200 000 tokens por espacio** (`uso_ia_indexado_diario`, migración 0023; `IA_TOPE_INDEXADO_ESPACIO_DIA`). Se reserva lo estimado de forma atómica antes de llamar y se ajusta con lo que informa el servicio. Agotado, **el indexado se pospone al día siguiente** (un trabajo demorado hasta la medianoche UTC) **y queda en el log**; no falla en silencio.
+- **`Describir`** (RPC nuevo, compatible): proveedor, modelo de embeddings y dimensiones. El API lo consulta en cada comprobación de salud y antes de buscar o indexar (con caché de 60 s). **Si no son 1024, la IA queda en "falla" en `/ready`, la búsqueda responde 502 y no se escribe ningún vector.**
+- **Búsqueda**: solo con vectores del **modelo vigente**, con una **similitud coseno mínima de 0,2** (`IA_SIMILITUD_MINIMA`, validada con zod; hay que recalibrarla con el modelo real) y **como máximo 3 fragmentos por documento**. Lo hace la base (`buscar_fragmentos` de 7 parámetros, migración 0023), con el mismo aislamiento por espacio y acceso de hoy.
+- **Cambio de modelo**: los fragmentos de otro modelo se reindexan aunque el texto no haya cambiado. `scripts\reindexar.bat` encola todos los documentos (contra el presupuesto de cada espacio).
+- **Topes configurables**: `IA_TOPE_PETICIONES_DIA` y `IA_TOPE_TOKENS_DIA` (300 y 300 000 por defecto). `GET /api/ia/uso` devuelve el uso de hoy, los topes y cuándo se renuevan. El uso de IA (por cuenta y por espacio) se guarda **400 días** (`purgar_retencion()`, migración 0023).
+
+### Inyección de prompts (bloque P2)
+
+El prompt lo arma el servicio de IA (`src/ia/prompt.ts`), que es quien habla con el modelo:
+
+- La **tarea** va en el mensaje de sistema, fija por tipo de pedido. La persona nunca escribe instrucciones libres: el estilo es un conjunto cerrado y el lenguaje se valida (`^[A-Za-z0-9+#._-]{1,40}$`; si no cumple, no entra a las instrucciones).
+- El **contenido** va solo en el mensaje de usuario, dentro de `<documento-NONCE>…</documento-NONCE>` (en el autocompletado, `<antes-…>` y `<despues-…>`), **escapado como XML**: ningún texto del documento puede abrir ni cerrar una etiqueta.
+- El **nonce** son 16 bytes aleatorios por llamada: un cierre falso escrito en el documento no coincide.
+- El sistema le dice al modelo que lo del bloque son datos y que nunca siga órdenes de ahí.
+- La **salida** también es dato no confiable: el servicio la recorta (explicar 4 000 caracteres, resumir y mejorar 60 000, una sugerencia 300) y, al llegar al tope, deja de pedirle al proveedor. No hay herramientas ni acciones: lo peor que logra una inyección es un texto. En Q se dibuja con el saneador de la vista renderizada.
+
+**Cómo se prueba**: una batería de 20 cargas en las 4 tareas (cierres falsos, con el nonce de la llamada, anidados, en mayúsculas, con espacios o caracteres invisibles, homoglifos, roles de sistema, JSON, bloques de código, bidi, 5 000 cierres seguidos…) contra un **modelo "ingenuo"** de pruebas que obedece todo lo que esté fuera del bloque y toma como fin el primer cierre parecido. Se exige que nunca obedezca, que cada bloque abra y cierre una vez con el nonce y contenga la carga escapada entera, y que las instrucciones sean idénticas sea cual sea el contenido. Además, de punta a punta por el API y gRPC con ese modelo. **Límite**: esto prueba la estructura; que un modelo real además resista es una evaluación aparte, cuando se elija el proveedor (riesgo residual R-04).
 
 ### Embeddings: 1024 dimensiones
 
@@ -269,6 +292,31 @@ Los embeddings son de **1024 dimensiones** (`vector(1024)` de la migración 0011
 | Autocompletado: un pedido viejo que llega tarde no se responde; la corriente se cierra con la conexión y se reabre si se corta | `tiempo-real/servidor.ts` `controlDelCliente()`, `cliente.ts` `autocompletado()` |
 | 30 pedidos de IA por minuto y cuenta (usa `limitarTasa`, probado en otros bloques) | `src/ia/rutas.ts` |
 | Reintentos del trabajo de indexado y `UnrecoverableError` con el tope diario | `src/ia/indexado.ts` |
+
+## Estado de verificación al cerrar P2
+
+**Verificado** (`tests/unitarias/ia-prompt.test.ts`, `tests/integracion/ia-p2.test.ts`, `config-ia.test.ts`, pruebas SQL de la 0023) y con mutaciones (backend P28–P44 y P21–P22 al día; base P01–P10):
+
+- la batería de inyección (84 casos) y de punta a punta por el API con el modelo ingenuo;
+- `Describir`; con un modelo de 512 dimensiones, `/ready` muestra la IA en "falla" sin 503, la búsqueda da 502 y el indexado no escribe ni cobra;
+- la búsqueda: umbral (con 0, 0,2 y 0,99), máximo 3 por documento, solo el modelo vigente, y en la base el umbral, el tope, el modelo, el límite 1–50 y el aislamiento;
+- el reindexado al cambiar de modelo;
+- el indexado automático: en nombre de la última persona que editó, del propietario si ella se fue, contra el presupuesto del espacio y no su cuota; agotado, se pospone (sin llamar a la IA) y por la cola queda en el log y como trabajo demorado hasta mañana;
+- la reserva del presupuesto, atómica (8 a la vez con tope 100 → 3);
+- el aviso del trabajo de "sin cambios" al indexado, con el último autor;
+- `GET /api/ia/uso`; los topes de salida (y que el servicio deja de pedirle al proveedor);
+- la retención de 400 días (por cuenta y por espacio) y la configuración nueva.
+
+**Implementado, sin prueba propia (P2):**
+
+| Regla | Código |
+|---|---|
+| Devolver lo reservado al presupuesto si la IA falla, y ajustar a la baja con el uso real | `src/ia/indexado.ts` (`ajustarIndexadoEspacio`) |
+| `UnrecoverableError` del trabajo con un modelo incompatible (no se reintenta) | `src/ia/indexado.ts` |
+| Que el trabajo pospuesto efectivamente corra al día siguiente (se prueba que queda demorado, no que corra) | `src/ia/indexado.ts` |
+| Caché de 60 s de `Describir` | `src/ia/cliente.ts` `modeloVigente()` |
+| `scripts\reindexar.bat` (se probó en vivo contra la base de pruebas, sin prueba automática) | `scripts/reindexar.ts` |
+| Prompts del esqueleto Anthropic (se arman, pero no se mandan a ningún modelo) | `src/ia/proveedor-anthropic.ts` |
 
 ## Decisiones tomadas (por escrito, 2026-10-17)
 
