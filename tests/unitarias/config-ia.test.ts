@@ -6,6 +6,8 @@ import { cargarConfig, ErrorConfig } from '../../src/config/entorno.js';
 import { cargarConfigIa } from '../../src/ia/config.js';
 
 const TOKEN_IA = randomBytes(32).toString('base64url');
+/** Clave del proveedor real, ficticia y distinta en cada corrida (nunca un literal que parezca una clave). */
+const CLAVE_FICTICIA = randomBytes(24).toString('base64url');
 
 const apiBase = {
   DATABASE_URL: 'postgresql://cuaderno_app:clave@127.0.0.1:5435/cuaderno',
@@ -78,11 +80,11 @@ describe('servicio de IA (proceso aparte)', () => {
 
   it('AI_PROVIDER=anthropic exige su clave', () => {
     expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic' })).toEqual(['ANTHROPIC_API_KEY: obligatoria con AI_PROVIDER=anthropic']);
-    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'clave-ficticia-de-prueba-123' })).toEqual([]);
+    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA })).toEqual([]);
   });
 
   it('producción: sin simulado, y con TLS mutuo o red privada', () => {
-    const prod = { NODE_ENV: 'production', IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'clave-ficticia-de-prueba-123' };
+    const prod = { NODE_ENV: 'production', IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA };
     expect(problemas(cargarConfigIa, { ...prod, ...TLS })).toEqual([]);
     expect(problemas(cargarConfigIa, { ...prod, IA_RED_PRIVADA: 'true' })).toEqual([]);
     expect(problemas(cargarConfigIa, prod)).toEqual(['IA_TLS_CERT: en producción hace falta TLS mutuo (IA_TLS_*) o IA_RED_PRIVADA=true']);

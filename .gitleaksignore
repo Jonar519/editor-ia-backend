@@ -13,3 +13,9 @@ b279c63ab6a37d30ae588ef5a6addad06f60bf40:docs/demo-F.md:generic-api-key:44
 # docs/demo-G.md línea 85: misma situación (variable de cmd con texto de ejemplo donde la persona pega
 # el token de cambio de correo de SU buzón simulado). No es un secreto.
 056372f7e5f1b9555d012dd63564777392b04ff0:docs/demo-G.md:generic-api-key:85
+
+# tests/unitarias/config-ia.test.ts líneas 81 y 85 (bloque P1): el literal 'clave-ficticia-de-prueba-123'
+# como ANTHROPIC_API_KEY de una prueba de configuración. Inventado, nunca fue una clave. El commit
+# siguiente lo reemplaza por una clave aleatoria generada en cada corrida.
+b94407d18fc6145cf08eb912c41d8735355c82d0:tests/unitarias/config-ia.test.ts:generic-api-key:81
+b94407d18fc6145cf08eb912c41d8735355c82d0:tests/unitarias/config-ia.test.ts:generic-api-key:85

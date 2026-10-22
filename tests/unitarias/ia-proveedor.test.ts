@@ -1,5 +1,6 @@
 // Proveedor simulado (bloque P1): determinista, vectores unitarios de 1024 con sentido (palabras en común
 // = más cerca), y cancelable. Y el esqueleto del real: falla con "no_implementado", nunca inventa.
+import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { DIMENSIONES } from '../../src/ia/contrato.js';
 import { ErrorProveedor } from '../../src/ia/proveedor.js';
@@ -53,7 +54,7 @@ describe('proveedor simulado', () => {
 
 describe('proveedor real (esqueleto)', () => {
   it('cada operación falla con no_implementado (502 ia_error_interno), nunca con una respuesta inventada', async () => {
-    const p = new ProveedorAnthropic('clave-ficticia-de-prueba-123');
+    const p = new ProveedorAnthropic(randomBytes(24).toString('base64url'));
     await expect(p.explicar({ contenido: 'x', lenguaje: '' }, senal())).rejects.toBeInstanceOf(ErrorProveedor);
     await expect(p.embeber(['x'], senal())).rejects.toMatchObject({ categoria: 'no_implementado' });
     await expect(p.autocompletar({ antes: 'x', despues: '' }, senal())).rejects.toMatchObject({ categoria: 'no_implementado' });
