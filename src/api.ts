@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rutasAuth } from './auth/rutas.js';
+import { rutasComentarios, rutasComentariosDeDocumento } from './comentarios/rutas.js';
 import { rutasCuenta } from './cuenta/rutas.js';
 import type { DependenciasApi } from './dependencias.js';
 import { rutasDocumentos } from './documentos/rutas.js';
@@ -7,6 +8,7 @@ import { rutasEspacios } from './espacios/rutas.js';
 import { rutasAdminInvitaciones, rutasInvitacionPublica } from './invitaciones/rutas.js';
 import { rutasTiempoReal } from './tiempo-real/rutas.js';
 import { rutasUsuarios } from './usuarios/rutas.js';
+import { rutasVersiones } from './versiones/rutas.js';
 
 /** Todas las rutas del API bajo /api. */
 export function crearApi(d: DependenciasApi): Router {
@@ -23,6 +25,9 @@ export function crearApi(d: DependenciasApi): Router {
   api.use('/admin/invitaciones', rutasAdminInvitaciones(d));
   api.use('/espacios', rutasEspacios(d));
   api.use('/documentos', rutasDocumentos(d));
+  api.use('/documentos', rutasVersiones(d));
+  api.use('/documentos', rutasComentariosDeDocumento(d));
+  api.use('/comentarios', rutasComentarios(d));
   api.use('/tiempo-real', rutasTiempoReal(d));
   return api;
 }

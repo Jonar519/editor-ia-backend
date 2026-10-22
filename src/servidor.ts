@@ -40,7 +40,27 @@ async function main(): Promise<void> {
   }
 
   const estado = { apagando: false };
+  // Tiempo real (bloque K2): WebSocket en el mismo puerto, compactación con BullMQ y avisos de la base
+  // reenviados por Redis. UNA sola instancia (ver src/tiempo-real/servidor.ts). Se crea ANTES que el API:
+  // las versiones y los comentarios (bloque N) usan el documento en memoria.
+  const compactador = iniciarCompactacion({
+    redisUrl: config.REDIS_URL,
+    prefijo: 'cuaderno:bull',
+    prisma,
+    log,
+    inactividadMs: LIMITES_PRODUCCION.compactarInactividadMs,
+  });
+  const tiempoReal = new ServidorTiempoReal({
+    prisma,
+    redis,
+    prefijoRedis: 'cuaderno:',
+    appUrl: config.APP_URL,
+    log,
+    limites: LIMITES_PRODUCCION,
+    pedirCompactacion: compactador.pedir,
+  });
   const api = crearApi({
+    contenido: tiempoReal,
     prisma,
     redis,
     correo: crearProveedorCorreo(config, prisma),
@@ -67,24 +87,6 @@ async function main(): Promise<void> {
     log.info({ host: config.HOST, puerto: config.PORT, entorno: config.NODE_ENV }, 'Cuaderno API escuchando');
   });
 
-  // Tiempo real (bloque K2): WebSocket en el mismo puerto, compactación con BullMQ y avisos de la base
-  // reenviados por Redis. UNA sola instancia (ver src/tiempo-real/servidor.ts).
-  const compactador = iniciarCompactacion({
-    redisUrl: config.REDIS_URL,
-    prefijo: 'cuaderno:bull',
-    prisma,
-    log,
-    inactividadMs: LIMITES_PRODUCCION.compactarInactividadMs,
-  });
-  const tiempoReal = new ServidorTiempoReal({
-    prisma,
-    redis,
-    prefijoRedis: 'cuaderno:',
-    appUrl: config.APP_URL,
-    log,
-    limites: LIMITES_PRODUCCION,
-    pedirCompactacion: compactador.pedir,
-  });
   tiempoReal.adjuntar(servidor);
   const avisos = iniciarAvisos({
     databaseUrl: config.DATABASE_URL,

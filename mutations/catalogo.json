@@ -1560,6 +1560,105 @@
       "reemplazo": "const lote = p.actualizaciones;",
       "comando": "test",
       "pruebas": ["tests/integracion/convergencia.test.ts"]
+    },
+    {
+      "id": "N01",
+      "regla": "Versiones: restaurar exige editor o propietario",
+      "archivo": "src/versiones/servicio.ts",
+      "buscar": "'editor', 'Solo un editor o propietario restaura versiones'",
+      "reemplazo": "'lector', 'Solo un editor o propietario restaura versiones'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "N02",
+      "regla": "Versiones: guardar una versión exige editor o propietario",
+      "archivo": "src/versiones/servicio.ts",
+      "buscar": "'editor', 'Solo un editor o propietario guarda versiones'",
+      "reemplazo": "'lector', 'Solo un editor o propietario guarda versiones'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "N03",
+      "regla": "Versiones: restaurar es un cambio del servidor que se guarda y llega a quien tiene el documento abierto",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "const delServidor = origen instanceof CambioDelServidor;",
+      "reemplazo": "const delServidor = false;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "N04",
+      "regla": "Versiones: restaurar cambia solo lo que difiere (lo igual conserva su identidad y las anclas)",
+      "archivo": "src/versiones/lineas.ts",
+      "buscar": "  let pos = 0;",
+      "reemplazo": "  texto.delete(0, texto.length); texto.insert(0, objetivo); let pos = 0; if (pos === 0) return;",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/lineas.test.ts"]
+    },
+    {
+      "id": "N11",
+      "regla": "Versiones: en una línea cambiada, restaurar toca solo lo que difiere dentro de ella",
+      "archivo": "src/versiones/lineas.ts",
+      "buscar": "      reemplazarDiferencia(texto, pos, trozo, nuevo);",
+      "reemplazo": "      texto.delete(pos, trozo.length); texto.insert(pos, nuevo);",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/lineas.test.ts"]
+    },
+    {
+      "id": "N05",
+      "regla": "Versiones: la automática se crea solo si el texto cambió desde la última",
+      "archivo": "src/tiempo-real/compactacion.ts",
+      "buscar": "if (ultima[0] ? ultima[0].contenido_texto === texto : texto === '') return null;",
+      "reemplazo": "if (!ultima[0] && texto === '') return null;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "N06",
+      "regla": "Comentarios: solo quien lo escribió edita el texto",
+      "archivo": "src/comentarios/servicio.ts",
+      "buscar": "if (f.autor_id !== usuarioId) throw sinPermiso('Solo quien escribió el comentario lo edita');",
+      "reemplazo": "if (false) throw sinPermiso('Solo quien escribió el comentario lo edita');",
+      "comando": "test",
+      "pruebas": ["tests/integracion/comentarios.test.ts"]
+    },
+    {
+      "id": "N07",
+      "regla": "Comentarios: resuelve el hilo quien lo abrió, o un editor o propietario",
+      "archivo": "src/comentarios/servicio.ts",
+      "buscar": "if (f.autor_id !== usuarioId && !alcanza(f.rol, 'editor'))",
+      "reemplazo": "if (false)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/comentarios.test.ts"]
+    },
+    {
+      "id": "N08",
+      "regla": "Comentarios: borra quien lo escribió o el PROPIETARIO del documento (un editor no)",
+      "archivo": "src/comentarios/servicio.ts",
+      "buscar": "if (f.autor_id !== usuarioId && f.rol !== 'propietario')",
+      "reemplazo": "if (f.autor_id !== usuarioId && !alcanza(f.rol, 'editor'))",
+      "comando": "test",
+      "pruebas": ["tests/integracion/comentarios.test.ts"]
+    },
+    {
+      "id": "N09",
+      "regla": "Comentarios: el ancla son exactamente dos posiciones relativas (sin bytes de más)",
+      "archivo": "src/comentarios/servicio.ts",
+      "buscar": "    if (decoding.hasContent(dec)) throw invalida();",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/comentarios.test.ts"]
+    },
+    {
+      "id": "N10",
+      "regla": "Comentarios: un comentario nuevo avisa a quienes tienen el documento abierto",
+      "archivo": "src/comentarios/servicio.ts",
+      "buscar": "d.contenido?.avisarComentarios(documentoId);",
+      "reemplazo": "void documentoId;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/comentarios.test.ts"]
     }
   ]
 }

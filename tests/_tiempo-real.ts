@@ -19,10 +19,6 @@ export type Persona = Awaited<ReturnType<typeof cuentaActiva>> & { sesionId: str
 
 export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean } = {}) {
   const e = await entornoApi();
-  const { app } = appDePrueba({ api: crearApi(e.deps) });
-  const servidor = app.listen(0, '127.0.0.1');
-  await new Promise((r) => servidor.once('listening', r));
-  const puerto = (servidor.address() as AddressInfo).port;
   const { log, lineas } = loggerEnMemoria();
   const rt = new ServidorTiempoReal({
     prisma: e.prisma,
@@ -33,6 +29,11 @@ export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos
     limites: { ...LIMITES_PRODUCCION, ...o.limites },
     pedirCompactacion: null,
   });
+  // Como en src/servidor.ts: el API usa el documento en memoria (versiones y comentarios, bloque N).
+  const { app } = appDePrueba({ api: crearApi({ ...e.deps, contenido: rt }) });
+  const servidor = app.listen(0, '127.0.0.1');
+  await new Promise((r) => servidor.once('listening', r));
+  const puerto = (servidor.address() as AddressInfo).port;
   rt.adjuntar(servidor);
   let avisos: Avisos | null = null;
   if (o.avisos !== false) {
@@ -105,6 +106,8 @@ export class Cliente {
   readonly doc = new Y.Doc();
   readonly presencia = new awarenessProtocol.Awareness(this.doc);
   rol: string | null = null;
+  /** Todos los mensajes de control recibidos (rol, comentarios...). */
+  readonly controles: { tipo: string; rol?: string }[] = [];
   recibidas = 0;
   readonly cerrado: Promise<Cierre>;
   readonly abierto: Promise<void>;
@@ -133,7 +136,9 @@ export class Cliente {
       } else if (tipo === 1) {
         awarenessProtocol.applyAwarenessUpdate(this.presencia, decoding.readVarUint8Array(dec), 'servidor');
       } else if (tipo === 2) {
-        this.rol = (JSON.parse(decoding.readVarString(dec)) as { rol: string }).rol;
+        const c = JSON.parse(decoding.readVarString(dec)) as { tipo: string; rol?: string };
+        this.controles.push(c);
+        if (c.tipo === 'rol') this.rol = c.rol ?? null;
       }
     });
     this.doc.on('update', (u: Uint8Array, origen: unknown) => {
