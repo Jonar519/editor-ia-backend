@@ -101,7 +101,9 @@ export class DocumentoVivo {
   private async vaciarAhora(): Promise<void> {
     for (const [autorId, p] of [...this.pendientes]) {
       if (p.actualizaciones.length === 0) continue;
-      const lote = p.actualizaciones;
+      // Una COPIA: lo que guardar() agregue mientras se inserta no es parte de este lote (con el mismo
+      // arreglo, el slice de abajo lo descartaba sin guardarlo; la prueba de convergencia lo encontró).
+      const lote = p.actualizaciones.slice();
       const unida = Y.mergeUpdates(lote);
       try {
         await this.o.prisma.$executeRaw`
@@ -123,12 +125,18 @@ export class DocumentoVivo {
           this.o.alRechazoDeEscritura(this.id, autorId);
           continue;
         }
+        // NO se descarta: el servidor ya tiene estos cambios en memoria, así que ningún cliente los
+        // reenvía; si se borraran del búfer, la base los perdería. Se reintenta en el próximo vaciado.
         p.fallos++;
-        this.o.log.error({ err, documentoId: this.id, autorId, fallos: p.fallos }, 'tiempo real: no se pudo guardar');
-        if (p.fallos >= 3) this.pendientes.delete(autorId); // los clientes los reenvían al reconectar
+        this.o.log.error({ err, documentoId: this.id, autorId, fallos: p.fallos, pendientes: p.actualizaciones.length }, 'tiempo real: no se pudo guardar; se reintenta');
       }
       if (p.actualizaciones.length === 0) this.pendientes.delete(autorId);
     }
+  }
+
+  /** ¿Queda algo en el búfer sin guardar? (La descarga de memoria espera a que no quede nada.) */
+  tienePendientes(): boolean {
+    return [...this.pendientes.values()].some((p) => p.actualizaciones.length > 0);
   }
 
   /** Detiene el vaciado periódico después de vaciar lo que quede. */

@@ -415,17 +415,29 @@ export class ServidorTiempoReal {
         this.d.log.warn({ err }, 'tiempo real: no se pudo borrar la sesión de edición');
       });
     }
-    if (this.delDocumento(doc.id).length === 0 && !this.descargas.has(doc.id)) {
-      this.descargas.set(
-        doc.id,
-        setTimeout(() => {
-          this.descargas.delete(doc.id);
-          if (this.delDocumento(doc.id).length > 0) return;
-          this.documentos.delete(doc.id);
-          void doc.cerrar();
-        }, this.d.limites.descargarMs),
-      );
-    }
+    if (this.delDocumento(doc.id).length === 0) this.programarDescarga(doc);
+  }
+
+  /**
+   * Descarga de memoria un documento sin conexiones, pasado `descargarMs`. Si quedan cambios sin guardar
+   * (la base falló), espera otra vuelta: en memoria es la única copia.
+   */
+  private programarDescarga(doc: DocumentoVivo): void {
+    if (this.descargas.has(doc.id)) return;
+    this.descargas.set(
+      doc.id,
+      setTimeout(() => {
+        this.descargas.delete(doc.id);
+        if (this.delDocumento(doc.id).length > 0) return;
+        if (doc.tienePendientes()) {
+          this.d.log.warn({ documentoId: doc.id }, 'tiempo real: cambios sin guardar; la descarga del documento espera');
+          this.programarDescarga(doc);
+          return;
+        }
+        this.documentos.delete(doc.id);
+        void doc.cerrar();
+      }, this.d.limites.descargarMs),
+    );
   }
 
   private control(o: unknown): Uint8Array {
