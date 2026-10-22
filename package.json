@@ -19,6 +19,10 @@
     "prisma:check": "node --env-file-if-exists=.env scripts/prisma.mjs check",
     "openapi": "tsx scripts/openapi.ts",
     "openapi:check": "tsx scripts/openapi.ts --check",
+    "proto:generate": "node scripts/proto-tipos.mjs",
+    "proto:check": "buf lint proto && buf breaking proto --against \"https://github.com/Jonar519/editor-ia-backend.git#branch=main,subdir=proto\"",
+    "ia:dev": "tsx watch --env-file-if-exists=.env src/ia/principal.ts",
+    "ia:start": "node --env-file-if-exists=.env dist/ia/principal.js",
     "mutate": "node scripts/mutar.mjs",
     "env:init": "node scripts/env-init.mjs",
     "invitar": "tsx --env-file-if-exists=.env scripts/invitar.ts",
@@ -28,6 +32,8 @@
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",
     "@aws-sdk/client-sesv2": "3.1151.0",
+    "@grpc/grpc-js": "1.14.6",
+    "@grpc/proto-loader": "0.8.1",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "bullmq": "6.3.10",
@@ -45,6 +51,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@bufbuild/buf": "1.73.0",
     "@eslint/js": "10.0.1",
     "@types/express": "5.0.6",
     "@types/node": "24.19.2",
