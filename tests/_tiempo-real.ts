@@ -9,6 +9,7 @@ import { readSyncMessage, writeSyncStep1 } from 'y-protocols/sync';
 import * as Y from 'yjs';
 import { WebSocket } from 'ws';
 import { crearApi } from '../src/api.js';
+import type { IaTiempoReal } from '../src/ia/autocompletado.js';
 import { iniciarAvisos, type Avisos } from '../src/tiempo-real/avisos.js';
 import { LIMITES_PRODUCCION, type LimitesTiempoReal } from '../src/tiempo-real/limites.js';
 import { ServidorTiempoReal } from '../src/tiempo-real/servidor.js';
@@ -17,7 +18,7 @@ import { appDePrueba, loggerEnMemoria, urlBdPruebas } from './_apoyo.js';
 
 export type Persona = Awaited<ReturnType<typeof cuentaActiva>> & { sesionId: string; auth: string };
 
-export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean } = {}) {
+export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean; ia?: IaTiempoReal } = {}) {
   const e = await entornoApi();
   const { log, lineas } = loggerEnMemoria();
   const rt = new ServidorTiempoReal({
@@ -28,6 +29,7 @@ export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos
     log,
     limites: { ...LIMITES_PRODUCCION, ...o.limites },
     pedirCompactacion: null,
+    ...(o.ia ? { ia: o.ia } : {}),
   });
   // Como en src/servidor.ts: el API usa el documento en memoria (versiones y comentarios, bloque N).
   const { app } = appDePrueba({ api: crearApi({ ...e.deps, contenido: rt }) });
@@ -106,8 +108,8 @@ export class Cliente {
   readonly doc = new Y.Doc();
   readonly presencia = new awarenessProtocol.Awareness(this.doc);
   rol: string | null = null;
-  /** Todos los mensajes de control recibidos (rol, comentarios...). */
-  readonly controles: { tipo: string; rol?: string }[] = [];
+  /** Todos los mensajes de control recibidos (rol, comentarios, ia.sugerencia...). */
+  readonly controles: { tipo: string; rol?: string; pedido?: number; texto?: string; error?: string }[] = [];
   recibidas = 0;
   readonly cerrado: Promise<Cierre>;
   readonly abierto: Promise<void>;
@@ -136,7 +138,7 @@ export class Cliente {
       } else if (tipo === 1) {
         awarenessProtocol.applyAwarenessUpdate(this.presencia, decoding.readVarUint8Array(dec), 'servidor');
       } else if (tipo === 2) {
-        const c = JSON.parse(decoding.readVarString(dec)) as { tipo: string; rol?: string };
+        const c = JSON.parse(decoding.readVarString(dec)) as Cliente['controles'][number];
         this.controles.push(c);
         if (c.tipo === 'rol') this.rol = c.rol ?? null;
       }
@@ -158,6 +160,24 @@ export class Cliente {
   escribir(t: string): void {
     const x = this.doc.getText('contenido');
     x.insert(x.length, t);
+  }
+
+  /** Manda un mensaje de control (tipo 2) con el texto tal cual (JSON o no). */
+  mandarControl(texto: string): void {
+    const e = encoding.createEncoder();
+    encoding.writeVarUint(e, 2);
+    encoding.writeVarString(e, texto);
+    this.ws.send(encoding.toUint8Array(e));
+  }
+
+  /** Pide una sugerencia de autocompletado (tramo 4). */
+  autocompletar(pedido: number, antes: string, despues = ''): void {
+    this.mandarControl(JSON.stringify({ tipo: 'ia.autocompletar', pedido, antes, despues }));
+  }
+
+  /** Las sugerencias recibidas. */
+  get sugerencias() {
+    return this.controles.filter((c) => c.tipo === 'ia.sugerencia');
   }
 
   /** Manda presencia propia (con lo que el cliente quiera poner, incluido un nombre falso). */

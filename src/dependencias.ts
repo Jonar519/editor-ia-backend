@@ -2,6 +2,9 @@ import type { Redis } from 'ioredis';
 import type { ProveedorCorreo } from './correo/proveedor.js';
 import type { PrismaClient } from './generated/prisma/client.js';
 import type { ProveedorGeo } from './geo/proveedor.js';
+import type { ClienteIa } from './ia/cliente.js';
+import type { Indexador } from './ia/indexado.js';
+import type { TopesIa } from './ia/uso.js';
 import type { ContenidoVivo } from './tiempo-real/servidor.js';
 
 /** Lo que necesitan las rutas del API. Las pruebas lo arman con la base y el Redis de pruebas. */
@@ -29,4 +32,10 @@ export interface DependenciasApi {
    * (pruebas que no levantan el tiempo real), esas rutas responden 503.
    */
   contenido?: ContenidoVivo;
+  /** Cliente del servicio de IA (bloque P1). Sin él, las rutas de IA responden 503 ia_no_disponible. */
+  ia?: ClienteIa;
+  /** Cola de indexado para la búsqueda semántica (BullMQ). */
+  indexador?: Indexador;
+  /** Tope diario de IA por cuenta (las pruebas lo bajan). */
+  topesIa?: TopesIa;
 }

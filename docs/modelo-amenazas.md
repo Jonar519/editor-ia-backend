@@ -49,3 +49,15 @@ El análisis STRIDE completo se escribe en el bloque R. Este documento se abre e
   - la autoría de cada versión manual y de cada restauración, que queda en la cadena de hash.
 - **Lo que no hay:** un tope de versiones por documento, una cuota por espacio o por cuenta, y una retención que borre o compacte versiones viejas. Una retención chocaría con el solo-inserción y la cadena de hash: habría que decidir cómo se "poda" sin perder la verificabilidad.
 - **Estado:** aceptado al cerrar el bloque N (decisión escrita: límites aprobados, versiones sin tope). Se revisa en el bloque R junto con el monitoreo del tamaño de la base.
+
+### R-03 · Tráfico entre el API y el servicio de IA con `IA_RED_PRIVADA=true`
+
+- **Origen:** bloque P1. En producción, la configuración exige TLS mutuo (`IA_TLS_*`) **o** declarar `IA_RED_PRIVADA=true`.
+- **Qué puede pasar:** con la segunda opción, el token entre servicios y el contenido de los documentos viajan en texto plano. Si la red NO es realmente privada (alguien pone la bandera por comodidad), un tercero en esa red los lee, y con el token puede llamar al servicio de IA gastando el proveedor (sin acceso a la base: el servicio no la tiene).
+- **Lo que lo acota hoy:**
+  - el servicio escucha en `127.0.0.1` por defecto;
+  - la bandera hay que ponerla a propósito (nunca es el valor por defecto) y queda en el log de arranque;
+  - el token es de 32+ bytes y se compara en tiempo constante;
+  - la salud estándar no lleva token, pero solo dice `SERVING` o `NOT_SERVING`.
+- **Lo que no hay:** una verificación de que la red sea privada (no se puede comprobar desde el proceso) ni rotación automática del token.
+- **Estado:** abierto hasta el despliegue (bloque R): ahí se decide TLS mutuo o la red privada concreta.

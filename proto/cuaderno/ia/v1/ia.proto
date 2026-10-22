@@ -1,9 +1,8 @@
-// BORRADOR (ADR 0002, apertura del tramo 3). No se compila ni se usa hasta el bloque P1, donde se revisa.
-//
-// Contrato entre el API (gateway) y el servicio de IA. Solo tráfico INTERNO: el navegador nunca habla
-// gRPC. Reglas del contrato:
+// Contrato entre el API (gateway) y el servicio de IA (ADR 0002, bloque P1). Solo tráfico INTERNO: el
+// navegador nunca habla gRPC. Reglas del contrato:
 //   - La versión va en el paquete (v1). Un cambio incompatible es v2, en paralelo.
 //   - Un número de campo nunca se reutiliza: al quitar un campo, su número y su nombre van a `reserved`.
+//     `buf breaking` (npm run proto:check, en el CI) lo comprueba contra main.
 //   - El contenido del documento y la instrucción van en campos SEPARADOS. El servicio trata el
 //     contenido siempre como datos (entre delimitadores), nunca como instrucciones.
 //   - Nada de identidad de la persona más allá de un id opaco: ni correo ni nombre.
@@ -36,12 +35,16 @@ service Asistente {
 // ─── Comunes ──────────────────────────────────────────────────────────────────
 
 // Quién pide y para qué documento: ids opacos (uuid en texto), para límites y trazas. Nunca datos
-// personales.
+// personales. El API ya verificó el acceso ANTES de llamar; el servicio no tiene base ni Redis.
 message Origen {
   string cuenta_id = 1;
+  // Vacío solo en EmbeberConsulta (la búsqueda es de un espacio, no de un documento).
   string documento_id = 2;
   // Id de la petición del API (el mismo que el campo `solicitud` de los errores), para correlacionar logs.
   string solicitud_id = 3;
+  // Espacio del documento (o de la búsqueda): el servicio lo registra con cada llamada para poder auditar
+  // el aislamiento entre espacios.
+  string espacio_id = 4;
 }
 
 // Tokens consumidos, para el tope diario que aplica el API (uso_ia_diario).
@@ -96,7 +99,8 @@ message EmbeberConsultaSolicitud {
 }
 
 message Vector {
-  // 1024 dimensiones (vector(1024) de la base, migración 0011).
+  // EXACTAMENTE 1024 dimensiones (vector(1024) de la base, migración 0011). El servicio rechaza (INTERNAL)
+  // un vector de otro tamaño; un modelo real con otra dimensión exige una migración (ADR 0002).
   repeated float valores = 1 [packed = true];
   Uso uso = 2;
 }
@@ -112,6 +116,9 @@ message FragmentoDocumento {
 message DocumentoIndexado {
   repeated VectorFragmento vectores = 1;
   Uso uso = 2;
+  // Modelo que produjo los vectores (se guarda en embeddings.modelo). Al cambiar de modelo hay que
+  // reindexar todo: vectores de modelos distintos no se comparan.
+  string modelo = 3;
 
   message VectorFragmento {
     uint32 indice = 1;

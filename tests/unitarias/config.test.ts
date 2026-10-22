@@ -22,6 +22,8 @@ const produccionValida = {
   GEO_PROVIDER: 'tabla_local',
   APP_URL: 'https://cuaderno.example.com',
   SES_REGION: 'us-east-1',
+  IA_SERVICE_TOKEN: randomBytes(32).toString('base64url'),
+  IA_RED_PRIVADA: 'true',
 };
 
 function problemas(env: Record<string, string | undefined>): string[] {

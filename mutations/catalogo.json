@@ -677,7 +677,7 @@
       "reemplazo": "${new Date(Date.now() + VIGENCIA_INVITACION_HORAS * 3_600_000)}",
       "comando": "test",
       "pruebas": [
-        "tests/integracion/mfa.test.ts"
+        "tests/integracion/reloj.test.ts"
       ]
     },
     {
@@ -1559,7 +1559,7 @@
       "buscar": "const lote = p.actualizaciones.slice();",
       "reemplazo": "const lote = p.actualizaciones;",
       "comando": "test",
-      "pruebas": ["tests/integracion/convergencia.test.ts"]
+      "pruebas": ["tests/unitarias/documento-lote.test.ts"]
     },
     {
       "id": "N01",
@@ -1659,6 +1659,248 @@
       "reemplazo": "void documentoId;",
       "comando": "test",
       "pruebas": ["tests/integracion/comentarios.test.ts"]
+    },
+    {
+      "id": "P01",
+      "regla": "IA: sin token de servicio válido, UNAUTHENTICATED (interceptor)",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "if (metodo.path.startsWith(RUTA_SALUD) || tokenValido(metadatos, esperado)) {",
+      "reemplazo": "if (true) {",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P02",
+      "regla": "IA: la salud estándar responde sin token (y solo ella)",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "metodo.path.startsWith(RUTA_SALUD) || tokenValido",
+      "reemplazo": "tokenValido",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P03",
+      "regla": "IA: el token se compara de verdad (en tiempo constante), no basta con mandar uno",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "return recibido !== '' && timingSafeEqual(a, b);",
+      "reemplazo": "return recibido !== '';",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P04",
+      "regla": "IA: una llamada cancelada (o con el deadline vencido) corta al proveedor",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "    llamada.on('cancelled', () => {\n      ac.abort();\n    });\n    return ac;",
+      "reemplazo": "    void llamada;\n    return ac;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts", "tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P05",
+      "regla": "IA: abortar la señal en el API cancela la corriente gRPC",
+      "archivo": "src/ia/cliente.ts",
+      "buscar": "    else senal?.addEventListener('abort', alAbortar, { once: true });\n    try {\n      for await",
+      "reemplazo": "    try {\n      for await",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts", "tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P06",
+      "regla": "IA: en Autocompletar, un pedido nuevo cancela la sugerencia anterior en el servicio",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "        actual?.abort();\n        const ac = new AbortController();",
+      "reemplazo": "        const ac = new AbortController();",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P07",
+      "regla": "IA: una corriente de indexado no admite un segundo origen (no mezcla documentos ni espacios)",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "          else if (m.origen) throw invalido('el origen va solo en el primer mensaje');\n          if (fragmentos.length",
+      "reemplazo": "          if (fragmentos.length",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P08",
+      "regla": "IA: un vector que no es de 1024 dimensiones se rechaza",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "    if (v.length !== DIMENSIONES) {",
+      "reemplazo": "    if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-proveedor.test.ts", "tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P09",
+      "regla": "IA: el origen exige cuenta y espacio (uuid)",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "if (!UUID.test(o.cuenta_id) || !UUID.test(o.espacio_id)) throw",
+      "reemplazo": "if (false) throw",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "P10",
+      "regla": "IA: DEADLINE_EXCEEDED → 504 ia_tiempo_agotado",
+      "archivo": "src/ia/errores.ts",
+      "buscar": "return { estado: 504, codigo: 'ia_tiempo_agotado'",
+      "reemplazo": "return { estado: 502, codigo: 'ia_tiempo_agotado'",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-errores.test.ts", "tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P11",
+      "regla": "IA: UNAVAILABLE → 503 ia_no_disponible",
+      "archivo": "src/ia/errores.ts",
+      "buscar": "return { estado: 503, codigo: 'ia_no_disponible'",
+      "reemplazo": "return { estado: 502, codigo: 'ia_no_disponible'",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-errores.test.ts", "tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P12",
+      "regla": "IA: CANCELLED no se responde (la persona ya se fue)",
+      "archivo": "src/ia/errores.ts",
+      "buscar": "    case grpc.status.CANCELLED:\n      return null;\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-errores.test.ts"]
+    },
+    {
+      "id": "P13",
+      "regla": "IA: RESOURCE_EXHAUSTED → 429 con el Retry-After del servicio",
+      "archivo": "src/ia/errores.ts",
+      "buscar": "if (f.reintentarEnS !== undefined) res.setHeader('Retry-After', String(f.reintentarEnS));",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-errores.test.ts", "tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P14",
+      "regla": "/ready: la IA caída se muestra pero NO pone /ready en 503",
+      "archivo": "src/http/salud.ts",
+      "buscar": "informativa || e === 'ok'",
+      "reemplazo": "e === 'ok'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P15",
+      "regla": "IA: tope diario de tokens",
+      "archivo": "src/ia/uso.ts",
+      "buscar": "        AND u.tokens_entrada + u.tokens_salida < ${topes.tokensDia}::bigint\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts", "tests/integracion/ia-autocompletado.test.ts"]
+    },
+    {
+      "id": "P16",
+      "regla": "IA: tope diario de peticiones, atómico",
+      "archivo": "src/ia/uso.ts",
+      "buscar": "(${!contarPeticion}::boolean OR u.peticiones < ${topes.peticionesDia}::int)",
+      "reemplazo": "true",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P17",
+      "regla": "IA: mejorar exige editor o propietario",
+      "archivo": "src/ia/rutas.ts",
+      "buscar": "tarea === 'mejorar' ? 'editor' : 'lector'",
+      "reemplazo": "'lector'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P18",
+      "regla": "IA: explicar exige acceso al documento (sin acceso, 404)",
+      "archivo": "src/ia/rutas.ts",
+      "buscar": "const { espacioId } = await exigirDocumento(d.prisma, u.id, b.documentoId, 'lector', '');",
+      "reemplazo": "const { espacioId } = { espacioId: '00000000-0000-4000-8000-000000000000' };",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P19",
+      "regla": "IA: buscar exige ser miembro del espacio (aislamiento: 404)",
+      "archivo": "src/ia/rutas.ts",
+      "buscar": "    await exigirEspacio(d.prisma, u.id, espacioId, 'lector', '');\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P20",
+      "regla": "IA: pedir el indexado exige editor o propietario",
+      "archivo": "src/ia/rutas.ts",
+      "buscar": "'editor', 'Solo un editor o propietario puede indexar el documento'",
+      "reemplazo": "'lector', 'Solo un editor o propietario puede indexar el documento'",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P21",
+      "regla": "IA: el trabajo de indexado reverifica el acceso (sin acceso, ni IA ni filas)",
+      "archivo": "src/ia/indexado.ts",
+      "buscar": "  if (!acceso) return { resultado: 'sin_acceso', fragmentos: 0 };\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P22",
+      "regla": "IA: sin cambios, el indexado no vuelve a llamar a la IA",
+      "archivo": "src/ia/indexado.ts",
+      "buscar": "  if (iguales) return",
+      "reemplazo": "  if (false) return",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-api.test.ts"]
+    },
+    {
+      "id": "P23",
+      "regla": "Autocompletado: un lector no autocompleta (ni se llama a la IA)",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "if (!escribe) { responder({ error: 'sin_permiso' }); return; }",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-autocompletado.test.ts"]
+    },
+    {
+      "id": "P24",
+      "regla": "Producción: el transporte a la IA exige TLS mutuo o red privada declarada",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "if (c.NODE_ENV === 'production' && tls === 0 && !c.IA_RED_PRIVADA) {",
+      "reemplazo": "if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config-ia.test.ts"]
+    },
+    {
+      "id": "P25",
+      "regla": "Producción: el API exige IA_SERVICE_TOKEN",
+      "archivo": "src/config/entorno.ts",
+      "buscar": "if (c.IA_SERVICE_TOKEN === undefined) {",
+      "reemplazo": "if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config-ia.test.ts"]
+    },
+    {
+      "id": "P26",
+      "regla": "Producción: el servicio de IA no arranca con el proveedor simulado",
+      "archivo": "src/ia/config.ts",
+      "buscar": "if (c.NODE_ENV === 'production' && c.AI_PROVIDER === 'mock') {",
+      "reemplazo": "if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config-ia.test.ts"]
+    },
+    {
+      "id": "P27",
+      "regla": "Contrato gRPC: buf breaking detecta un cambio incompatible contra main",
+      "archivo": "proto/cuaderno/ia/v1/ia.proto",
+      "buscar": "  string cuenta_id = 1;",
+      "reemplazo": "  string cuenta_id = 9;",
+      "comando": "proto:check"
     }
   ]
 }

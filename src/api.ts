@@ -5,6 +5,7 @@ import { rutasCuenta } from './cuenta/rutas.js';
 import type { DependenciasApi } from './dependencias.js';
 import { rutasDocumentos } from './documentos/rutas.js';
 import { rutasEspacios } from './espacios/rutas.js';
+import { rutasIa } from './ia/rutas.js';
 import { rutasAdminInvitaciones, rutasInvitacionPublica } from './invitaciones/rutas.js';
 import { rutasTiempoReal } from './tiempo-real/rutas.js';
 import { rutasUsuarios } from './usuarios/rutas.js';
@@ -23,6 +24,11 @@ export function crearApi(d: DependenciasApi): Router {
   api.use('/cuenta', rutasCuenta(d));
   api.use('/usuarios', rutasUsuarios(d));
   api.use('/admin/invitaciones', rutasAdminInvitaciones(d));
+  // IA (bloque P1): búsqueda e indexado van ANTES de espacios y documentos para no pasar dos veces por la sesión.
+  const ia = rutasIa(d);
+  api.use('/ia', ia.ia);
+  api.use('/espacios', ia.busqueda);
+  api.use('/documentos', ia.indice);
   api.use('/espacios', rutasEspacios(d));
   api.use('/documentos', rutasDocumentos(d));
   api.use('/documentos', rutasVersiones(d));

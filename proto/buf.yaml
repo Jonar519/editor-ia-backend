@@ -1,0 +1,21 @@
+# Módulo de Protocol Buffers del contrato entre el API y el servicio de IA (ADR 0002).
+#   npm run proto:check  →  buf lint + buf breaking contra main (en el CI, job "verificar").
+version: v2
+lint:
+  use:
+    - STANDARD
+  except:
+    # Nombres en español (ADR 0002): "ExplicarSolicitud" en vez de "ExplicarRequest", "Asistente" sin
+    # el sufijo "Service" y "ESTILO_SIN_ESPECIFICAR" en vez de "_UNSPECIFIED".
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    - SERVICE_SUFFIX
+    - ENUM_ZERO_VALUE_SUFFIX
+    # Resumir y Mejorar comparten solicitud y respuesta a propósito: son la misma transformación.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+  ignore:
+    # Copia sin cambios del health.proto oficial de gRPC: no es nuestro, no se le aplica nuestro estilo.
+    - grpc/health/v1/health.proto
+breaking:
+  use:
+    - FILE

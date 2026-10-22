@@ -12,10 +12,10 @@ export const RUTAS_REDACTADAS = [
   '*.codigo_mfa',
 ];
 
-export function crearLogger(nivel: LevelWithSilent, destino?: DestinationStream): Logger {
+export function crearLogger(nivel: LevelWithSilent, destino?: DestinationStream, servicio = 'cuaderno-api'): Logger {
   const opciones = {
     level: nivel,
-    base: { servicio: 'cuaderno-api' },
+    base: { servicio },
     redact: { paths: RUTAS_REDACTADAS, censor: '[REDACTADO]' },
   };
   return destino ? pino(opciones, destino) : pino(opciones);

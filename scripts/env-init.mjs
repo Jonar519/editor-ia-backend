@@ -1,5 +1,5 @@
 // Crea .env a partir de .env.example, o completa uno existente con las variables que falten.
-// Genera MFA_ENCRYPTION_KEY y METRICS_TOKEN, y arma DATABASE_URL / TEST_DATABASE_URL con la contraseña
+// Genera MFA_ENCRYPTION_KEY, ACCESS_TOKEN_SECRET, METRICS_TOKEN e IA_SERVICE_TOKEN, y arma DATABASE_URL / TEST_DATABASE_URL con la contraseña
 // del rol cuaderno_app que está en el .env del repo de base. Nunca cambia un valor que ya exista.
 
 import { randomBytes } from 'node:crypto';
@@ -47,6 +47,7 @@ const generadores = {
   MFA_ENCRYPTION_KEY: () => randomBytes(32).toString('base64'),
   ACCESS_TOKEN_SECRET: () => randomBytes(32).toString('base64'),
   METRICS_TOKEN: () => randomBytes(32).toString('base64url'),
+  IA_SERVICE_TOKEN: () => randomBytes(32).toString('base64url'),
   DATABASE_URL: () => urlBd(base.get('CUADERNO_DEV_DB') || 'cuaderno'),
   TEST_DATABASE_URL: () => urlBd(base.get('CUADERNO_TEST_DB') || 'cuaderno_test'),
 };

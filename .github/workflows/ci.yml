@@ -80,10 +80,13 @@ jobs:
           npm ci --prefix editor-ia-database
           node scripts/bd-preparar.mjs
       - run: npm run prisma:generate
+      - run: npm run proto:generate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run prisma:check
       - run: npm run openapi:check
+      # Contrato gRPC (ADR 0002): estilo y compatibilidad con el de main (buf breaking).
+      - run: npm run proto:check
       - run: npm test
       - run: npm run build
       - run: npm run mutate

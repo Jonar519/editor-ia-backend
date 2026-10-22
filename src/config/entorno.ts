@@ -25,6 +25,39 @@ const claveHmac = z
     error: 'debe ser de al menos 32 bytes en base64',
   });
 
+/** Token entre el API y el servicio de IA: 32+ bytes aleatorios en base64url (env-init.bat lo genera). */
+export const tokenServicio = z
+  .string({ error: 'falta: genéralo con scripts\\env-init.bat (ver .env.example)' })
+  .refine((v) => /^[A-Za-z0-9_-]+$/.test(v) && Buffer.from(v, 'base64url').length >= 32, {
+    error: 'debe ser de al menos 32 bytes en base64url',
+  });
+
+/** Transporte API ↔ servicio de IA: los MISMOS nombres en los dos procesos (cada uno con sus archivos). */
+export const transporteIa = {
+  IA_TLS_CERT: opcional(z.string()),
+  IA_TLS_KEY: opcional(z.string()),
+  IA_TLS_CA: opcional(z.string()),
+  IA_RED_PRIVADA: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+};
+
+/**
+ * Regla de transporte (ADR 0002): en producción, TLS MUTUO (los tres archivos) o una red privada declarada
+ * a propósito (IA_RED_PRIVADA=true); sin una de las dos, el proceso no arranca. Fuera de producción, texto
+ * plano en 127.0.0.1. Con TLS van los tres archivos o ninguno.
+ */
+export function reglaTransporte(
+  c: { NODE_ENV: string; IA_TLS_CERT?: string | undefined; IA_TLS_KEY?: string | undefined; IA_TLS_CA?: string | undefined; IA_RED_PRIVADA: boolean },
+  ctx: z.RefinementCtx,
+): void {
+  const tls = [c.IA_TLS_CERT, c.IA_TLS_KEY, c.IA_TLS_CA].filter((x) => x !== undefined).length;
+  if (tls !== 0 && tls !== 3) {
+    ctx.addIssue({ code: 'custom', path: ['IA_TLS_CERT'], message: 'TLS mutuo necesita IA_TLS_CERT, IA_TLS_KEY e IA_TLS_CA (los tres)' });
+  }
+  if (c.NODE_ENV === 'production' && tls === 0 && !c.IA_RED_PRIVADA) {
+    ctx.addIssue({ code: 'custom', path: ['IA_TLS_CERT'], message: 'en producción hace falta TLS mutuo (IA_TLS_*) o IA_RED_PRIVADA=true' });
+  }
+}
+
 /** Costo mínimo de scrypt en producción: N = 2^15. */
 export const COSTO_HASH_MINIMO_PRODUCCION = 15;
 
@@ -49,8 +82,14 @@ const esquema = z
     AI_PROVIDER: z.enum(PROVEEDORES.AI_PROVIDER).default('mock'),
     EMAIL_PROVIDER: z.enum(PROVEEDORES.EMAIL_PROVIDER).default('mock'),
     GEO_PROVIDER: z.enum(PROVEEDORES.GEO_PROVIDER).default('mock'),
+    // Servicio de IA (proceso aparte, bloque P1). Sin token fuera de producción: el API arranca sin IA
+    // (sus rutas responden 503 ia_no_disponible y /ready la muestra como "falla").
+    IA_URL: z.string().regex(/^[A-Za-z0-9.-]+:\d{1,5}$/, { error: 'debe ser host:puerto (ej. 127.0.0.1:4210)' }).default('127.0.0.1:4210'),
+    IA_SERVICE_TOKEN: opcional(tokenServicio),
+    ...transporteIa,
   })
   .superRefine((c, ctx) => {
+    reglaTransporte(c, ctx);
     if (c.EMAIL_PROVIDER === 'ses' && c.SES_REGION === undefined) {
       ctx.addIssue({ code: 'custom', path: ['SES_REGION'], message: 'obligatoria con EMAIL_PROVIDER=ses' });
     }
@@ -74,6 +113,9 @@ const esquema = z
     }
     if (c.METRICS_TOKEN === undefined) {
       ctx.addIssue({ code: 'custom', path: ['METRICS_TOKEN'], message: 'obligatorio en producción' });
+    }
+    if (c.IA_SERVICE_TOKEN === undefined) {
+      ctx.addIssue({ code: 'custom', path: ['IA_SERVICE_TOKEN'], message: 'obligatorio en producción' });
     }
     const redis = new URL(c.REDIS_URL);
     if (redis.password === '' && redis.protocol !== 'rediss:') {

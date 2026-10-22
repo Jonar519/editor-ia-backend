@@ -33,6 +33,10 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { validarSesion } from '../auth/sesiones.js';
 import { type RolContenido, rolEnDocumento } from '../contenido/acceso.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
+import { ErrorHttp } from '../http/errores.js';
+import { CONTEXTO_AUTOCOMPLETADO, type IaTiempoReal } from '../ia/autocompletado.js';
+import type { SesionAutocompletado } from '../ia/cliente.js';
+import { esErrorGrpc, falloDeGrpc } from '../ia/errores.js';
 import { DocumentoVivo, NOMBRE_TEXTO } from './documento.js';
 import { CIERRE, type LimitesTiempoReal } from './limites.js';
 import { consumirTicket, PROTOCOLO, ticketDeProtocolos } from './tickets.js';
@@ -62,6 +66,8 @@ export interface DepsTiempoReal {
   limites: LimitesTiempoReal;
   /** Pedir compactación del documento (BullMQ); null en pruebas que no la usan. */
   pedirCompactacion: ((documentoId: string, inmediata: boolean) => Promise<void>) | null;
+  /** Autocompletado con la IA (bloque P1). Sin ella, los pedidos responden ia_no_disponible. */
+  ia?: IaTiempoReal;
 }
 
 interface Conexion {
@@ -81,6 +87,10 @@ interface Conexion {
   sesionEdicionId: string | null;
   esperandoPong: boolean;
   temporizadores: ReturnType<typeof setTimeout>[];
+  /** Corriente de autocompletado con el servicio de IA (se abre con el primer pedido). */
+  ia: SesionAutocompletado | null;
+  /** El último pedido de autocompletado: uno más viejo que llegue tarde no se responde. */
+  ultimoPedidoIa: number;
 }
 
 const puedeEscribir = (c: Conexion) => !c.cortada && (c.rol === 'editor' || c.rol === 'propietario');
@@ -168,6 +178,8 @@ export class ServidorTiempoReal implements ContenidoVivo {
           sesionEdicionId: fila[0]?.id ?? null,
           esperandoPong: false,
           temporizadores: [],
+          ia: null,
+          ultimoPedidoIa: -1,
         };
         this.abrir(c, doc, sesion[0]?.expira_en ?? null);
       });
@@ -342,14 +354,57 @@ export class ServidorTiempoReal implements ContenidoVivo {
         }
       } else if (tipo === MENSAJE.presencia) {
         this.presencia(c, doc, decoding.readVarUint8Array(dec));
-      } else if (tipo !== MENSAJE.control) {
-        // Los mensajes de control del cliente (tramo 4: autocompletado) todavía no se usan.
+      } else if (tipo === MENSAJE.control) {
+        this.controlDelCliente(c, decoding.readVarString(dec));
+      } else {
         this.cortar(c, CIERRE.malFormado, 'tipo de mensaje desconocido');
       }
     } catch (err) {
       this.d.log.warn({ err, documentoId: c.documentoId, usuarioId: c.usuarioId }, 'tiempo real: mensaje mal formado');
       this.cortar(c, CIERRE.malFormado, 'mensaje mal formado');
     }
+  }
+
+  /**
+   * Control del cliente: hoy solo `ia.autocompletar` (tramo 4) con { pedido, antes, despues }. Un JSON mal
+   * formado cierra con 4400; un tipo desconocido se ignora (compatibilidad con clientes más nuevos). La
+   * respuesta es `ia.sugerencia` con el mismo pedido y el texto, o un error con código estable.
+   */
+  private controlDelCliente(c: Conexion, crudo: string): void {
+    const m = JSON.parse(crudo) as { tipo?: unknown; pedido?: unknown; antes?: unknown; despues?: unknown } | null;
+    if (typeof m !== 'object' || m === null) { this.cortar(c, CIERRE.malFormado, 'control mal formado'); return; }
+    if (m.tipo !== 'ia.autocompletar') return;
+    const { pedido, antes, despues } = m;
+    if (typeof pedido !== 'number' || !Number.isSafeInteger(pedido) || pedido < 0 || typeof antes !== 'string' || typeof despues !== 'string') {
+      this.cortar(c, CIERRE.malFormado, 'pedido de autocompletado mal formado'); return;
+    }
+    const responder = (r: { texto: string } | { error: string }) => {
+      if (!c.cortada) this.enviar(c, this.control({ tipo: 'ia.sugerencia', pedido, ...r }));
+    };
+    // Un lector no autocompleta (ADR 0002): ni siquiera se llama a la IA.
+    const escribe = puedeEscribir(c);
+    if (!escribe) { responder({ error: 'sin_permiso' }); return; }
+    const ia = this.d.ia;
+    if (!ia) { responder({ error: 'ia_no_disponible' }); return; }
+    c.ultimoPedidoIa = pedido;
+    c.ia ??= ia.sesion({ cuentaId: c.usuarioId, espacioId: c.espacioId, documentoId: c.documentoId, solicitudId: c.sesionEdicionId ?? '' });
+    const sesion = c.ia;
+    void (async () => {
+      try {
+        await ia.reservar(c.usuarioId);
+        if (c.ultimoPedidoIa !== pedido || c.cortada) return; // llegó otro mientras tanto
+        const r = await sesion.pedir(pedido, antes.slice(-CONTEXTO_AUTOCOMPLETADO.antes), despues.slice(0, CONTEXTO_AUTOCOMPLETADO.despues));
+        if (r === null) return; // otro pedido lo reemplazó (el servicio lo canceló)
+        responder({ texto: r.texto });
+        await ia.registrar(c.usuarioId, r.uso);
+      } catch (err) {
+        if (err instanceof ErrorHttp) { responder({ error: err.codigo }); return; }
+        const f = esErrorGrpc(err) ? falloDeGrpc(err) : { codigo: 'interno' };
+        if (!f) return; // CANCELLED: la conexión se cerró
+        if (f.codigo === 'interno') this.d.log.error({ err, documentoId: c.documentoId }, 'tiempo real: el autocompletado falló');
+        responder({ error: f.codigo });
+      }
+    })();
   }
 
   /** Actualización de quien no puede escribir: no se aplica ni se retransmite; a la tercera, 4403. */
@@ -460,6 +515,7 @@ export class ServidorTiempoReal implements ContenidoVivo {
   private async cerrada(c: Conexion, doc: DocumentoVivo): Promise<void> {
     c.cortada = true;
     for (const t of c.temporizadores) clearTimeout(t);
+    c.ia?.cerrar();
     this.conexiones.delete(c);
     if (c.clientIds.size > 0) removeAwarenessStates(doc.awareness, [...c.clientIds], 'cierre');
     if (c.sesionEdicionId) {
