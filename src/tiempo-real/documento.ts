@@ -35,8 +35,8 @@ export interface OpcionesDocumento {
   limites: LimitesTiempoReal;
   /** La base rechazó por permiso una escritura de este autor: revalidar sus conexiones ya. */
   alRechazoDeEscritura: (documentoId: string, autorId: string) => void;
-  /** Pedir compactación (inmediata al juntar N filas; si no, por inactividad). */
-  pedirCompactacion: (documentoId: string, inmediata: boolean) => void;
+  /** Pedir compactación (inmediata al juntar N filas; si no, por inactividad), con el autor de lo guardado. */
+  pedirCompactacion: (documentoId: string, inmediata: boolean, autorId: string) => void;
 }
 
 export class DocumentoVivo {
@@ -115,7 +115,7 @@ export class DocumentoVivo {
         p.bytes = p.actualizaciones.reduce((t, a) => t + a.length, 0);
         p.fallos = 0;
         this.filasSinCompactar++;
-        this.o.pedirCompactacion(this.id, this.filasSinCompactar >= this.o.limites.compactarFilas);
+        this.o.pedirCompactacion(this.id, this.filasSinCompactar >= this.o.limites.compactarFilas, autorId);
         if (this.filasSinCompactar >= this.o.limites.compactarFilas) this.filasSinCompactar = 0;
       } catch (err) {
         if (sqlstateDe(err) === '42501') {

@@ -8,6 +8,7 @@ import {
   RespuestaIa,
   ResultadosBusqueda,
   TransformarSolicitudHttp,
+  UsoIaHoy,
   CambiarComentarioSolicitud,
   Comentario,
   ComentarioSolicitud,
@@ -783,9 +784,17 @@ function registrarIa(registro: OpenAPIRegistry): void {
     method: 'post',
     path: '/api/espacios/{espacioId}/buscar',
     ...ia,
-    summary: 'Búsqueda semántica en un espacio: solo fragmentos de ese espacio y de documentos con acceso HOY',
+    summary:
+      'Búsqueda semántica en un espacio: solo fragmentos de ese espacio y de documentos con acceso HOY, del modelo vigente, con similitud de al menos IA_SIMILITUD_MINIMA y hasta 3 por documento. 502 si el modelo no es de 1024 dimensiones',
     request: { params: IdEspacio, body: json(BusquedaSolicitud) },
     responses: { 200: { description: 'Resultados, del más parecido al menos', ...json(ResultadosBusqueda) }, 404: error('El espacio no existe o no eres miembro'), ...errores },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/ia/uso',
+    ...ia,
+    summary: 'El uso de IA de hoy de la cuenta, sus topes y cuándo se renuevan (no llama a la IA)',
+    responses: { 200: { description: 'Uso de hoy', ...json(UsoIaHoy) }, 401: error('Sin sesión viva') },
   });
   registro.registerPath({
     method: 'post',

@@ -65,7 +65,7 @@ export interface DepsTiempoReal {
   log: Logger;
   limites: LimitesTiempoReal;
   /** Pedir compactación del documento (BullMQ); null en pruebas que no la usan. */
-  pedirCompactacion: ((documentoId: string, inmediata: boolean) => Promise<void>) | null;
+  pedirCompactacion: ((documentoId: string, inmediata: boolean, autorId: string) => Promise<void>) | null;
   /** Autocompletado con la IA (bloque P1). Sin ella, los pedidos responden ia_no_disponible. */
   ia?: IaTiempoReal;
 }
@@ -203,8 +203,8 @@ export class ServidorTiempoReal implements ContenidoVivo {
         log: this.d.log,
         limites: this.d.limites,
         alRechazoDeEscritura: (doc, autor) => { this.revalidarDonde((c) => c.documentoId === doc && c.usuarioId === autor); },
-        pedirCompactacion: (doc, inmediata) => {
-          void this.d.pedirCompactacion?.(doc, inmediata).catch((err: unknown) => {
+        pedirCompactacion: (doc, inmediata, autorId) => {
+          void this.d.pedirCompactacion?.(doc, inmediata, autorId).catch((err: unknown) => {
             this.d.log.warn({ err, documentoId: doc }, 'compactación: no se pudo encolar');
           });
         },

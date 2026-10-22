@@ -12,7 +12,11 @@ export interface TopesIa {
   tokensDia: number;
 }
 
+/** Valores por defecto (los mismos de IA_TOPE_PETICIONES_DIA e IA_TOPE_TOKENS_DIA; el servidor usa la config). */
 export const TOPES_IA: TopesIa = { peticionesDia: 300, tokensDia: 300_000 };
+
+/** Presupuesto diario del indexado automático por espacio (IA_TOPE_INDEXADO_ESPACIO_DIA). */
+export const TOPE_INDEXADO_ESPACIO = 200_000;
 
 /** Segundos hasta la próxima medianoche UTC (cuando se renueva el tope). */
 export const segundosHastaManana = (ahora = Date.now()): number => 86_400 - (Math.floor(ahora / 1000) % 86_400);
@@ -35,6 +39,39 @@ export async function reservarUso(bd: Bd, usuarioId: string, topes: TopesIa, con
         AND u.tokens_entrada + u.tokens_salida < ${topes.tokensDia}::bigint
     RETURNING 1 AS ok`;
   if (filas.length === 0) throw topeAlcanzado();
+}
+
+/**
+ * Presupuesto diario del indexado AUTOMÁTICO por espacio (uso_ia_indexado_diario, migración 0023). Reserva
+ * `estimado` tokens si caben en `tope`, en una sola sentencia (dos trabajos a la vez no pasan los dos el
+ * último lugar). Devuelve false si no caben: el indexado se pospone al día siguiente.
+ */
+export async function reservarIndexadoEspacio(bd: Bd, espacioId: string, estimado: number, tope: number): Promise<boolean> {
+  if (estimado > tope) return false;
+  const filas = await bd.$queryRaw<{ ok: number }[]>`
+    INSERT INTO uso_ia_indexado_diario AS u (espacio_id, dia, tokens)
+    VALUES (${espacioId}::uuid, (now() AT TIME ZONE 'UTC')::date, ${estimado}::bigint)
+    ON CONFLICT (espacio_id, dia) DO UPDATE SET tokens = u.tokens + EXCLUDED.tokens
+      WHERE u.tokens + EXCLUDED.tokens <= ${tope}::bigint
+    RETURNING 1 AS ok`;
+  return filas.length > 0;
+}
+
+/** Corrige la reserva con lo que informó el servicio (nunca por debajo de cero). */
+export async function ajustarIndexadoEspacio(bd: Bd, espacioId: string, diferencia: number): Promise<void> {
+  if (diferencia === 0) return;
+  await bd.$executeRaw`
+    UPDATE uso_ia_indexado_diario SET tokens = greatest(tokens + ${diferencia}::bigint, 0)
+    WHERE espacio_id = ${espacioId}::uuid AND dia = (now() AT TIME ZONE 'UTC')::date`;
+}
+
+/** El uso de hoy de una cuenta (GET /api/ia/uso). */
+export async function usoDeHoy(bd: Bd, usuarioId: string): Promise<{ peticiones: number; tokensEntrada: number; tokensSalida: number }> {
+  const filas = await bd.$queryRaw<{ peticiones: number; tokens_entrada: bigint; tokens_salida: bigint }[]>`
+    SELECT peticiones, tokens_entrada, tokens_salida FROM uso_ia_diario
+    WHERE usuario_id = ${usuarioId}::uuid AND dia = (now() AT TIME ZONE 'UTC')::date`;
+  const f = filas[0];
+  return { peticiones: f?.peticiones ?? 0, tokensEntrada: Number(f?.tokens_entrada ?? 0), tokensSalida: Number(f?.tokens_salida ?? 0) };
 }
 
 /** Suma los tokens que informó el servicio (o la estimación, si la persona canceló a mitad). */

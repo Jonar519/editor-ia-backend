@@ -295,7 +295,7 @@ describe('aislamiento entre espacios', () => {
   let lectorA: Persona;
   let espA: { espacioId: string; documentoId: string };
   let espB: { espacioId: string; documentoId: string };
-  const deps = () => ({ prisma: e.prisma, ia: x.cliente, topes: { peticionesDia: 1000, tokensDia: 10_000_000 } });
+  const deps = () => ({ prisma: e.prisma, ia: x.cliente, topes: { peticionesDia: 1000, tokensDia: 10_000_000 }, topeIndexadoEspacio: 10_000_000 });
 
   beforeAll(async () => {
     a = await persona();
@@ -303,8 +303,8 @@ describe('aislamiento entre espacios', () => {
     lectorA = await persona('lector');
     espA = await espacioCon(a, 'Las zanahorias moradas del huerto ficticio.\n\nOtro párrafo sobre kiwis.', [[lectorA, 'lector']]);
     espB = await espacioCon(b, 'Manzanas y peras del espacio B.');
-    expect((await indexarDocumento(deps(), espA.documentoId, a.id, 'prueba')).resultado).toBe('indexado');
-    expect((await indexarDocumento(deps(), espB.documentoId, b.id, 'prueba')).resultado).toBe('indexado');
+    expect((await indexarDocumento(deps(), espA.documentoId, { usuarioId: a.id }, 'prueba')).resultado).toBe('indexado');
+    expect((await indexarDocumento(deps(), espB.documentoId, { usuarioId: b.id }, 'prueba')).resultado).toBe('indexado');
   });
 
   const buscar = (p: Persona, espacioId: string, consulta: string) =>
@@ -339,18 +339,18 @@ describe('aislamiento entre espacios', () => {
   it('quien sale del espacio deja de ver sus fragmentos en el acto (404)', async () => {
     const ex = await persona('lector');
     const esp = await espacioCon(a, 'Texto del espacio temporal con limones.', [[ex, 'lector']]);
-    await indexarDocumento(deps(), esp.documentoId, a.id, 'prueba');
+    await indexarDocumento(deps(), esp.documentoId, { usuarioId: a.id }, 'prueba');
     expect((await buscar(ex, esp.espacioId, 'limones')).status).toBe(200);
     await request(app()).delete(`/api/espacios/${esp.espacioId}/miembros/${ex.id}`).set('authorization', a.auth).expect(204);
     expect((await buscar(ex, esp.espacioId, 'limones')).status).toBe(404);
   });
 
   it('indexar un documento ajeno: el API responde 404 y el trabajo no llama a la IA ni escribe nada', async () => {
-    expect((await request(app({ indexador: { pedir: () => Promise.resolve(), cerrar: () => Promise.resolve() } })).post(`/api/documentos/${espA.documentoId}/indice`).set('authorization', b.auth)).status).toBe(404);
+    expect((await request(app({ indexador: { pedir: () => Promise.resolve(), pedirAutomatico: () => Promise.resolve(), cerrar: () => Promise.resolve() } })).post(`/api/documentos/${espA.documentoId}/indice`).set('authorization', b.auth)).status).toBe(404);
     const llamadasAntes = x.lineas.filter((l) => l.metodo === 'IndexarDocumento').length;
     const filasAntes = await e.prisma.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM embeddings WHERE documento_id = ${espA.documentoId}::uuid`;
     await escribir(espA.documentoId, a.id, 'Texto nuevo de A que B intentaría indexar.');
-    expect((await indexarDocumento(deps(), espA.documentoId, b.id, 'prueba')).resultado).toBe('sin_acceso');
+    expect((await indexarDocumento(deps(), espA.documentoId, { usuarioId: b.id }, 'prueba')).resultado).toBe('sin_acceso');
     expect(x.lineas.filter((l) => l.metodo === 'IndexarDocumento')).toHaveLength(llamadasAntes);
     const filas = await e.prisma.$queryRaw<{ n: number; indexado_por: string }[]>`
       SELECT count(*)::int AS n, min(indexado_por::text) AS indexado_por FROM embeddings WHERE documento_id = ${espA.documentoId}::uuid`;
@@ -387,7 +387,7 @@ describe('indexado', () => {
     const lector = await persona('lector');
     const { documentoId } = await espacioCon(dueno, 'texto', [[lector, 'lector']]);
     const pedidos: string[] = [];
-    const indexador = { pedir: (doc: string) => (pedidos.push(doc), Promise.resolve()), cerrar: () => Promise.resolve() };
+    const indexador = { pedir: (doc: string) => (pedidos.push(doc), Promise.resolve()), pedirAutomatico: () => Promise.resolve(), cerrar: () => Promise.resolve() };
     expect((await request(app({ indexador })).post(`/api/documentos/${documentoId}/indice`).set('authorization', dueno.auth)).status).toBe(202);
     expect(pedidos).toEqual([documentoId]);
     expect((await request(app({ indexador })).post(`/api/documentos/${documentoId}/indice`).set('authorization', lector.auth)).status).toBe(403);
@@ -397,20 +397,21 @@ describe('indexado', () => {
   it('sin cambios no vuelve a llamar a la IA; con cambios reemplaza los fragmentos', async () => {
     const dueno = await persona();
     const { documentoId } = await espacioCon(dueno, 'Primer párrafo.\n\nSegundo párrafo.');
-    const d = { prisma: e.prisma, ia: x.cliente, topes: { peticionesDia: 1000, tokensDia: 10_000_000 } };
-    expect(await indexarDocumento(d, documentoId, dueno.id, 'p')).toEqual({ resultado: 'indexado', fragmentos: 1 });
+    const d = { prisma: e.prisma, ia: x.cliente, topes: { peticionesDia: 1000, tokensDia: 10_000_000 }, topeIndexadoEspacio: 10_000_000 };
+    const quien = { usuarioId: dueno.id };
+    expect(await indexarDocumento(d, documentoId, quien, 'p')).toEqual({ resultado: 'indexado', fragmentos: 1, indexadoPor: dueno.id });
     const llamadas = x.lineas.filter((l) => l.metodo === 'IndexarDocumento').length;
-    expect(await indexarDocumento(d, documentoId, dueno.id, 'p')).toEqual({ resultado: 'sin_cambios', fragmentos: 1 });
+    expect(await indexarDocumento(d, documentoId, quien, 'p')).toEqual({ resultado: 'sin_cambios', fragmentos: 1 });
     expect(x.lineas.filter((l) => l.metodo === 'IndexarDocumento')).toHaveLength(llamadas);
     await escribir(documentoId, dueno.id, `${'a'.repeat(1400)}\n\n${'b'.repeat(1400)}`);
-    expect(await indexarDocumento(d, documentoId, dueno.id, 'p')).toEqual({ resultado: 'indexado', fragmentos: 2 });
+    expect(await indexarDocumento(d, documentoId, quien, 'p')).toEqual({ resultado: 'indexado', fragmentos: 2, indexadoPor: dueno.id });
     const filas = await e.prisma.$queryRaw<{ fragmento: number; modelo: string }[]>`SELECT fragmento, modelo FROM embeddings WHERE documento_id = ${documentoId}::uuid ORDER BY fragmento`;
     expect(filas).toEqual([
       { fragmento: 0, modelo: 'mock-palabras-1024' },
       { fragmento: 1, modelo: 'mock-palabras-1024' },
     ]);
     await escribir(documentoId, dueno.id, '');
-    expect(await indexarDocumento(d, documentoId, dueno.id, 'p')).toEqual({ resultado: 'vacio', fragmentos: 0 });
+    expect(await indexarDocumento(d, documentoId, quien, 'p')).toEqual({ resultado: 'vacio', fragmentos: 0 });
     expect(await e.prisma.$queryRaw`SELECT 1 FROM embeddings WHERE documento_id = ${documentoId}::uuid`).toEqual([]);
   });
 
@@ -422,6 +423,7 @@ describe('indexado', () => {
       prisma: e.prisma,
       ia: x.cliente,
       topes: { peticionesDia: 1000, tokensDia: 10_000_000 },
+      topeIndexadoEspacio: 10_000_000,
       redisUrl: urlRedisPruebas(),
       prefijo: `${e.deps.prefijoRedis}bull`,
       log,

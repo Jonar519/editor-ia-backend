@@ -26,6 +26,7 @@
     "mutate": "node scripts/mutar.mjs",
     "env:init": "node scripts/env-init.mjs",
     "invitar": "tsx --env-file-if-exists=.env scripts/invitar.ts",
+    "reindexar": "tsx --env-file-if-exists=.env scripts/reindexar.ts",
     "buzon": "tsx --env-file-if-exists=.env scripts/buzon.ts",
     "totp": "tsx scripts/totp.ts"
   },

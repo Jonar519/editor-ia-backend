@@ -87,6 +87,12 @@ const esquema = z
     IA_URL: z.string().regex(/^[A-Za-z0-9.-]+:\d{1,5}$/, { error: 'debe ser host:puerto (ej. 127.0.0.1:4210)' }).default('127.0.0.1:4210'),
     IA_SERVICE_TOKEN: opcional(tokenServicio),
     ...transporteIa,
+    // Topes de IA (bloque P2): por cuenta y día UTC, y el presupuesto del indexado automático por espacio.
+    IA_TOPE_PETICIONES_DIA: z.coerce.number().int().min(1).max(1_000_000).default(300),
+    IA_TOPE_TOKENS_DIA: z.coerce.number().int().min(1).max(1_000_000_000).default(300_000),
+    IA_TOPE_INDEXADO_ESPACIO_DIA: z.coerce.number().int().min(1).max(1_000_000_000).default(200_000),
+    // Similitud coseno mínima de un resultado de búsqueda. Se recalibra con el modelo real.
+    IA_SIMILITUD_MINIMA: z.coerce.number().min(0, { error: 'entre 0 y 1' }).max(1, { error: 'entre 0 y 1' }).default(0.2),
   })
   .superRefine((c, ctx) => {
     reglaTransporte(c, ctx);

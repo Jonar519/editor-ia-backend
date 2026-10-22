@@ -67,6 +67,20 @@ describe('API: cliente del servicio de IA', () => {
     expect(problemas(cargarConfig, { ...apiProduccion, IA_RED_PRIVADA: 'true', IA_SERVICE_TOKEN: undefined })).toEqual(['IA_SERVICE_TOKEN: obligatorio en producción']);
   });
 
+  it('topes y umbral (P2): valores por defecto y validación', () => {
+    expect(cargarConfig(apiBase)).toMatchObject({
+      IA_TOPE_PETICIONES_DIA: 300,
+      IA_TOPE_TOKENS_DIA: 300_000,
+      IA_TOPE_INDEXADO_ESPACIO_DIA: 200_000,
+      IA_SIMILITUD_MINIMA: 0.2,
+    });
+    expect(cargarConfig({ ...apiBase, IA_SIMILITUD_MINIMA: '0.35' }).IA_SIMILITUD_MINIMA).toBe(0.35);
+    expect(problemas(cargarConfig, { ...apiBase, IA_SIMILITUD_MINIMA: '1.5' })).toEqual(['IA_SIMILITUD_MINIMA: entre 0 y 1']);
+    expect(problemas(cargarConfig, { ...apiBase, IA_SIMILITUD_MINIMA: '-0.1' })).toEqual(['IA_SIMILITUD_MINIMA: entre 0 y 1']);
+    expect(problemas(cargarConfig, { ...apiBase, IA_TOPE_INDEXADO_ESPACIO_DIA: '0' })).toHaveLength(1);
+    expect(problemas(cargarConfig, { ...apiBase, IA_TOPE_TOKENS_DIA: 'mucho' })).toHaveLength(1);
+  });
+
   it('TLS: los tres archivos o ninguno (también fuera de producción)', () => {
     expect(problemas(cargarConfig, { ...apiBase, IA_TLS_CERT: 'certs/api.crt' })).toEqual(['IA_TLS_CERT: TLS mutuo necesita IA_TLS_CERT, IA_TLS_KEY e IA_TLS_CA (los tres)']);
   });

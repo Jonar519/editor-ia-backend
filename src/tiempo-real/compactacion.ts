@@ -82,8 +82,11 @@ export async function versionAutomatica(prisma: PrismaClient, documentoId: strin
 }
 
 export interface Compactador {
-  /** Pide compactar: `inmediata` al juntar N filas; si no, 5 min después de la última llamada. */
-  pedir: (documentoId: string, inmediata: boolean) => Promise<void>;
+  /**
+   * Pide compactar: `inmediata` al juntar N filas; si no, 5 min después de la última llamada. `autorId`
+   * es quien hizo el último cambio guardado (el indexado automático va en su nombre, P2).
+   */
+  pedir: (documentoId: string, inmediata: boolean, autorId?: string) => Promise<void>;
   cerrar: () => Promise<void>;
 }
 
@@ -93,19 +96,25 @@ export function iniciarCompactacion(o: {
   prisma: PrismaClient;
   log: Logger;
   inactividadMs: number;
+  /** Tras 5 minutos sin cambios (P2): encolar el indexado automático para la búsqueda. */
+  alInactividad?: (documentoId: string, autorId: string | null) => Promise<void>;
 }): Compactador {
   const connection = { url: o.redisUrl, maxRetriesPerRequest: null };
   const cola = new Queue(COLA_DOCUMENTOS, { connection, prefix: o.prefijo });
   const worker = new Worker(
     COLA_DOCUMENTOS,
     async (job) => {
-      const { documentoId, version } = job.data as { documentoId: string; version?: boolean };
+      const { documentoId, version, autorId } = job.data as { documentoId: string; version?: boolean; autorId?: string };
       const borradas = await compactarDocumento(o.prisma, documentoId);
       o.log.info({ documentoId, borradas }, 'documento compactado');
-      // Tras 5 minutos sin cambios (no en la compactación por cantidad de filas): versión automática.
+      // Tras 5 minutos sin cambios (no en la compactación por cantidad de filas): versión automática e
+      // indexado automático (P2; si el texto no cambió, el indexado no llama a la IA).
       if (version) {
         const numero = await versionAutomatica(o.prisma, documentoId);
         if (numero !== null) o.log.info({ documentoId, numero }, 'versión automática');
+        await o.alInactividad?.(documentoId, autorId ?? null).catch((err: unknown) => {
+          o.log.warn({ err, documentoId }, 'ia: no se pudo encolar el indexado automático');
+        });
       }
       return borradas;
     },
@@ -116,13 +125,14 @@ export function iniciarCompactacion(o: {
   });
   const reintentos = { attempts: 3, backoff: { type: 'exponential' as const, delay: 1000 }, removeOnComplete: 100, removeOnFail: 100 };
   return {
-    pedir: async (documentoId, inmediata) => {
+    pedir: async (documentoId, inmediata, autorId) => {
       if (inmediata) {
         await cola.add('compactar', { documentoId }, { ...reintentos, deduplication: { id: `ya:${documentoId}`, keepLastIfActive: true } });
       } else {
+        // replace: el trabajo que queda es el del ÚLTIMO cambio, con su autor.
         await cola.add(
           'compactar',
-          { documentoId, version: true },
+          { documentoId, version: true, ...(autorId ? { autorId } : {}) },
           { ...reintentos, delay: o.inactividadMs, deduplication: { id: `inactivo:${documentoId}`, ttl: o.inactividadMs, extend: true, replace: true } },
         );
       }

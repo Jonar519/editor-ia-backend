@@ -11,7 +11,6 @@ import type { Comprobacion } from './http/salud.js';
 import { ClienteIa, credencialesIa } from './ia/cliente.js';
 import { iniciarIndexado } from './ia/indexado.js';
 import { iaTiempoReal } from './ia/autocompletado.js';
-import { TOPES_IA } from './ia/uso.js';
 import { comprobacionBd, comprobacionEsquema, crearPool, crearPrisma } from './infra/bd.js';
 import { accionPorPrivilegios, leerPrivilegios, problemasDePrivilegios } from './infra/privilegios.js';
 import { comprobacionRedis, crearRedis } from './infra/redis.js';
@@ -50,7 +49,10 @@ async function main(): Promise<void> {
     ? new ClienteIa({ url: config.IA_URL, token: config.IA_SERVICE_TOKEN, ...credencialesIa(config) })
     : undefined;
   if (!ia) log.warn('IA deshabilitada: falta IA_SERVICE_TOKEN (scripts\\env-init.bat lo genera)');
-  const indexador = ia ? iniciarIndexado({ redisUrl: config.REDIS_URL, prefijo: 'cuaderno:bull', prisma, ia, topes: TOPES_IA, log }) : undefined;
+  const topesIa = { peticionesDia: config.IA_TOPE_PETICIONES_DIA, tokensDia: config.IA_TOPE_TOKENS_DIA };
+  const indexador = ia
+    ? iniciarIndexado({ redisUrl: config.REDIS_URL, prefijo: 'cuaderno:bull', prisma, ia, topes: topesIa, topeIndexadoEspacio: config.IA_TOPE_INDEXADO_ESPACIO_DIA, log })
+    : undefined;
   const comprobacionIa: Comprobacion = {
     nombre: 'ia',
     informativa: true,
@@ -67,6 +69,8 @@ async function main(): Promise<void> {
     prisma,
     log,
     inactividadMs: LIMITES_PRODUCCION.compactarInactividadMs,
+    // P2: al dejar de editar, el indexado automático (contra el presupuesto del espacio).
+    ...(indexador ? { alInactividad: indexador.pedirAutomatico } : {}),
   });
   const tiempoReal = new ServidorTiempoReal({
     prisma,
@@ -76,10 +80,12 @@ async function main(): Promise<void> {
     log,
     limites: LIMITES_PRODUCCION,
     pedirCompactacion: compactador.pedir,
-    ...(ia ? { ia: iaTiempoReal(ia, prisma, TOPES_IA) } : {}),
+    ...(ia ? { ia: iaTiempoReal(ia, prisma, topesIa) } : {}),
   });
   const api = crearApi({
     contenido: tiempoReal,
+    topesIa,
+    similitudMinimaIa: config.IA_SIMILITUD_MINIMA,
     ...(ia ? { ia } : {}),
     ...(indexador ? { indexador } : {}),
     prisma,
