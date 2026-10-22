@@ -325,7 +325,14 @@ export class ServidorTiempoReal {
       if (ajenos.has(id)) continue;
       c.clientIds.add(id);
       const estado = JSON.parse(crudo) as Record<string, unknown> | null;
-      aceptados.push({ id, reloj, estado: JSON.stringify(estado === null ? null : { ...estado, usuario: { id: c.usuarioId, nombre: c.nombre } }) });
+      // "user" es lo que dibuja el editor (y-codemirror.next: name y color): el cliente pone el color, el
+      // NOMBRE lo pone el servidor.
+      const user = typeof estado?.user === 'object' && estado.user !== null ? estado.user : {};
+      aceptados.push({
+        id,
+        reloj,
+        estado: JSON.stringify(estado === null ? null : { ...estado, usuario: { id: c.usuarioId, nombre: c.nombre }, user: { ...user, name: c.nombre } }),
+      });
     }
     if (aceptados.length === 0) return;
     const e = encoding.createEncoder();

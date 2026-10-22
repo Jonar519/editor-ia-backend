@@ -195,6 +195,30 @@ Está en [`proto/cuaderno/ia/v1/ia.proto`](../../proto/cuaderno/ia/v1/ia.proto).
 | Mapeo de errores (P1) | Una prueba por fila de la tabla gRPC → HTTP. |
 | Carga (R) | HTTP con autocannon. WebSocket: autocannon no lo soporta, así que se usa un script propio con `ws` (N clientes, M cambios por segundo, latencia p50/p95/p99 de ida y vuelta). |
 
+## Estado de verificación al cerrar K2
+
+**Verificado** con pruebas de integración y sockets reales (`tests/integracion/tiempo-real.test.ts`) y mutaciones T01–T08:
+
+- el ticket de un solo uso, aun con dos conexiones simultáneas;
+- el ticket vencido, el `Origin`, y que en Redis quede solo el hash;
+- el guardia: lo de un lector se descarta, y a la tercera vez se cierra con 4403;
+- la presencia con el nombre de la cuenta;
+- la revocación por aviso (8–19 ms);
+- la ventana de R-01 medida;
+- los mensajes mal formados (4400) y las ráfagas (4429).
+
+**Implementado, sin prueba propia:**
+
+| Regla | Código |
+|---|---|
+| Latido (4408) | `servidor.ts`, `abrir()` |
+| Cola de envío de 4 MiB (1013) | `servidor.ts`, `enviar()` |
+| Cierre cuando la sesión vence con la conexión abierta (4401) | `servidor.ts`, `abrir()` |
+| Redis caído al entrar (503) | `servidor.ts`, `upgrade()` |
+| Revalidar todo al reconectar el puente o Redis | `avisos.ts` |
+| Apagado ordenado (1001, guardar lo pendiente) | `servidor.ts`, `cerrar()` |
+| Mensaje de más de 1 MiB (1009, de la librería `ws`) | `maxPayload` |
+
 ## Decisiones tomadas (por escrito, 2026-10-17)
 
 1. **Rol del guardia: en memoria por conexión, verificado en cada mensaje.** Se invalida al instante por pub/sub y se revalida en la base cada 30 s. **Condición:** la ventana no puede dejar que alguien sin permiso siga siendo retransmitido a los demás. Por eso:

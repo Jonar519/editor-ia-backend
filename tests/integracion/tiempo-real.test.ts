@@ -117,9 +117,14 @@ describe('con avisos de la base', () => {
     const a = conectar(t.url, proto(await t.ticket(ana, documentoId)));
     const b = conectar(t.url, proto(await t.ticket(bruno, documentoId)));
     await Promise.all([a.abierto, b.abierto]);
-    a.mandarPresencia({ cursor: 3, usuario: { nombre: 'Nombre Falso' } });
+    a.mandarPresencia({ cursor: 3, usuario: { nombre: 'Nombre Falso' }, user: { name: 'Nombre Falso', color: '#123456' } });
     await esperar(() => b.presencia.getStates().has(a.doc.clientID));
-    expect(b.presencia.getStates().get(a.doc.clientID)).toEqual({ cursor: 3, usuario: { id: ana.id, nombre: ana.nombre } });
+    // El nombre (también el que dibuja el editor, user.name) es el de la cuenta; el color es del cliente.
+    expect(b.presencia.getStates().get(a.doc.clientID)).toEqual({
+      cursor: 3,
+      usuario: { id: ana.id, nombre: ana.nombre },
+      user: { name: ana.nombre, color: '#123456' },
+    });
     b.mandarPresencia({ cursor: 99 }, a.doc.clientID); // Bruno intenta hablar como Ana
     await new Promise((r) => setTimeout(r, 300));
     expect(b.presencia.getStates().get(a.doc.clientID)).toMatchObject({ cursor: 3, usuario: { id: ana.id } }); // sigue siendo la de Ana

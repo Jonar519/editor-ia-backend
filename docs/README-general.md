@@ -149,4 +149,15 @@ Además, producción se niega a arrancar si:
   - **Límites de operación:** en `src/tiempo-real/limites.ts`.
   - **Una sola instancia.**
   - **Riesgo residual R-01, medido:** en [modelo-amenazas.md](modelo-amenazas.md).
+  - **Implementadas, sin prueba propia:**
+    - el latido (4408);
+    - la cola de envío de 4 MiB (1013);
+    - el cierre cuando vence la sesión;
+    - Redis caído al entrar (503);
+    - el tope de 10 MiB por documento (4413);
+    - el disparo de la compactación (200 filas o 5 min de inactividad);
+    - la revalidación total al reconectar;
+    - el apagado ordenado.
+    
+    Detalle en la sección "Estado de verificación" de los ADR [0002](adr/0002-comunicacion.md) y [0003](adr/0003-crdt.md).
 - **Auditoría de permisos (bloque K2, migración 0022).** Cada concesión y revocación de miembros, permisos y propiedad queda en `eventos_seguridad`: quién, a quién (`objetivo_id`) y sobre qué (`recurso_id`, solo un id). Las creaciones no se registran.
