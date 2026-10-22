@@ -162,4 +162,22 @@ Además, producción se niega a arrancar si:
     
     Detalle en la sección "Estado de verificación" de los ADR [0002](adr/0002-comunicacion.md) y [0003](adr/0003-crdt.md).
   - **Convergencia (bloque M), verificada:** prueba con semilla contra el servidor y la base reales, con réplicas, cortes, ediciones sin conexión, duplicados y compactación. Encontró un fallo de K2 que perdía en la base lo que llegaba durante un `INSERT`; corregido (ADR 0003).
+- **Versiones y comentarios (bloque N, sin migración: las tablas son de 0010).**
+  - **Versiones** (`/api/documentos/:id/versiones`):
+    - ver el historial y el texto de una versión: cualquier rol;
+    - guardar y restaurar: editor o propietario (30 por hora por cuenta);
+    - restaurar es un **cambio nuevo** en el documento vivo (lo reciben quienes lo tienen abierto) y una versión «restauración» que apunta a la restaurada; el historial (cadena de hash, solo inserción) no se reescribe;
+    - restaurar toca solo lo que difiere: por líneas y, dentro de una línea cambiada, por caracteres. Así un comentario sobre texto que no cambió conserva su ancla;
+    - versión automática tras 5 minutos sin cambios, si el texto cambió desde la última.
+  - **Comentarios** (`/api/documentos/:id/comentarios`, `/api/comentarios/:id`):
+    - hilos anclados con dos posiciones relativas de Yjs (validadas);
+    - comentar: cualquier rol (60 cada 10 minutos por cuenta);
+    - editar: quien lo escribió;
+    - resolver: quien abrió el hilo, o un editor o propietario;
+    - borrar: quien lo escribió, o el propietario del documento;
+    - cada cambio avisa por el WebSocket.
+  - **Verificado:** integración con el tiempo real (restaurar llega al editor y queda en la base; permisos; aviso), diff por líneas con semilla, mutaciones N01–N11, E2E y prueba en vivo.
+  - **Implementadas, sin prueba propia:**
+    - el disparo real de la versión automática por BullMQ (la función sí tiene prueba);
+    - los límites de tasa de versiones y comentarios.
 - **Auditoría de permisos (bloque K2, migración 0022).** Cada concesión y revocación de miembros, permisos y propiedad queda en `eventos_seguridad`: quién, a quién (`objetivo_id`) y sobre qué (`recurso_id`, solo un id). Las creaciones no se registran.
