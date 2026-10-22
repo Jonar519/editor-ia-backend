@@ -34,3 +34,18 @@ El análisis STRIDE completo se escribe en el bloque R. Este documento se abre e
 
   En producción, la confidencialidad queda acotada por la revalidación de **30 s** más lo que tarda una consulta. La integridad queda acotada por el vaciado de **250 ms**: no depende de la revalidación.
 - **Estado:** aceptado por escrito al aprobar el ADR 0002, con la condición de cortar la retransmisión en cuanto el rol revalidado cambie.
+
+### R-02 · Abuso de almacenamiento por versiones sin tope
+
+- **Origen:** bloque N. Cada versión guarda una copia completa del documento (`estado_yjs` y `contenido_texto`, hasta 10 MiB cada uno), y la tabla `versiones` es de **solo inserción**: no se borra nada mientras exista el documento.
+- **Qué puede pasar:** una cuenta con rol editor llena la base guardando o restaurando versiones de un documento grande.
+  - Peor caso por cuenta: 30 versiones por hora × hasta unos 20 MiB por versión ≈ **600 MiB por hora**.
+  - Varias cuentas editoras lo multiplican.
+  - Las versiones automáticas (tras 5 minutos sin cambios, solo si el texto cambió) también suman, pero exigen editar de verdad.
+- **Lo que lo acota hoy:**
+  - el límite de 30 versiones por hora por cuenta;
+  - el tope de 10 MiB por documento;
+  - el rol editor (un lector no crea versiones);
+  - la autoría de cada versión manual y de cada restauración, que queda en la cadena de hash.
+- **Lo que no hay:** un tope de versiones por documento, una cuota por espacio o por cuenta, y una retención que borre o compacte versiones viejas. Una retención chocaría con el solo-inserción y la cadena de hash: habría que decidir cómo se "poda" sin perder la verificabilidad.
+- **Estado:** aceptado al cerrar el bloque N (decisión escrita: límites aprobados, versiones sin tope). Se revisa en el bloque R junto con el monitoreo del tamaño de la base.
