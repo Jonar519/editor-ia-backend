@@ -677,7 +677,7 @@
       "reemplazo": "${new Date(Date.now() + VIGENCIA_INVITACION_HORAS * 3_600_000)}",
       "comando": "test",
       "pruebas": [
-        "tests/integracion/mfa.test.ts"
+        "tests/integracion/reloj.test.ts"
       ]
     },
     {
@@ -1559,7 +1559,7 @@
       "buscar": "const lote = p.actualizaciones.slice();",
       "reemplazo": "const lote = p.actualizaciones;",
       "comando": "test",
-      "pruebas": ["tests/integracion/convergencia.test.ts"]
+      "pruebas": ["tests/unitarias/documento-lote.test.ts"]
     },
     {
       "id": "N01",
