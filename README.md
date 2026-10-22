@@ -94,7 +94,7 @@ Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesió
 | `POST /api/ia/explicar` | Explicar un fragmento (cualquier rol con acceso al documento). |
 | `POST /api/ia/resumir`, `/mejorar` | Respuesta en streaming (SSE sobre `fetch` POST). Mejorar exige editor. Abortar el `fetch` cancela la generación. |
 | `POST /api/espacios/{id}/buscar` | Búsqueda semántica: solo el espacio pedido y documentos con acceso hoy. |
-| `POST /api/documentos/{id}/indice` | Encolar el indexado del documento para la búsqueda (editor). |
+| `POST /api/documentos/{id}/indice` | Encolar el indexado del documento para la búsqueda (editor). El indexado automático al dejar de editar queda pendiente para P2. |
 
 El autocompletado va por el WebSocket del documento (mensaje de control `ia.autocompletar`). Decisiones de IA y tabla de errores gRPC → HTTP en [docs/adr/0002-comunicacion.md](docs/adr/0002-comunicacion.md).
 

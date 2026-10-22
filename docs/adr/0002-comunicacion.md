@@ -166,6 +166,7 @@ Decisiones escritas al aprobar el diseño de P1:
 - **Topes del lado del servicio**: además del deadline del API, cada método corta solo al doble de ese deadline, por si un cliente no lo pusiera.
 - **Aislamiento**: el `Origen` va solo en el primer mensaje de una corriente; otro después cierra con `INVALID_ARGUMENT`. Cada llamada se registra con cuenta, espacio y documento, nunca con el contenido.
 - **Tope diario** por cuenta en `uso_ia_diario` (300 pedidos y 300 000 tokens por día UTC), reservado de forma atómica antes de llamar; 429 `tope_diario_ia` con `Retry-After` hasta la medianoche UTC. El autocompletado cuenta solo tokens. Si la persona cancela a mitad, se cobra lo estimado hasta el corte.
+- **Indexado**: en P1 se pide a mano (`POST /api/documentos/:id/indice`, editor o propietario). **El indexado automático al dejar de editar queda pendiente para P2.**
 
 ### Embeddings: 1024 dimensiones
 
