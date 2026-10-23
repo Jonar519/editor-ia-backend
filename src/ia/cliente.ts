@@ -36,6 +36,8 @@ export interface OpcionesClienteIa {
   /** TLS mutuo en producción; sin esto, texto plano (solo 127.0.0.1). */
   credenciales?: grpc.ChannelCredentials;
   deadlines?: Partial<Deadlines>;
+  /** Opciones del canal de grpc-js (la medición de P3 fuerza conexiones separadas con un pool local). */
+  opcionesCanal?: grpc.ChannelOptions;
 }
 
 export interface Descripcion {
@@ -80,7 +82,7 @@ export class ClienteIa {
   constructor(private readonly o: OpcionesClienteIa) {
     const credenciales = o.credenciales ?? grpc.credentials.createInsecure();
     // 16 MiB: la respuesta de IndexarDocumento lleva hasta 1000 vectores de 1024 floats (≈4 MiB).
-    const opciones = { 'grpc.max_receive_message_length': 16 * 1024 * 1024 };
+    const opciones = { 'grpc.max_receive_message_length': 16 * 1024 * 1024, ...o.opcionesCanal };
     this.asistente = new paquete.cuaderno.ia.v1.Asistente(o.url, credenciales, opciones);
     this.salud = new paquete.grpc.health.v1.Health(o.url, credenciales);
     this.deadlines = { ...DEADLINES_MS, ...o.deadlines };
@@ -138,16 +140,24 @@ export class ClienteIa {
     };
     if (senal?.aborted) llamada.cancel();
     else senal?.addEventListener('abort', alAbortar, { once: true });
+    // Se lee la corriente HASTA SU FIN (el estado OK del servicio llega después del mensaje final):
+    // salir del for-await apenas llega `fin` destruía la corriente con RST_STREAM mientras llegaba ese
+    // estado, y con muchas corrientes en el mismo canal eso cerraba la sesión HTTP/2 entera (INTERNAL
+    // "Session closed with error code 2"; lo encontró la medición de P3).
+    let uso: Uso | null = null;
+    let completa = false;
     try {
       for await (const m of llamada as AsyncIterable<FragmentoGrpc>) {
-        if (m.fin) return usoDe(m.uso);
-        if (m.texto) yield m.texto;
+        if (m.fin) uso = usoDe(m.uso);
+        else if (m.texto) yield m.texto;
       }
-      throw errorGrpc(grpc.status.INTERNAL, 'la corriente terminó sin el mensaje final');
+      if (!uso) throw errorGrpc(grpc.status.INTERNAL, 'la corriente terminó sin el mensaje final');
+      completa = true;
+      return uso;
     } finally {
       senal?.removeEventListener('abort', alAbortar);
       // Si el consumidor dejó de leer antes del final, la generación se corta en el servicio.
-      llamada.cancel();
+      if (!completa) llamada.cancel();
     }
   }
 

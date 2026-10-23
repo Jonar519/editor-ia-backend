@@ -94,6 +94,31 @@ describe('los cuatro tipos de llamada', () => {
     expect(r.value.salida).toBeGreaterThan(0);
   });
 
+  it('3000 corrientes, 8 a la vez por el MISMO canal: todas terminan bien (sin romper la sesión HTTP/2)', async () => {
+    // Regresión (la encontró la medición de P3): cortar la corriente al llegar el mensaje final, antes del
+    // estado OK, cerraba a veces la sesión entera y fallaban las demás llamadas en vuelo.
+    const x = await ia();
+    const contenido = 'palabra '.repeat(1024);
+    let lanzadas = 0;
+    let bien = 0;
+    const errores: string[] = [];
+    await Promise.all(
+      Array.from({ length: 8 }, async () => {
+        while (lanzadas < 3000) {
+          lanzadas++;
+          try {
+            const r = await leerTodo(x.cliente.transformar('resumir', origenFicticio(), contenido, 'claro'));
+            if (r.texto.startsWith('Resumen simulado (claro): palabra')) bien++;
+          } catch (e) {
+            errores.push((e as Error).message);
+          }
+        }
+      }),
+    );
+    expect(errores.slice(0, 3)).toEqual([]);
+    expect(bien).toBe(3000);
+  }, 60_000);
+
   it('streaming del cliente: IndexarDocumento devuelve un vector por fragmento, en su índice', async () => {
     const x = await ia();
     const r = await x.cliente.indexar(origenFicticio(), [
