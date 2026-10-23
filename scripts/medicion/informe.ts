@@ -125,7 +125,7 @@ export function generarInforme(d: DatosMedicion): string {
   e.push('');
   e.push('## Diagnóstico del entorno: piso de latencia en Windows');
   e.push('');
-  e.push('Antes de medir, un diagnóstico aparte (2 000 llamadas en serie, tres pasadas, servidor en otro proceso) encontró en **Windows** un piso de unos 2–3 ms por llamada en gRPC con mensajes chicos y en REST sobre HTTP/1.1, que **no aparece en Linux** en la misma máquina (contenedor). No es calentamiento (las tres pasadas daban lo mismo) ni se debe a `noDelay` en los sockets del cliente. **Su causa no se investigó** (decisión escrita): corregirlo exigiría cambiar la configuración TCP del sistema. Mientras exista, en Windows esos caminos miden sobre todo ese piso y no el transporte.');
+  e.push('Antes de medir, un diagnóstico aparte (2 000 llamadas en serie, tres pasadas, servidor en otro proceso) encontró en **Windows** un piso de unos 2–3 ms por llamada en gRPC con mensajes chicos y en REST sobre HTTP/1.1 (en ese diagnóstico, REST h2c no lo tuvo), que **no apareció en Linux** en la misma máquina (contenedor). No era calentamiento (las tres pasadas daban lo mismo) ni se debía a `noDelay` en los sockets del cliente. **Su causa no se investigó** (decisión escrita): corregirlo exigiría cambiar la configuración TCP del sistema. Cuáles caminos lo tienen puede variar entre corridas; la línea calculada debajo de la tabla dice cuáles lo tuvieron en **esta** medición.');
   e.push('');
   e.push('Los p50 en serie de **esta** medición, por tamaño de pedido (mediana de las repeticiones, ms):');
   e.push('');
@@ -139,6 +139,16 @@ export function generarInforme(d: DatosMedicion): string {
       };
       e.push(`| ${etiqueta} | ${VARIANTES[v] ?? v} | ${p('U2-100B')} | ${p('U2-8KB')} | ${p('U2-64KB')} |`);
     }
+  }
+  e.push('');
+  for (const [etiqueta, x] of Object.entries(d.corridas)) {
+    const sobre = ['grpc-1-canal', 'h1-c-conexiones', 'h2-1-sesion'].flatMap((v) =>
+      (['U2-100B', 'U2-8KB', 'U2-64KB'] as const).flatMap((op) => {
+        const g = agrupar(x.serie.filter((c) => c.operacion === op && c.variante === v))[0];
+        return g && g.p50.mediana >= 1 ? [`${VARIANTES[v] ?? v} con ${op.slice(3)}`] : [];
+      }),
+    );
+    e.push(`- Calculado, ${etiqueta}: p50 en serie de 1 ms o más en ${sobre.length === 0 ? 'ningún caso' : sobre.join('; ')}.`);
   }
   e.push('');
   e.push('## Cómo se midió');
@@ -229,7 +239,7 @@ export function generarInforme(d: DatosMedicion): string {
         const bc = g.find((k) => k.variante === 'h1-c-conexiones');
         if (a1 && ac && b1 && bc) {
           hechosTodos.push(
-            `  - Multiplexación, ${op} c = ${String(c)}: gRPC 1 canal frente a ${String(c)} canales → ${ent(a1.rps)} frente a ${ent(ac.rps)} ped/s (×${num(a1.rps / ac.rps, 2)}); REST 1.1 con 1 conexión frente a ${String(c)} → ${ent(b1.rps)} frente a ${ent(bc.rps)} ped/s (×${num(b1.rps / bc.rps, 2)}).`,
+            `  - Multiplexación, ${etiqueta} · ${op} · c = ${String(c)}: gRPC 1 canal frente a ${String(c)} canales → ${ent(a1.rps)} frente a ${ent(ac.rps)} ped/s (×${num(a1.rps / ac.rps, 2)}); REST 1.1 con 1 conexión frente a ${String(c)} → ${ent(b1.rps)} frente a ${ent(bc.rps)} ped/s (×${num(b1.rps / bc.rps, 2)}).`,
           );
         }
       }
