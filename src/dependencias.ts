@@ -36,6 +36,8 @@ export interface DependenciasApi {
   ia?: ClienteIa;
   /** Cola de indexado para la búsqueda semántica (BullMQ). */
   indexador?: Indexador;
-  /** Tope diario de IA por cuenta (las pruebas lo bajan). */
+  /** Tope diario de IA por cuenta (IA_TOPE_*; las pruebas lo bajan). */
   topesIa?: TopesIa;
+  /** Similitud coseno mínima de un resultado de búsqueda (IA_SIMILITUD_MINIMA). */
+  similitudMinimaIa?: number;
 }

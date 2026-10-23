@@ -17,7 +17,7 @@ import * as grpc from '@grpc/grpc-js';
 import type { Logger } from 'pino';
 import { DIMENSIONES, paquete, SERVICIO, type AsistenteHandlers, type HealthHandlers } from './contrato.js';
 import type { Origen__Output } from '../generated/ia/cuaderno/ia/v1/Origen.js';
-import { ErrorProveedor, type Estilo, type ProveedorIa, type Uso } from './proveedor.js';
+import { ErrorProveedor, tokensAprox, type Estilo, type ProveedorIa, type Uso } from './proveedor.js';
 
 /** Topes de tamaño (caracteres) y de tiempo del lado del servicio. */
 export const LIMITES_SERVICIO = {
@@ -28,6 +28,10 @@ export const LIMITES_SERVICIO = {
   fragmentos: 2_000,
   antes: 4_000,
   despues: 1_000,
+  /** Topes de SALIDA (P2): lo que genera el modelo tampoco es de confianza; más largo, se recorta. */
+  salidaExplicar: 4_000,
+  salidaTransformar: 60_000,
+  salidaSugerencia: 300,
   /** El doble de los deadlines del API (ADR 0002): 15 s, 60 s, 120 s y 2 s por sugerencia. */
   unariaMs: 30_000,
   transformarMs: 120_000,
@@ -217,13 +221,23 @@ export function crearServicioIa(o: OpcionesServicioIa) {
         origen = validarOrigen(llamada.request.origen, true);
         const contenido = texto(llamada.request.contenido, LIMITES_SERVICIO.transformar, 'contenido');
         const generador = p.transformar({ tarea, contenido, estilo: ESTILOS[llamada.request.estilo] ?? 'claro' }, ac.signal);
+        let emitido = 0;
         for (;;) {
           const r = await generador.next();
           if (r.done) {
             await escribir(llamada, { texto: '', fin: true, uso: usoGrpc(r.value) });
             break;
           }
-          await escribir(llamada, { texto: r.value, fin: false, uso: null });
+          const trozo = r.value.slice(0, LIMITES_SERVICIO.salidaTransformar - emitido);
+          emitido += trozo.length;
+          if (trozo) await escribir(llamada, { texto: trozo, fin: false, uso: null });
+          if (emitido >= LIMITES_SERVICIO.salidaTransformar) {
+            // Tope de salida: se corta la generación y se cierra con el uso estimado hasta aquí.
+            ac.abort();
+            log.warn({ metodo, ...ids(origen), caracteres: emitido }, 'ia: salida recortada al tope');
+            await escribir(llamada, { texto: '', fin: true, uso: usoGrpc({ entrada: tokensAprox(contenido), salida: Math.ceil(emitido / 4) }) });
+            break;
+          }
         }
         llamada.end();
         registrar(metodo, origen, inicio, grpc.status.OK);
@@ -240,6 +254,10 @@ export function crearServicioIa(o: OpcionesServicioIa) {
     };
 
   const asistente: AsistenteHandlers = {
+    Describir: (_llamada, responder) => {
+      responder(null, { proveedor: p.nombre, modelo_embeddings: p.modeloEmbeddings, dimensiones: p.dimensiones });
+    },
+
     Explicar: (llamada, responder) => {
       const inicio = Date.now();
       const ac = controlador(llamada, LIMITES_SERVICIO.unariaMs);
@@ -251,7 +269,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
         const r = await p.explicar({ contenido, lenguaje: llamada.request.lenguaje }, ac.signal);
         ac.abort();
         registrar('Explicar', origen, inicio, grpc.status.OK);
-        responder(null, { texto: r.texto, uso: usoGrpc(r.uso) });
+        responder(null, { texto: r.texto.slice(0, LIMITES_SERVICIO.salidaExplicar), uso: usoGrpc(r.uso) });
       })().catch((err: unknown) => {
         ac.abort();
         const e = aGrpc(err, 'Explicar', origen);
@@ -362,7 +380,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
             clearTimeout(t);
             if (ac.signal.aborted || terminada) return;
             registrar('Autocompletar', origen, inicio, grpc.status.OK);
-            llamada.write({ pedido_id: pedido, texto: r.texto, uso: usoGrpc(r.uso) });
+            llamada.write({ pedido_id: pedido, texto: r.texto.slice(0, LIMITES_SERVICIO.salidaSugerencia), uso: usoGrpc(r.uso) });
           },
           (err: unknown) => {
             clearTimeout(t);

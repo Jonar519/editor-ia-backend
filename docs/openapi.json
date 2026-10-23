@@ -1743,6 +1743,55 @@
           "consulta"
         ]
       },
+      "UsoIaHoy": {
+        "type": "object",
+        "properties": {
+          "hoy": {
+            "type": "object",
+            "properties": {
+              "peticiones": {
+                "type": "integer"
+              },
+              "tokensEntrada": {
+                "type": "integer"
+              },
+              "tokensSalida": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "peticiones",
+              "tokensEntrada",
+              "tokensSalida"
+            ]
+          },
+          "topes": {
+            "type": "object",
+            "properties": {
+              "peticionesDia": {
+                "type": "integer"
+              },
+              "tokensDia": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "peticionesDia",
+              "tokensDia"
+            ]
+          },
+          "renuevaEnSegundos": {
+            "type": "integer",
+            "description": "Hasta la medianoche UTC, cuando el uso vuelve a cero"
+          }
+        },
+        "required": [
+          "hoy",
+          "topes",
+          "renuevaEnSegundos"
+        ],
+        "description": "El autocompletado suma tokens pero no peticiones. El indexado automático no gasta esta cuota (va contra el presupuesto del espacio)."
+      },
       "IndiceEncolado": {
         "type": "object",
         "properties": {
@@ -6371,7 +6420,7 @@
             "acceso": []
           }
         ],
-        "summary": "Búsqueda semántica en un espacio: solo fragmentos de ese espacio y de documentos con acceso HOY",
+        "summary": "Búsqueda semántica en un espacio: solo fragmentos de ese espacio y de documentos con acceso HOY, del modelo vigente, con similitud de al menos IA_SIMILITUD_MINIMA y hasta 3 por documento. 502 si el modelo no es de 1024 dimensiones",
         "parameters": [
           {
             "schema": {
@@ -6465,6 +6514,41 @@
           },
           "504": {
             "description": "ia_tiempo_agotado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ia/uso": {
+      "get": {
+        "tags": [
+          "ia"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "El uso de IA de hoy de la cuenta, sus topes y cuándo se renuevan (no llama a la IA)",
+        "responses": {
+          "200": {
+            "description": "Uso de hoy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsoIaHoy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
             "content": {
               "application/json": {
                 "schema": {

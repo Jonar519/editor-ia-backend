@@ -30,6 +30,23 @@ service Asistente {
   // Bidireccional: una corriente por conexión de edición. Entra el contexto en cada pausa de escritura y
   // salen sugerencias. Un contexto nuevo con otro `pedido_id` cancela la sugerencia anterior.
   rpc Autocompletar(stream ContextoAutocompletado) returns (stream Sugerencia);
+
+  // Unaria (P2): qué modelo de embeddings usa el servicio y de cuántas dimensiones. El API lo consulta en
+  // cada comprobación de salud y antes de buscar o indexar: si no son 1024, la IA queda en "falla" y no
+  // se escriben vectores.
+  rpc Describir(DescribirSolicitud) returns (Descripcion);
+}
+
+// ─── Descripción (P2) ─────────────────────────────────────────────────────────
+
+message DescribirSolicitud {}
+
+message Descripcion {
+  // "mock" o "anthropic": el proveedor configurado en el servicio.
+  string proveedor = 1;
+  // El mismo nombre que se guarda en embeddings.modelo (DocumentoIndexado.modelo).
+  string modelo_embeddings = 2;
+  uint32 dimensiones = 3;
 }
 
 // ─── Comunes ──────────────────────────────────────────────────────────────────

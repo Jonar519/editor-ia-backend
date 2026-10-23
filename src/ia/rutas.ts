@@ -6,6 +6,7 @@
 //   POST /api/ia/mejorar                  SSE. Editor o propietario (es para reemplazar texto).
 //   POST /api/espacios/:id/buscar         JSON. Miembro del espacio; solo fragmentos con acceso HOY.
 //   POST /api/documentos/:id/indice       202. Editor o propietario: encola el indexado (BullMQ).
+//   GET  /api/ia/uso                      JSON. El uso de hoy de la cuenta, sus topes y cuándo se renuevan.
 //
 // SSE (ADR 0002): los errores ANTES del primer byte son códigos HTTP normales; a mitad, `event: error` y fin.
 // Si la persona aborta el fetch, la llamada gRPC se cancela y el servicio deja de generar; se cobra lo
@@ -17,18 +18,23 @@ import { exigirDocumento, exigirEspacio } from '../contenido/acceso.js';
 import type { DependenciasApi } from '../dependencias.js';
 import { ErrorHttp } from '../http/errores.js';
 import { BusquedaSolicitud, ExplicarSolicitud, IdDocumento, IdEspacio, TransformarSolicitudHttp } from '../http/esquemas.js';
-import type { ClienteIa, OrigenIa } from './cliente.js';
+import { ModeloIncompatible, type ClienteIa, type OrigenIa } from './cliente.js';
 import { DIMENSIONES } from './contrato.js';
 import { errorHttpDeIa } from './errores.js';
 import { tokensAprox, type Uso } from './proveedor.js';
-import { registrarUso, reservarUso, segundosHastaManana, TOPES_IA } from './uso.js';
+import { registrarUso, reservarUso, segundosHastaManana, TOPES_IA, usoDeHoy } from './uso.js';
 
 export const LIMITES_IA = {
   /** Pedidos por minuto y cuenta (además del tope diario). */
   minuto: { max: 30, ventanaMs: 60_000 },
   /** Latido SSE: un comentario cada 15 s para que ningún proxy corte la corriente por inactividad. */
   latidoMs: 15_000,
+  /** Búsqueda (decisión escrita de P2): como máximo 3 fragmentos de cada documento. */
+  fragmentosPorDocumento: 3,
 } as const;
+
+/** Similitud coseno mínima por defecto (IA_SIMILITUD_MINIMA; se recalibra con el modelo real). */
+export const SIMILITUD_MINIMA = 0.2;
 
 const noDisponible = () => new ErrorHttp(503, 'ia_no_disponible', 'La IA no está disponible en este momento');
 
@@ -45,6 +51,7 @@ const usoHttp = (u: Uso) => ({ tokensEntrada: u.entrada, tokensSalida: u.salida 
 
 export function rutasIa(d: DependenciasApi): { ia: Router; busqueda: Router; indice: Router } {
   const topes = d.topesIa ?? TOPES_IA;
+  const similitudMinima = d.similitudMinimaIa ?? SIMILITUD_MINIMA;
   const sesion = requiereSesion(d);
   const lim = limitarTasa(
     crearLimitador({ redis: d.redis, prefijo: d.prefijoRedis, nombre: 'ia', ...LIMITES_IA.minuto }),
@@ -159,6 +166,11 @@ export function rutasIa(d: DependenciasApi): { ia: Router; busqueda: Router; ind
   ia.post('/resumir', lim, transformar('resumir'));
   ia.post('/mejorar', lim, transformar('mejorar'));
 
+  // El uso de hoy y los topes (para la interfaz de Q). No llama a la IA: responde aunque esté caída.
+  ia.get('/uso', async (_req, res) => {
+    res.json({ hoy: await usoDeHoy(d.prisma, usuarioDe(res).id), topes, renuevaEnSegundos: segundosHastaManana() });
+  });
+
   // ─── /api/espacios/:espacioId/buscar ─────────────────────────────────────────
   const busqueda = Router();
   busqueda.post('/:espacioId/buscar', sesion, lim, async (req, res) => {
@@ -167,6 +179,18 @@ export function rutasIa(d: DependenciasApi): { ia: Router; busqueda: Router; ind
     const u = usuarioDe(res);
     await exigirEspacio(d.prisma, u.id, espacioId, 'lector', '');
     const c = cliente();
+    // El modelo vigente (Describir), ANTES de cobrar: con otras dimensiones que 1024 no se busca (502).
+    let modelo: string;
+    try {
+      modelo = await c.modeloVigente();
+    } catch (e) {
+      if (e instanceof ModeloIncompatible) {
+        req.log.error({ descripcion: e.descripcion }, 'ia: modelo de embeddings incompatible con la base');
+        throw new ErrorHttp(502, 'ia_error_interno', 'El servicio de IA falló');
+      }
+      fallo(e, req, res);
+      return;
+    }
     await reservar(res, u.id);
     let vector: number[];
     try {
@@ -178,10 +202,12 @@ export function rutasIa(d: DependenciasApi): { ia: Router; busqueda: Router; ind
       return;
     }
     if (vector.length !== DIMENSIONES) throw new ErrorHttp(502, 'ia_error_interno', 'El servicio de IA falló');
-    // buscar_fragmentos (migración 0011) filtra por espacio Y por el acceso de HOY de quien busca.
+    // buscar_fragmentos (migración 0023) filtra por espacio Y por el acceso de HOY de quien busca, solo con
+    // vectores del modelo vigente, con el umbral de similitud y como máximo N fragmentos por documento.
     const filas = await d.prisma.$queryRaw<{ documento_id: string; titulo: string; fragmento: number; texto: string; distancia: number }[]>`
       SELECT f.documento_id, d.titulo, f.fragmento, f.texto, f.distancia
-      FROM buscar_fragmentos(${u.id}::uuid, ${espacioId}::uuid, ${`[${vector.join(',')}]`}::vector, ${b.limite}::int) f
+      FROM buscar_fragmentos(${u.id}::uuid, ${espacioId}::uuid, ${`[${vector.join(',')}]`}::vector, ${b.limite}::int,
+                             ${modelo}, ${1 - similitudMinima}::float8, ${LIMITES_IA.fragmentosPorDocumento}::int) f
       JOIN documentos d ON d.id = f.documento_id
       ORDER BY f.distancia`;
     res.json({

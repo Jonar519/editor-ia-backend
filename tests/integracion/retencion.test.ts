@@ -53,6 +53,8 @@ describe('retención diaria', () => {
         'eventos_seguridad',
         'sesiones',
         'tokens_recuperacion',
+        'uso_ia_diario', // 0023: el uso de IA se guarda 400 días
+        'uso_ia_indexado_diario',
       ]);
       expect(lineas.some((l) => l.msg === 'retención diaria ejecutada')).toBe(true);
     } finally {

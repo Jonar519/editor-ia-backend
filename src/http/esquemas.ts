@@ -427,3 +427,11 @@ export const ResultadosBusqueda = z
   .meta({ id: 'ResultadosBusqueda', description: 'Solo del espacio pedido y de documentos a los que tienes acceso HOY' });
 
 export const IndiceEncolado = z.object({ encolado: z.literal(true) }).meta({ id: 'IndiceEncolado' });
+
+export const UsoIaHoy = z
+  .object({
+    hoy: z.object({ peticiones: z.number().int(), tokensEntrada: z.number().int(), tokensSalida: z.number().int() }),
+    topes: z.object({ peticionesDia: z.number().int(), tokensDia: z.number().int() }),
+    renuevaEnSegundos: z.number().int().meta({ description: 'Hasta la medianoche UTC, cuando el uso vuelve a cero' }),
+  })
+  .meta({ id: 'UsoIaHoy', description: 'El autocompletado suma tokens pero no peticiones. El indexado automático no gasta esta cuota (va contra el presupuesto del espacio).' });

@@ -45,6 +45,7 @@ const NOMBRE_ESTILO: Record<Estilo, string> = { claro: 'claro', breve: 'breve', 
 export class ProveedorMock implements ProveedorIa {
   readonly nombre = 'mock';
   readonly modeloEmbeddings = 'mock-palabras-1024';
+  readonly dimensiones = DIMENSIONES;
   /** Fragmentos generados desde que se creó: una prueba de cancelación mira que deje de crecer. */
   generados = 0;
   /** Si está puesto, cada operación falla con este error (para probar el mapeo de errores). */

@@ -1844,8 +1844,8 @@
       "id": "P21",
       "regla": "IA: el trabajo de indexado reverifica el acceso (sin acceso, ni IA ni filas)",
       "archivo": "src/ia/indexado.ts",
-      "buscar": "  if (!acceso) return { resultado: 'sin_acceso', fragmentos: 0 };\n",
-      "reemplazo": "",
+      "buscar": "  if (!usuarioId || !acceso) return { resultado: 'sin_acceso', fragmentos: 0 };\n",
+      "reemplazo": "  if (!usuarioId) return { resultado: 'sin_acceso', fragmentos: 0 };\n",
       "comando": "test",
       "pruebas": ["tests/integracion/ia-api.test.ts"]
     },
@@ -1901,6 +1901,159 @@
       "buscar": "  string cuenta_id = 1;",
       "reemplazo": "  string cuenta_id = 9;",
       "comando": "proto:check"
+    },
+    {
+      "id": "P28",
+      "regla": "Inyección: el contenido va escapado como XML (no puede cerrar el bloque)",
+      "archivo": "src/ia/prompt.ts",
+      "buscar": "${escaparXml(contenido)}",
+      "reemplazo": "${contenido}",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-prompt.test.ts"]
+    },
+    {
+      "id": "P29",
+      "regla": "Inyección: el nonce es aleatorio por llamada (no fijo)",
+      "archivo": "src/ia/prompt.ts",
+      "buscar": "randomBytes(16).toString('hex')",
+      "reemplazo": "'0'.repeat(32)",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-prompt.test.ts"]
+    },
+    {
+      "id": "P30",
+      "regla": "Inyección: el contenido va DENTRO del bloque de datos",
+      "archivo": "src/ia/prompt.ts",
+      "buscar": "`<${nombre}-${nonce}>\\n${escaparXml(contenido)}\\n</${nombre}-${nonce}>`",
+      "reemplazo": "`<${nombre}-${nonce}>\\n\\n</${nombre}-${nonce}>\\n${escaparXml(contenido)}`",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-prompt.test.ts"]
+    },
+    {
+      "id": "P31",
+      "regla": "Describir: con otras dimensiones que 1024 no se busca ni se indexa",
+      "archivo": "src/ia/cliente.ts",
+      "buscar": "    if (d.dimensiones !== DIMENSIONES) throw new ModeloIncompatible(d);\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P32",
+      "regla": "Describir: la salud de /ready mira las dimensiones (la IA queda en falla)",
+      "archivo": "src/ia/cliente.ts",
+      "buscar": "    this.vigente = null;\n    await this.modeloVigente();\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P33",
+      "regla": "Búsqueda: el umbral de similitud sale de la configuración",
+      "archivo": "src/ia/rutas.ts",
+      "buscar": "${1 - similitudMinima}::float8",
+      "reemplazo": "${2}::float8",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P34",
+      "regla": "Búsqueda: como máximo 3 fragmentos por documento",
+      "archivo": "src/ia/rutas.ts",
+      "buscar": "${LIMITES_IA.fragmentosPorDocumento}::int",
+      "reemplazo": "${50}::int",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P35",
+      "regla": "Indexado automático: en nombre de la última persona que editó (si tiene acceso)",
+      "archivo": "src/ia/indexado.ts",
+      "buscar": "  if (autorId && (await rolEnDocumento(prisma, autorId, documentoId))) return autorId;\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P36",
+      "regla": "Indexado automático: contra el presupuesto del ESPACIO, no la cuota de quien editó",
+      "archivo": "src/ia/indexado.ts",
+      "buscar": "  if (automatico) {\n    if (!(await reservarIndexadoEspacio",
+      "reemplazo": "  if (false) {\n    if (!(await reservarIndexadoEspacio",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P37",
+      "regla": "Presupuesto del espacio: reserva atómica que nunca pasa del tope",
+      "archivo": "src/ia/uso.ts",
+      "buscar": "      WHERE u.tokens + EXCLUDED.tokens <= ${tope}::bigint\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P38",
+      "regla": "Presupuesto agotado: el indexado se pospone al día siguiente (no se pierde en silencio)",
+      "archivo": "src/ia/indexado.ts",
+      "buscar": "          await cola.add('indexar', { documentoId: datos.documentoId, autorId: datos.autorId ?? null },",
+      "reemplazo": "          void ('indexar', { documentoId: datos.documentoId, autorId: datos.autorId ?? null },",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P39",
+      "regla": "Al dejar de editar se avisa al indexado, con el último autor",
+      "archivo": "src/tiempo-real/compactacion.ts",
+      "buscar": "await o.alInactividad?.(documentoId, autorId ?? null)",
+      "reemplazo": "await o.alInactividad?.(documentoId, null)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P40",
+      "regla": "Tope de salida: explicar se recorta",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "r.texto.slice(0, LIMITES_SERVICIO.salidaExplicar)",
+      "reemplazo": "r.texto",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P41",
+      "regla": "Tope de salida: resumir y mejorar se recortan",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "r.value.slice(0, LIMITES_SERVICIO.salidaTransformar - emitido)",
+      "reemplazo": "r.value",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P42",
+      "regla": "Tope de salida: al llegar, el servicio deja de pedirle al proveedor",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "if (emitido >= LIMITES_SERVICIO.salidaTransformar) {",
+      "reemplazo": "if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P43",
+      "regla": "Tope de salida: la sugerencia de autocompletado se recorta",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "r.texto.slice(0, LIMITES_SERVICIO.salidaSugerencia)",
+      "reemplazo": "r.texto",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-p2.test.ts"]
+    },
+    {
+      "id": "P44",
+      "regla": "Config: el umbral de similitud se valida entre 0 y 1",
+      "archivo": "src/config/entorno.ts",
+      "buscar": ".max(1, { error: 'entre 0 y 1' })",
+      "reemplazo": ".max(5, { error: 'entre 0 y 1' })",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config-ia.test.ts"]
     }
   ]
 }

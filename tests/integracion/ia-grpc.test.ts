@@ -62,7 +62,9 @@ describe('autenticación entre servicios', () => {
   it('la salud estándar responde sin token (la consultan los orquestadores) y dice SERVING', async () => {
     const x = await ia();
     const otro = x.clienteCon('y'.repeat(43));
-    await expect(otro.comprobarSalud()).resolves.toBeUndefined();
+    await expect(otro.saludEstandar()).resolves.toBeUndefined();
+    // La de /ready además pide Describir, que SÍ exige el token.
+    await expect(otro.comprobarSalud()).rejects.toMatchObject({ code: grpc.status.UNAUTHENTICATED });
     otro.cerrar();
   });
 });
@@ -199,6 +201,7 @@ describe('errores: proveedor → estado gRPC → HTTP (una fila de la tabla del 
     const proveedor: ProveedorIa = {
       nombre: 'mock',
       modeloEmbeddings: 'corto',
+      dimensiones: 512,
       explicar: (e, s) => corto.explicar(e, s),
       transformar: (e, s) => corto.transformar(e, s),
       autocompletar: (e, s) => corto.autocompletar(e, s),
