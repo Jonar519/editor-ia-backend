@@ -121,6 +121,35 @@ export function generarInforme(d: DatosMedicion): string {
   e.push('- **Nada sobre máquinas separadas.** Cliente y servidor corren en la misma máquina y compiten por la misma CPU.');
   e.push('- Tampoco: la compresión (ni la de gRPC ni gzip en JSON), la memoria a largo plazo, el costo del stack Express del API (se comparan transportes, no frameworks) ni el enlace navegador ↔ API. Todos *no medidos*.');
   e.push('- Los números son de **esta** máquina y de este momento; otra máquina da otros números. Las conclusiones de abajo son solo las que los datos de esta tabla muestran.');
+  e.push('- **La corrida de Windows no sirve para comparar transportes** (ver el diagnóstico que sigue): se presenta solo como comportamiento observado en este entorno. **La referencia para comparar transportes es la corrida de Linux.**');
+  e.push('');
+  e.push('## Diagnóstico del entorno: piso de latencia en Windows');
+  e.push('');
+  e.push('Antes de medir, un diagnóstico aparte (2 000 llamadas en serie, tres pasadas, servidor en otro proceso) encontró en **Windows** un piso de unos 2–3 ms por llamada en gRPC con mensajes chicos y en REST sobre HTTP/1.1 (en ese diagnóstico, REST h2c no lo tuvo), que **no apareció en Linux** en la misma máquina (contenedor). No era calentamiento (las tres pasadas daban lo mismo) ni se debía a `noDelay` en los sockets del cliente. **Su causa no se investigó** (decisión escrita): corregirlo exigiría cambiar la configuración TCP del sistema. Cuáles caminos lo tienen puede variar entre corridas; la línea calculada debajo de la tabla dice cuáles lo tuvieron en **esta** medición.');
+  e.push('');
+  e.push('Los p50 en serie de **esta** medición, por tamaño de pedido (mediana de las repeticiones, ms):');
+  e.push('');
+  e.push('| Entorno | Camino | Explicar 100 B | Explicar 8 KB | Explicar 64 KB |');
+  e.push('|---|---|---|---|---|');
+  for (const [etiqueta, x] of Object.entries(d.corridas)) {
+    for (const v of ['grpc-1-canal', 'h1-c-conexiones', 'h2-1-sesion']) {
+      const p = (op: string) => {
+        const g = agrupar(x.serie.filter((c) => c.operacion === op && c.variante === v))[0];
+        return g ? num(g.p50.mediana) : '—';
+      };
+      e.push(`| ${etiqueta} | ${VARIANTES[v] ?? v} | ${p('U2-100B')} | ${p('U2-8KB')} | ${p('U2-64KB')} |`);
+    }
+  }
+  e.push('');
+  for (const [etiqueta, x] of Object.entries(d.corridas)) {
+    const sobre = ['grpc-1-canal', 'h1-c-conexiones', 'h2-1-sesion'].flatMap((v) =>
+      (['U2-100B', 'U2-8KB', 'U2-64KB'] as const).flatMap((op) => {
+        const g = agrupar(x.serie.filter((c) => c.operacion === op && c.variante === v))[0];
+        return g && g.p50.mediana >= 1 ? [`${VARIANTES[v] ?? v} con ${op.slice(3)}`] : [];
+      }),
+    );
+    e.push(`- Calculado, ${etiqueta}: p50 en serie de 1 ms o más en ${sobre.length === 0 ? 'ningún caso' : sobre.join('; ')}.`);
+  }
   e.push('');
   e.push('## Cómo se midió');
   e.push('');
@@ -141,12 +170,27 @@ export function generarInforme(d: DatosMedicion): string {
     const en = x.entorno;
     e.push(`## Entorno: ${etiqueta}`);
     e.push('');
+    e.push(
+      etiqueta === 'linux'
+        ? '> **Referencia para comparar transportes.**'
+        : '> **Solo comportamiento observado en este entorno**: con el piso de latencia del diagnóstico, no sirve para comparar transportes.',
+    );
+    e.push('');
     e.push('| | |');
     e.push('|---|---|');
     for (const [k, v] of Object.entries(en)) e.push(`| ${k} | ${String(v)} |`);
     e.push(`| parámetros | calentamiento ${String(x.parametros.calentamiento)}, en serie ${String(x.parametros.serie)}, en concurrencia ${String(x.parametros.concurrencia)} con c = ${x.parametros.concurrencias.join(', ')}, ${String(x.parametros.repeticiones)} repeticiones |`);
     const cargas = [...x.serie, ...x.concurrencia].map((c) => c.cargaPrevia);
-    e.push(`| carga previa por corrida | máxima ${num(Math.max(...cargas), 1)} %, mediana ${num(medianaDeCorridas(cargas).mediana, 1)} % (${String(cargas.filter((c) => c > en.umbral).length)} corridas sobre el umbral de ${String(en.umbral)} %) |`);
+    const todas = [...x.serie, ...x.concurrencia];
+    const conEsperas = todas.filter((c) => (c.esperasPorCarga ?? 0) > 0).length;
+    const controlada = todas.every((c) => c.esperasPorCarga !== undefined);
+    e.push(
+      `| carga previa por corrida | máxima ${num(Math.max(...cargas), 1)} %, mediana ${num(medianaDeCorridas(cargas).mediana, 1)} %; ${String(cargas.filter((c) => c > en.umbral).length)} de ${String(cargas.length)} corridas sobre el umbral de ${String(en.umbral)} % ${
+        controlada
+          ? `(se esperó a que bajara antes de ${String(conEsperas)} corridas; ninguna se midió por encima)`
+          : '(**esta corrida solo REGISTRABA la carga previa; no esperaba a que bajara**: las que figuran sobre el umbral se midieron así)'
+      } |`,
+    );
     e.push('');
     if (en.rapido) e.push('> **Corrida rápida (`--rapido`)**: pocos pedidos, solo para probar el script. No sirve para comparar.\n');
 
@@ -195,7 +239,7 @@ export function generarInforme(d: DatosMedicion): string {
         const bc = g.find((k) => k.variante === 'h1-c-conexiones');
         if (a1 && ac && b1 && bc) {
           hechosTodos.push(
-            `  - Multiplexación, ${op} c = ${String(c)}: gRPC 1 canal frente a ${String(c)} canales → ${ent(a1.rps)} frente a ${ent(ac.rps)} ped/s (×${num(a1.rps / ac.rps, 2)}); REST 1.1 con 1 conexión frente a ${String(c)} → ${ent(b1.rps)} frente a ${ent(bc.rps)} ped/s (×${num(b1.rps / bc.rps, 2)}).`,
+            `  - Multiplexación, ${etiqueta} · ${op} · c = ${String(c)}: gRPC 1 canal frente a ${String(c)} canales → ${ent(a1.rps)} frente a ${ent(ac.rps)} ped/s (×${num(a1.rps / ac.rps, 2)}); REST 1.1 con 1 conexión frente a ${String(c)} → ${ent(b1.rps)} frente a ${ent(bc.rps)} ped/s (×${num(b1.rps / bc.rps, 2)}).`,
           );
         }
       }
@@ -204,7 +248,7 @@ export function generarInforme(d: DatosMedicion): string {
 
   e.push('## Lo que muestran los datos (calculado, sin interpretar)');
   e.push('');
-  e.push('Por escenario: el camino con el menor p50 (mediana de las repeticiones), cuántas veces más tardan los demás (×) y, en concurrencia, el mayor throughput. Se marca cuando los rangos del p50 de los dos primeros se solapan.');
+  e.push('Por escenario: el camino con el menor p50 (mediana de las repeticiones), cuántas veces más tardan los demás (×) y, en concurrencia, el mayor throughput. Se marca cuando los rangos del p50 de los dos primeros se solapan. Las líneas de **linux** son la referencia para comparar transportes; las de **windows**, solo comportamiento observado en ese entorno.');
   e.push('');
   e.push(...hechosTodos.filter(Boolean));
   e.push('');
