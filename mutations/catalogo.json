@@ -1700,8 +1700,8 @@
       "id": "P05",
       "regla": "IA: abortar la señal en el API cancela la corriente gRPC",
       "archivo": "src/ia/cliente.ts",
-      "buscar": "    else senal?.addEventListener('abort', alAbortar, { once: true });\n    try {\n      for await",
-      "reemplazo": "    try {\n      for await",
+      "buscar": "    else senal?.addEventListener('abort', alAbortar, { once: true });\n    // Se lee la corriente HASTA SU FIN",
+      "reemplazo": "    // Se lee la corriente HASTA SU FIN",
       "comando": "test",
       "pruebas": ["tests/integracion/ia-grpc.test.ts", "tests/integracion/ia-api.test.ts"]
     },
