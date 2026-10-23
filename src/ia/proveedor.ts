@@ -48,11 +48,18 @@ export class ErrorProveedor extends Error {
   }
 }
 
-/** Espera `ms`, o rechaza con "cancelado" apenas se aborta la señal. */
+/**
+ * Espera `ms`, o rechaza con "cancelado" apenas se aborta la señal. Con 0 ms no usa temporizador (un
+ * setTimeout(0) suma al menos ~1 ms por llamada, y la medición de P3 lo vería como costo del transporte).
+ */
 export function esperar(ms: number, senal: AbortSignal): Promise<void> {
   return new Promise((resolver, rechazar) => {
     if (senal.aborted) {
       rechazar(new ErrorProveedor('cancelado', 'cancelado'));
+      return;
+    }
+    if (ms <= 0) {
+      resolver();
       return;
     }
     const alAbortar = () => {

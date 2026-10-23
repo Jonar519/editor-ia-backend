@@ -1700,8 +1700,8 @@
       "id": "P05",
       "regla": "IA: abortar la señal en el API cancela la corriente gRPC",
       "archivo": "src/ia/cliente.ts",
-      "buscar": "    else senal?.addEventListener('abort', alAbortar, { once: true });\n    try {\n      for await",
-      "reemplazo": "    try {\n      for await",
+      "buscar": "    else senal?.addEventListener('abort', alAbortar, { once: true });\n    // Se lee la corriente HASTA SU FIN",
+      "reemplazo": "    // Se lee la corriente HASTA SU FIN",
       "comando": "test",
       "pruebas": ["tests/integracion/ia-grpc.test.ts", "tests/integracion/ia-api.test.ts"]
     },
@@ -2054,6 +2054,15 @@
       "reemplazo": ".max(5, { error: 'entre 0 y 1' })",
       "comando": "test",
       "pruebas": ["tests/unitarias/config-ia.test.ts"]
+    },
+    {
+      "id": "P45",
+      "regla": "Cliente gRPC: la corriente se lee hasta su fin y no se cancela si terminó (el código de P1 rompía la sesión con muchas en vuelo)",
+      "archivo": "src/ia/cliente.ts",
+      "buscar": "        if (m.fin) uso = usoDe(m.uso);\n        else if (m.texto) yield m.texto;\n      }\n      if (!uso) throw errorGrpc(grpc.status.INTERNAL, 'la corriente terminó sin el mensaje final');\n      completa = true;\n      return uso;\n    } finally {\n      senal?.removeEventListener('abort', alAbortar);\n      // Si el consumidor dejó de leer antes del final, la generación se corta en el servicio.\n      if (!completa) llamada.cancel();",
+      "reemplazo": "        if (m.fin) return usoDe(m.uso);\n        if (m.texto) yield m.texto;\n      }\n      void uso; void completa;\n      throw errorGrpc(grpc.status.INTERNAL, 'la corriente terminó sin el mensaje final');\n    } finally {\n      senal?.removeEventListener('abort', alAbortar);\n      llamada.cancel();",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
     }
   ]
 }

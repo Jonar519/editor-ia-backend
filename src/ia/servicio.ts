@@ -44,8 +44,11 @@ const RUTA_SALUD = '/grpc.health.v1.Health/';
 
 const invalido = (mensaje: string) => new ErrorProveedor('invalido', mensaje);
 
-/** El origen: cuenta y espacio siempre; documento salvo en EmbeberConsulta. Solo ids, nunca datos personales. */
-function validarOrigen(o: Origen__Output | null, conDocumento: boolean): Origen__Output {
+/**
+ * El origen: cuenta y espacio siempre; documento salvo en EmbeberConsulta. Solo ids, nunca datos personales.
+ * (Exportada para la medición de P3: el adaptador REST hace EXACTAMENTE la misma validación.)
+ */
+export function validarOrigen(o: Origen__Output | null, conDocumento: boolean): Origen__Output {
   if (!o) throw invalido('falta el origen');
   if (!UUID.test(o.cuenta_id) || !UUID.test(o.espacio_id)) throw invalido('origen: cuenta_id y espacio_id deben ser uuid');
   if (conDocumento ? !UUID.test(o.documento_id) : o.documento_id !== '' && !UUID.test(o.documento_id)) throw invalido('origen: documento_id inválido');
@@ -53,7 +56,7 @@ function validarOrigen(o: Origen__Output | null, conDocumento: boolean): Origen_
   return o;
 }
 
-function texto(valor: string, maximo: number, campo: string): string {
+export function texto(valor: string, maximo: number, campo: string): string {
   if (valor.trim() === '') throw invalido(`${campo} vacío`);
   if (valor.length > maximo) throw invalido(`${campo} supera ${String(maximo)} caracteres`);
   return valor;
@@ -159,6 +162,11 @@ export interface OpcionesServicioIa {
   log: Logger;
   /** TLS mutuo en producción; sin esto, texto plano (solo 127.0.0.1). */
   credenciales?: grpc.ServerCredentials;
+  /**
+   * SOLO para la medición de P3 (pedidos de 64 KB): el tope de caracteres de Explicar. El servicio de
+   * producción (principal.ts) nunca lo pasa y usa LIMITES_SERVICIO.explicar.
+   */
+  limiteExplicar?: number;
 }
 
 export function crearServicioIa(o: OpcionesServicioIa) {
@@ -264,7 +272,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
       let origen: Origen__Output | null = null;
       void (async () => {
         origen = validarOrigen(llamada.request.origen, true);
-        const contenido = texto(llamada.request.contenido, LIMITES_SERVICIO.explicar, 'contenido');
+        const contenido = texto(llamada.request.contenido, o.limiteExplicar ?? LIMITES_SERVICIO.explicar, 'contenido');
         if (llamada.request.lenguaje.length > 40) throw invalido('lenguaje demasiado largo');
         const r = await p.explicar({ contenido, lenguaje: llamada.request.lenguaje }, ac.signal);
         ac.abort();

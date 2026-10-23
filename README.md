@@ -47,6 +47,7 @@ Los dos procesos comparten `.env` (el mismo `IA_SERVICE_TOKEN`). Sin el servicio
 | `dev.bat` | Servidor de desarrollo con recarga. |
 | `ia.bat` | Servicio de IA (gRPC, `127.0.0.1:4210`) con recarga. |
 | `reindexar.bat` | Encola el reindexado de todos los documentos (por ejemplo, al cambiar el modelo de embeddings). Lo procesa el API. |
+| `medir.bat [--rapido]` | Medición P3: la misma operación por gRPC y por REST/JSON (HTTP/1.1 y h2c) en el mismo proceso. Escribe `docs/medicion-p3.json` y `docs/medicion-p3.md`. No mide si la CPU de la máquina ya está ocupada (más del 10 %). |
 | `npm run proto:generate` | Tipos TypeScript del contrato gRPC en `src/generated/ia` (no se versionan). |
 | `npm run proto:check` | `buf lint` y `buf breaking` del contrato contra `main` (lo corre el CI). |
 | `test.bat` | Vitest + Supertest contra la base de **pruebas** y Redis db 1. |
