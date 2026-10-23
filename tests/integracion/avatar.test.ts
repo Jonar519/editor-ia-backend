@@ -1,6 +1,7 @@
 // Avatar de punta a punta: se guarda SOLO la versión limpia; un archivo no analizable se rechaza sin
 // guardar nada; se sirve con cabeceras que impiden interpretarlo como documento.
 import { readFileSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { appApi, cuentaActiva, entornoApi, type EntornoApi } from '../_api.js';
@@ -86,6 +87,20 @@ describe('avatar', () => {
     const { c, acceso } = await entrar(app);
     const svg = await request(app).put('/api/cuenta/avatar').set('authorization', `Bearer ${acceso}`).set('content-type', 'image/png').send(Buffer.from('<svg onload="alert(1)"/>'));
     expect(svg.status).toBe(422);
+    expect(await datosGuardados(c.id)).toBeNull();
+  });
+
+  it('imagen comprimida (Content-Encoding: gzip) → 415 sin descomprimirla, y no se guarda nada (GHSA-27r3-jxmh-p828)', async () => {
+    const app = appApi(e.deps);
+    const { c, acceso } = await entrar(app);
+    const r = await request(app)
+      .put('/api/cuenta/avatar')
+      .set('authorization', `Bearer ${acceso}`)
+      .set('content-type', 'image/jpeg')
+      .set('content-encoding', 'gzip')
+      .send(gzipSync(JPEG));
+    expect(r.status).toBe(415);
+    expect((r.body as CuerpoError).error.codigo).toBe('codificacion_no_admitida');
     expect(await datosGuardados(c.id)).toBeNull();
   });
 

@@ -99,7 +99,8 @@ export function rutasCuenta(d: DependenciasApi): Router {
 
   // ─── Avatar ─────────────────────────────────────────────────────────────────────
   // El cuerpo es la imagen tal cual (sin multipart). El formato se decide por la firma de bytes.
-  r.put('/avatar', lim('avatar'), express.raw({ type: ['image/jpeg', 'image/png'], limit: BYTES_MAXIMOS_AVATAR }), async (req, res) => {
+  // inflate: false (GHSA-27r3-jxmh-p828): una imagen con Content-Encoding comprimido se rechaza (415).
+  r.put('/avatar', lim('avatar'), express.raw({ type: ['image/jpeg', 'image/png'], limit: BYTES_MAXIMOS_AVATAR, inflate: false }), async (req, res) => {
     if (!Buffer.isBuffer(req.body)) throw new ErrorHttp(415, 'tipo_no_admitido', 'Envía la imagen con Content-Type image/jpeg o image/png');
     res.json(await guardarAvatar(d, usuarioDe(res).id, req.body, truncarIp(req.ip)));
   });
