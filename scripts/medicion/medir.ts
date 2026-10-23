@@ -110,6 +110,16 @@ function crearCliente(l: Listo, v: Variante, c: number): ClienteMedicion {
 const variantesDe = (c: number): Variante[] =>
   c === 1 ? ['grpc-1-canal', 'h1-c-conexiones', 'h2-1-sesion'] : ['grpc-1-canal', 'grpc-c-canales', 'h1-c-conexiones', 'h1-1-conexion', 'h2-1-sesion'];
 
+/** Intentos (de unos 5 s) para que baje la carga antes de una corrida; después, se aborta todo. */
+const ESPERAS_MAXIMAS = 12;
+
+class CargaAjena extends Error {
+  constructor(carga: number, op: string, v: string, c: number) {
+    super(`carga de CPU ajena persistente (${String(carga)} % > ${String(UMBRAL)} %) antes de ${op} ${v} c=${String(c)}`);
+    this.name = 'CargaAjena';
+  }
+}
+
 const ahora = () => Number(process.hrtime.bigint()) / 1e6;
 const msCpu = (u: NodeJS.CpuUsage) => (u.user + u.system) / 1000;
 
@@ -119,6 +129,8 @@ export interface Corrida {
   concurrencia: number;
   repeticion: number;
   cargaPrevia: number;
+  /** Cuántas veces hubo que esperar a que bajara la carga antes de esta corrida (0 = ninguna). */
+  esperasPorCarga?: number;
   latencia: Resumen;
   /** Solo S1: hasta el primer fragmento. */
   primerFragmento?: Resumen;
@@ -151,7 +163,15 @@ async function corrida(hijo: ChildProcess, l: Listo, op: Operacion, v: Variante,
   const cliente = crearCliente(l, v, c);
   try {
     await lazo(cliente, op, c, PARAMETROS.calentamiento);
-    const cargaPrevia = await cargaCpu(300);
+    // No se mide con la máquina ocupada: si la carga pasa del umbral, se espera y se vuelve a medir; si
+    // sigue alta, se aborta TODO sin escribir nada (no se mezclan datos con carga ajena).
+    let cargaPrevia = await cargaCpu(300);
+    let esperasPorCarga = 0;
+    while (cargaPrevia > UMBRAL && !a.forzar) {
+      if (++esperasPorCarga > ESPERAS_MAXIMAS) throw new CargaAjena(cargaPrevia, op, v, c);
+      await new Promise((r) => setTimeout(r, 4000));
+      cargaPrevia = await cargaCpu(1000);
+    }
     const cliente0 = process.cpuUsage();
     const servidor0 = await cpuServidor(hijo);
     const r = await lazo(cliente, op, c, total);
@@ -164,6 +184,7 @@ async function corrida(hijo: ChildProcess, l: Listo, op: Operacion, v: Variante,
       concurrencia: c,
       repeticion,
       cargaPrevia,
+      esperasPorCarga,
       latencia: resumir(r.latencias),
       ...(op === 'S1' ? { primerFragmento: resumir(r.primeros) } : {}),
       pedidosPorSegundo: Math.round((total / r.paredMs) * 1000),
@@ -301,4 +322,12 @@ async function principal(): Promise<void> {
   }
 }
 
-await principal();
+try {
+  await principal();
+} catch (e) {
+  if (e instanceof CargaAjena) {
+    console.error(`NO SE MIDE: ${e.message}. No se escribió nada; cierra lo que esté usando la CPU y vuelve a correr.`);
+    process.exit(4);
+  }
+  throw e;
+}

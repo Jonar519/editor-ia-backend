@@ -24,4 +24,9 @@ process.on('message', (m: { tipo: string }) => {
   }
 });
 
+// Si el medidor termina (o aborta por carga ajena), el servidor no queda escuchando.
+process.on('disconnect', () => {
+  void s.cerrar().then(() => process.exit(0));
+});
+
 enviar({ tipo: 'listo', token: s.token, puertos: s.puertos, proxies: s.proxies, pid: process.pid });

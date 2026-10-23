@@ -171,7 +171,16 @@ export function generarInforme(d: DatosMedicion): string {
     for (const [k, v] of Object.entries(en)) e.push(`| ${k} | ${String(v)} |`);
     e.push(`| parámetros | calentamiento ${String(x.parametros.calentamiento)}, en serie ${String(x.parametros.serie)}, en concurrencia ${String(x.parametros.concurrencia)} con c = ${x.parametros.concurrencias.join(', ')}, ${String(x.parametros.repeticiones)} repeticiones |`);
     const cargas = [...x.serie, ...x.concurrencia].map((c) => c.cargaPrevia);
-    e.push(`| carga previa por corrida | máxima ${num(Math.max(...cargas), 1)} %, mediana ${num(medianaDeCorridas(cargas).mediana, 1)} % (${String(cargas.filter((c) => c > en.umbral).length)} corridas sobre el umbral de ${String(en.umbral)} %) |`);
+    const todas = [...x.serie, ...x.concurrencia];
+    const conEsperas = todas.filter((c) => (c.esperasPorCarga ?? 0) > 0).length;
+    const controlada = todas.every((c) => c.esperasPorCarga !== undefined);
+    e.push(
+      `| carga previa por corrida | máxima ${num(Math.max(...cargas), 1)} %, mediana ${num(medianaDeCorridas(cargas).mediana, 1)} %; ${String(cargas.filter((c) => c > en.umbral).length)} de ${String(cargas.length)} corridas sobre el umbral de ${String(en.umbral)} % ${
+        controlada
+          ? `(se esperó a que bajara antes de ${String(conEsperas)} corridas; ninguna se midió por encima)`
+          : '(**esta corrida solo REGISTRABA la carga previa; no esperaba a que bajara**: las que figuran sobre el umbral se midieron así)'
+      } |`,
+    );
     e.push('');
     if (en.rapido) e.push('> **Corrida rápida (`--rapido`)**: pocos pedidos, solo para probar el script. No sirve para comparar.\n');
 
