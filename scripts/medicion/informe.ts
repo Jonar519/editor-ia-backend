@@ -121,6 +121,25 @@ export function generarInforme(d: DatosMedicion): string {
   e.push('- **Nada sobre máquinas separadas.** Cliente y servidor corren en la misma máquina y compiten por la misma CPU.');
   e.push('- Tampoco: la compresión (ni la de gRPC ni gzip en JSON), la memoria a largo plazo, el costo del stack Express del API (se comparan transportes, no frameworks) ni el enlace navegador ↔ API. Todos *no medidos*.');
   e.push('- Los números son de **esta** máquina y de este momento; otra máquina da otros números. Las conclusiones de abajo son solo las que los datos de esta tabla muestran.');
+  e.push('- **La corrida de Windows no sirve para comparar transportes** (ver el diagnóstico que sigue): se presenta solo como comportamiento observado en este entorno. **La referencia para comparar transportes es la corrida de Linux.**');
+  e.push('');
+  e.push('## Diagnóstico del entorno: piso de latencia en Windows');
+  e.push('');
+  e.push('Antes de medir, un diagnóstico aparte (2 000 llamadas en serie, tres pasadas, servidor en otro proceso) encontró en **Windows** un piso de unos 2–3 ms por llamada en gRPC con mensajes chicos y en REST sobre HTTP/1.1, que **no aparece en Linux** en la misma máquina (contenedor). No es calentamiento (las tres pasadas daban lo mismo) ni se debe a `noDelay` en los sockets del cliente. **Su causa no se investigó** (decisión escrita): corregirlo exigiría cambiar la configuración TCP del sistema. Mientras exista, en Windows esos caminos miden sobre todo ese piso y no el transporte.');
+  e.push('');
+  e.push('Los p50 en serie de **esta** medición, por tamaño de pedido (mediana de las repeticiones, ms):');
+  e.push('');
+  e.push('| Entorno | Camino | Explicar 100 B | Explicar 8 KB | Explicar 64 KB |');
+  e.push('|---|---|---|---|---|');
+  for (const [etiqueta, x] of Object.entries(d.corridas)) {
+    for (const v of ['grpc-1-canal', 'h1-c-conexiones', 'h2-1-sesion']) {
+      const p = (op: string) => {
+        const g = agrupar(x.serie.filter((c) => c.operacion === op && c.variante === v))[0];
+        return g ? num(g.p50.mediana) : '—';
+      };
+      e.push(`| ${etiqueta} | ${VARIANTES[v] ?? v} | ${p('U2-100B')} | ${p('U2-8KB')} | ${p('U2-64KB')} |`);
+    }
+  }
   e.push('');
   e.push('## Cómo se midió');
   e.push('');
@@ -140,6 +159,12 @@ export function generarInforme(d: DatosMedicion): string {
   for (const [etiqueta, x] of Object.entries(d.corridas)) {
     const en = x.entorno;
     e.push(`## Entorno: ${etiqueta}`);
+    e.push('');
+    e.push(
+      etiqueta === 'linux'
+        ? '> **Referencia para comparar transportes.**'
+        : '> **Solo comportamiento observado en este entorno**: con el piso de latencia del diagnóstico, no sirve para comparar transportes.',
+    );
     e.push('');
     e.push('| | |');
     e.push('|---|---|');
@@ -204,7 +229,7 @@ export function generarInforme(d: DatosMedicion): string {
 
   e.push('## Lo que muestran los datos (calculado, sin interpretar)');
   e.push('');
-  e.push('Por escenario: el camino con el menor p50 (mediana de las repeticiones), cuántas veces más tardan los demás (×) y, en concurrencia, el mayor throughput. Se marca cuando los rangos del p50 de los dos primeros se solapan.');
+  e.push('Por escenario: el camino con el menor p50 (mediana de las repeticiones), cuántas veces más tardan los demás (×) y, en concurrencia, el mayor throughput. Se marca cuando los rangos del p50 de los dos primeros se solapan. Las líneas de **linux** son la referencia para comparar transportes; las de **windows**, solo comportamiento observado en ese entorno.');
   e.push('');
   e.push(...hechosTodos.filter(Boolean));
   e.push('');
