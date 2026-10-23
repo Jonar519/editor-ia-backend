@@ -208,7 +208,7 @@ Los embeddings son de **1024 dimensiones** (`vector(1024)` de la migración 0011
 | **Cookie de sesión para el WebSocket** | La cookie de refresco solo viaja a `/api/auth` por diseño (ADR 0001). Ampliarla a otra ruta abre CSRF y mezcla los dos mecanismos. |
 | **Ticket como primer mensaje** (después de abrir) | El socket queda abierto y sin autenticar un momento; hay que cerrarlo a mano si no llega. El subprotocolo autentica **antes** del 101. |
 | **`EventSource`** para la IA | Solo GET, sin cabeceras ni cuerpo. |
-| **REST/JSON entre el API y el servicio de IA** | Sin contrato tipado ni streaming bidireccional nativo. Es justo lo que P3 mide contra gRPC. |
+| **REST/JSON entre el API y el servicio de IA** | Sin contrato tipado ni streaming bidireccional nativo. Es justo lo que P3 mide contra gRPC: resultados, con lo que la medición NO permite concluir, en [`docs/medicion-p3.md`](../medicion-p3.md) (generado por `scripts\medir.bat`). |
 
 ## Riesgos
 
