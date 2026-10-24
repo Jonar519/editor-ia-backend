@@ -17,6 +17,7 @@ import {
   ListaComentarios,
   ListaVersiones,
   TextoActual,
+  VerificacionCadena,
   Version,
   VersionConTexto,
   ActualizarPerfil,
@@ -662,6 +663,14 @@ function registrarVersionesYComentarios(registro: OpenAPIRegistry): void {
     summary: 'Guardar el estado actual como versión manual (editor o propietario)',
     request: { params: IdDocumento },
     responses: { 201: { description: 'Versión creada', ...json(Version) }, ...sinRol, ...sinDocumento, 429: error('Demasiadas versiones seguidas'), ...sinTiempoReal, ...comunes },
+  });
+  registro.registerPath({
+    method: 'get',
+    path: '/api/documentos/{documentoId}/versiones/verificacion',
+    ...versiones,
+    summary: 'Verificar la cadena de hash de todas las versiones (cualquier rol); la recalcula la base',
+    request: { params: IdDocumento },
+    responses: { 200: { description: 'Resultado', ...json(VerificacionCadena) }, ...sinDocumento, 429: error('Demasiadas verificaciones seguidas'), ...comunes },
   });
   registro.registerPath({
     method: 'get',

@@ -1426,6 +1426,31 @@
           "caracteres"
         ]
       },
+      "VerificacionCadena": {
+        "type": "object",
+        "properties": {
+          "integra": {
+            "type": "boolean"
+          },
+          "versiones": {
+            "type": "integer",
+            "description": "Cuántas versiones se recalcularon (todas, no solo las 200 del historial)"
+          },
+          "alteradaDesde": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Número de la primera versión que no encadena; null si la cadena está íntegra"
+          }
+        },
+        "required": [
+          "integra",
+          "versiones",
+          "alteradaDesde"
+        ],
+        "description": "La base recalcula la cadena de hash (verificar_cadena_versiones)"
+      },
       "VersionConTexto": {
         "type": "object",
         "properties": {
@@ -5594,6 +5619,82 @@
           },
           "503": {
             "description": "El servidor de tiempo real no está disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documentos/{documentoId}/versiones/verificacion": {
+      "get": {
+        "tags": [
+          "versiones"
+        ],
+        "security": [
+          {
+            "acceso": []
+          }
+        ],
+        "summary": "Verificar la cadena de hash de todas las versiones (cualquier rol); la recalcula la base",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificacionCadena"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas verificaciones seguidas",
             "content": {
               "application/json": {
                 "schema": {
