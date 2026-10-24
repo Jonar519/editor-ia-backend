@@ -84,3 +84,22 @@ El análisis STRIDE completo se escribe en el bloque R. Este documento se abre e
   - el lockfile cambiado solo en esas dos entradas, con su integridad;
   - `npm audit` en el CI y gitleaks.
 - **Estado:** aceptado por escrito el 23-10-2026. Se revisa al actualizar Express o body-parser: los overrides se quitan cuando Express traiga por sí solo una versión parcheada con 14 días o más.
+
+### R-06 · Inyección de CSS: `'unsafe-inline'` en los estilos de la CSP
+
+- **Origen:** bloque R. La CSP del frontend (`editor-ia-frontend/scripts/lib/csp.mjs`, como `<meta>` en el `index.html` del build) permite `'unsafe-inline'` **solo** en `style-src-elem` y `style-src-attr`. Lo midió la E2E completa con `style-src 'self'` estricto:
+  - **CodeMirror** (`style-mod`) mete su CSS en un `<style>` (solo usa hojas construidas dentro de un shadow root). Sin él, el editor se rompe: la lista no continúa bien. Pasaba en 16 pruebas por navegador.
+  - **La presencia de `y-codemirror.next`** pone `style="background-color: …"` en el cursor y la selección remotos, con `lib0/dom`, que va en el chunk compartido de la vista renderizada. Por eso el navegador atribuye la violación a ese chunk. Sin ese estilo, Firefox deja el atributo vacío y axe midió en Chromium un contraste de 1,08:1 en la etiqueta con el nombre.
+  - Ninguno de los dos atributos lo pone código nuestro.
+- **Qué puede pasar:** si alguien lograra meter un `<style>` o un atributo `style` en la página, podría cambiar cómo se ve: tapar o falsear partes de la interfaz, o intentar sacar datos con selectores de CSS.
+- **Lo que lo acota hoy:**
+  - `script-src 'self'` estricto: sin `'unsafe-inline'` ni `'unsafe-eval'`, con prueba unitaria y mutaciones R03–R04 del frontend. La E2E `csp.spec.mjs` comprueba que un `<script>` en línea no corre;
+  - no hay ningún camino que inserte HTML: los nodos se crean con `h()`, el Markdown no admite HTML, y está la batería XSS con las mutaciones O01–O04;
+  - `img-src`, `font-src` y `connect-src` son `'self'`: un CSS inyectado solo podría pedir recursos al propio origen, no mandar datos afuera;
+  - un atributo `style` no tiene selectores;
+  - `'unsafe-inline'` en otra directiva (también en `style-src`) hace fallar la prueba unitaria (mutación R05);
+  - cualquier otra violación hace fallar la E2E: la fixture y la página de la segunda persona juntan las violaciones de todas sus navegaciones.
+- **Salida para el despliegue (no hecha: sin despliegue en R):**
+  - un **nonce por respuesta** generado por el servidor, entregado a CodeMirror con `EditorView.cspNonce`, con `style-src-elem 'nonce-…'` en lugar de `'unsafe-inline'`. La presencia de y-codemirror seguiría pidiendo `style-src-attr` (o `'unsafe-hashes'` con los hashes de sus atributos, que son finitos);
+  - **`frame-ancestors 'none'` por cabecera:** no funciona en `<meta>`.
+- **Estado:** aceptado por escrito al cerrar R2 (opción 1).
