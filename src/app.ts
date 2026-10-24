@@ -48,7 +48,9 @@ export function crearApp(d: DependenciasApp): Express {
   );
   app.use(helmet());
   app.use(medirPeticiones(d.metricas));
-  app.use(express.json({ limit: LIMITE_CUERPO }));
+  // inflate: false (GHSA-27r3-jxmh-p828, defensa adicional): un cuerpo comprimido (Content-Encoding
+  // distinto de identity) se rechaza con 415 sin descomprimirlo. El frontend nunca comprime pedidos.
+  app.use(express.json({ limit: LIMITE_CUERPO, inflate: false }));
 
   app.use(
     rutasSalud({

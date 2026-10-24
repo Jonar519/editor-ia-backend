@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { ErrorHttp } from '../../src/http/errores.js';
@@ -20,6 +21,17 @@ describe('HTTP: formato de errores y seguridad básica', () => {
     const r = await request(app).post('/eco').set('content-type', 'application/json').send('{"roto":');
     expect(r.status).toBe(400);
     expect((r.body as CuerpoError).error.codigo).toBe('json_invalido');
+  });
+
+  it('cuerpo JSON comprimido (Content-Encoding: gzip) → 415 sin descomprimirlo (GHSA-27r3-jxmh-p828)', async () => {
+    const { app } = appDePrueba({ extender: (a) => a.post('/eco', (req, res) => res.json(req.body)) });
+    const comprimido = gzipSync(Buffer.from('{"saludo":"hola"}'));
+    const r = await request(app).post('/eco').set('content-type', 'application/json').set('content-encoding', 'gzip').send(comprimido);
+    expect(r.status).toBe(415);
+    expect((r.body as CuerpoError).error.codigo).toBe('codificacion_no_admitida');
+    // Sin comprimir, el mismo cuerpo pasa.
+    const plano = await request(app).post('/eco').set('content-type', 'application/json').send('{"saludo":"hola"}');
+    expect(plano.body).toEqual({ saludo: 'hola' });
   });
 
   it('cuerpo de más de 100 kB → 413', async () => {

@@ -74,3 +74,13 @@ El análisis STRIDE completo se escribe en el bloque R. Este documento se abre e
   - la autoría de cada cambio queda registrada (actualizaciones con autor y versiones).
 - **Lo que no hay:** una garantía de que un modelo real ignore las órdenes del documento. La batería de 20 cargas prueba la estructura del prompt contra un modelo "ingenuo"; falta evaluar el modelo real elegido, y un aviso en la interfaz de que la respuesta se basa en contenido del documento (Q).
 - **Estado:** abierto hasta elegir el proveedor real; entonces se corre la batería contra ese modelo.
+
+### R-05 · Dependencias publicadas hace menos de 14 días (excepción por GHSA-27r3-jxmh-p828)
+
+- **Origen:** 23-10-2026. Aviso alto en `body-parser` 2.0.0–2.3.0 (por Express 5.3.0): un cuerpo comprimido con bytes sobrantes al final provoca denegación de servicio. Era alcanzable en el API (`express.json()` y `express.raw()` del avatar).
+- **Qué se hizo:** `body-parser` 2.4.0 y `qs` 6.16.1 con overrides exactos, por una **excepción escrita** a la regla de los 14 días (ADR 0003). Y, aparte, `inflate: false` en los dos parsers: un cuerpo con `Content-Encoding` comprimido recibe 415 sin descomprimirse (pruebas y mutaciones B01–B03). Con eso, la ruta vulnerable no se recorre aunque una versión futura reintrodujera el problema.
+- **Qué riesgo queda:** el que la regla de los 14 días busca evitar: una versión muy nueva puede traer un error o un cambio malicioso que todavía nadie detectó. Lo acotan:
+  - la lectura del diff de las dos versiones antes de aprobarlas (cambio acotado, sin red, archivos ni procesos nuevos);
+  - el lockfile cambiado solo en esas dos entradas, con su integridad;
+  - `npm audit` en el CI y gitleaks.
+- **Estado:** aceptado por escrito el 23-10-2026. Se revisa al actualizar Express o body-parser: los overrides se quitan cuando Express traiga por sí solo una versión parcheada con 14 días o más.

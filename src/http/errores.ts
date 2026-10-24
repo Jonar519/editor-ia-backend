@@ -59,6 +59,10 @@ export function manejadorErrores(log: Logger): ErrorRequestHandler {
       res.status(413).json(cuerpo('cuerpo_demasiado_grande', 'El cuerpo supera el tamaño permitido', solicitud));
       return;
     }
+    if (esErrorDeCuerpo(err) && err.type === 'encoding.unsupported') {
+      res.status(415).json(cuerpo('codificacion_no_admitida', 'El cuerpo no puede venir comprimido (Content-Encoding)', solicitud));
+      return;
+    }
     log.error({ err, solicitud }, 'error no controlado');
     res.status(500).json(cuerpo('interno', 'Error interno', solicitud));
   };

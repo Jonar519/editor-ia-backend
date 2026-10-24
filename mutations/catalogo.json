@@ -2063,6 +2063,33 @@
       "reemplazo": "        if (m.fin) return usoDe(m.uso);\n        if (m.texto) yield m.texto;\n      }\n      void uso; void completa;\n      throw errorGrpc(grpc.status.INTERNAL, 'la corriente terminó sin el mensaje final');\n    } finally {\n      senal?.removeEventListener('abort', alAbortar);\n      llamada.cancel();",
       "comando": "test",
       "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
+      "id": "B01",
+      "regla": "GHSA-27r3-jxmh-p828: el JSON comprimido no se descomprime (inflate: false)",
+      "archivo": "src/app.ts",
+      "buscar": "express.json({ limit: LIMITE_CUERPO, inflate: false })",
+      "reemplazo": "express.json({ limit: LIMITE_CUERPO })",
+      "comando": "test",
+      "pruebas": ["tests/integracion/http.test.ts"]
+    },
+    {
+      "id": "B02",
+      "regla": "GHSA-27r3-jxmh-p828: la imagen comprimida del avatar no se descomprime (inflate: false)",
+      "archivo": "src/cuenta/rutas.ts",
+      "buscar": "limit: BYTES_MAXIMOS_AVATAR, inflate: false",
+      "reemplazo": "limit: BYTES_MAXIMOS_AVATAR",
+      "comando": "test",
+      "pruebas": ["tests/integracion/avatar.test.ts"]
+    },
+    {
+      "id": "B03",
+      "regla": "Un cuerpo comprimido rechazado responde 415 codificacion_no_admitida (no un 500 genérico)",
+      "archivo": "src/http/errores.ts",
+      "buscar": "    if (esErrorDeCuerpo(err) && err.type === 'encoding.unsupported') {\n      res.status(415).json(cuerpo('codificacion_no_admitida', 'El cuerpo no puede venir comprimido (Content-Encoding)', solicitud));\n      return;\n    }\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/http.test.ts", "tests/integracion/avatar.test.ts"]
     }
   ]
 }

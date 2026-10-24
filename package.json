@@ -71,7 +71,9 @@
     "vitest": "5.0.4"
   },
   "overrides": {
+    "body-parser": "2.4.0",
     "deepmerge-ts": "8.0.2",
-    "mysql2": "3.24.6"
+    "mysql2": "3.24.6",
+    "qs": "6.16.1"
   }
 }
