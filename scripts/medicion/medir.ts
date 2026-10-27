@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { paquete } from '../../src/ia/contrato.js';
 import { clienteGrpc, clienteH1, clienteH2, type ClienteMedicion } from './clientes.js';
+import { cargaCpu } from './cpu.js';
 import { resumir, type Resumen } from './estadistica.js';
 import { generarInforme } from './informe.js';
 import { ORIGEN_MEDICION, vectorDenso } from './servidor.js';
@@ -39,18 +40,6 @@ export const PARAMETROS = a.rapido
   ? { calentamiento: 50, serie: 300, concurrencia: 1000, concurrencias: [1, 8, 32], repeticiones: 2 }
   : { calentamiento: 500, serie: 5000, concurrencia: 20_000, concurrencias: [1, 8, 32, 128], repeticiones: 5 };
 const UMBRAL = Number(a.umbral);
-
-// ─── Carga de CPU de la máquina ─────────────────────────────────────────────────
-
-/** % de CPU ocupada en toda la máquina durante `ms` (todos los núcleos). */
-async function cargaCpu(ms: number): Promise<number> {
-  const tomar = () => cpus().reduce((t, c) => ({ ocupado: t.ocupado + c.times.user + c.times.nice + c.times.sys + c.times.irq, total: t.total + c.times.user + c.times.nice + c.times.sys + c.times.irq + c.times.idle }), { ocupado: 0, total: 0 });
-  const antes = tomar();
-  await new Promise((r) => setTimeout(r, ms));
-  const despues = tomar();
-  const total = despues.total - antes.total;
-  return total > 0 ? Math.round(((despues.ocupado - antes.ocupado) / total) * 1000) / 10 : 0;
-}
 
 // ─── El proceso servidor ────────────────────────────────────────────────────────
 
