@@ -50,6 +50,7 @@ Los dos procesos comparten `.env` (el mismo `IA_SERVICE_TOKEN`). Sin el servicio
 | `medir.bat [--rapido]` | Medición P3: la misma operación por gRPC y por REST/JSON (HTTP/1.1 y h2c) en el mismo proceso. Escribe `docs/medicion-p3.json` y `docs/medicion-p3.md`. No mide si la CPU de la máquina ya está ocupada (más del 10 %). |
 | `carga.bat [--rapido]` | Pruebas de carga del bloque R contra el API real (`npm run build` antes): HTTP H1–H4 con autocannon y WebSocket W1–W2 con generadores propios. Usa la base de pruebas `cuaderno_carga_test`, que recrea, y la db 2 de Redis, que vacía; nunca la de desarrollo. Escribe `docs/carga-r.json` y `docs/carga-r.md`, que abre con lo que la medición no permite concluir. No mide con más del 10 % de CPU ocupada. |
 | `carga-linux.bat [--rapido]` | Lo mismo en el contenedor de Linux, en la red Docker de Cuaderno, contra los mismos PostgreSQL y Redis; junta sus datos con los de Windows. |
+| `almacenamiento.bat [--rapido]` | Cuánto ocupa cada versión según el tamaño y el contenido del documento, y si el límite de 30 por hora corta (riesgo R-02). Mismo API, base de pruebas y Redis que `carga.bat`. Escribe `docs/almacenamiento-r.json` y `docs/almacenamiento-r.md`. |
 | `npm run proto:generate` | Tipos TypeScript del contrato gRPC en `src/generated/ia` (no se versionan). |
 | `npm run proto:check` | `buf lint` y `buf breaking` del contrato contra `main` (lo corre el CI). |
 | `test.bat` | Vitest + Supertest contra la base de **pruebas** y Redis db 1. |
