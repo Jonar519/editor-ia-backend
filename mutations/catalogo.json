@@ -2144,6 +2144,15 @@
       "reemplazo": "    '## Cómo se midió',",
       "comando": "test",
       "pruebas": ["tests/unitarias/carga-contabilidad.test.ts"]
+    },
+    {
+      "id": "R07",
+      "regla": "Almacenamiento (R-02): el peor caso por hora sale del límite vigente de versiones",
+      "archivo": "scripts/carga/informe-almacenamiento.ts",
+      "buscar": "bytesPorVersion * LIMITES_VERSIONES.versiones.max *",
+      "reemplazo": "bytesPorVersion *",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/almacenamiento.test.ts"]
     }
   ]
 }
