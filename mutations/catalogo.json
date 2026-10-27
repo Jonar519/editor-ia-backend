@@ -2117,6 +2117,33 @@
       "reemplazo": "r.get('/:documentoId/versiones/verificacion', async",
       "comando": "test",
       "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "R04",
+      "regla": "Carga: las entregas esperadas son a los OTROS clientes del documento (sin contarse a sí mismo)",
+      "archivo": "scripts/carga/contabilidad.ts",
+      "buscar": "n + d.enviados * (d.clientes - 1)",
+      "reemplazo": "n + d.enviados * d.clientes",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/carga-contabilidad.test.ts"]
+    },
+    {
+      "id": "R05",
+      "regla": "Carga: la convergencia exige el mismo texto que el servidor",
+      "archivo": "scripts/carga/contabilidad.ts",
+      "buscar": " &&\n      servidor[d.documento] === primera.largo",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/carga-contabilidad.test.ts"]
+    },
+    {
+      "id": "R06",
+      "regla": "Carga: el informe abre con lo que la medición NO permite concluir",
+      "archivo": "scripts/carga/informe-carga.ts",
+      "buscar": "    TITULO_LIMITES,\n    '',\n    LIMITES,\n    '',\n    '## Cómo se midió',",
+      "reemplazo": "    '## Cómo se midió',",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/carga-contabilidad.test.ts"]
     }
   ]
 }
