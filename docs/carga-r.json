@@ -1,0 +1,4110 @@
+{
+ "corridas": {
+  "windows": {
+   "entorno": {
+    "etiqueta": "windows",
+    "fecha": "2026-10-27T04:16:38.742Z",
+    "cpu": "AMD Ryzen 9 7900 12-Core Processor",
+    "hilos": 24,
+    "ramGiB": 31.1,
+    "sistema": "Windows_NT 10.0.26300",
+    "node": "v24.13.1",
+    "autocannon": "8.0.0",
+    "postgres": "16.15 (Debian 16.15-1.pgdg12+2)",
+    "cargaInicial": 3.2,
+    "umbral": 10,
+    "forzado": false,
+    "rapido": false
+   },
+   "parametros": {
+    "conexiones": [
+     10,
+     50,
+     100
+    ],
+    "duracionS": 30,
+    "calentamientoS": 5,
+    "repeticiones": 3,
+    "sondaSolaS": 10,
+    "clientesW1": [
+     10,
+     50,
+     100
+    ],
+    "tasas": [
+     2,
+     5
+    ],
+    "documentosW2": 20,
+    "clientesPorDocumentoW2": 5,
+    "esperaFinalMs": 3000
+   },
+   "http": [
+    {
+     "escenario": "H1",
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 5.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2554.6,
+      "total": 76621,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 4,
+       "max": 101,
+       "media": 3.21
+      },
+      "codigos": {
+       "200": 76621
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 44.7,
+     "cpuClientePct": 19.6,
+     "rssMaxMiB": 191.8
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 3.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 3351.6,
+      "total": 100531,
+      "latenciaMs": {
+       "p50": 14,
+       "p90": 15,
+       "p99": 20,
+       "max": 69,
+       "media": 14.41
+      },
+      "codigos": {
+       "200": 100531
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 78.9,
+     "cpuClientePct": 28.6,
+     "rssMaxMiB": 240.5
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 3366.07,
+      "total": 100969,
+      "latenciaMs": {
+       "p50": 29,
+       "p90": 31,
+       "p99": 37,
+       "max": 101,
+       "media": 29.2
+      },
+      "codigos": {
+       "200": 100969
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 78.8,
+     "cpuClientePct": 28.6,
+     "rssMaxMiB": 243.2
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 6.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 3306.94,
+      "total": 99194,
+      "latenciaMs": {
+       "p50": 29,
+       "p90": 31,
+       "p99": 38,
+       "max": 175,
+       "media": 29.73
+      },
+      "codigos": {
+       "200": 99194
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 79.6,
+     "cpuClientePct": 27.1,
+     "rssMaxMiB": 243.2
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 2.1,
+     "esperasPorCarga": 1,
+     "resultado": {
+      "pedidosPorSegundo": 3405.67,
+      "total": 102157,
+      "latenciaMs": {
+       "p50": 14,
+       "p90": 15,
+       "p99": 18,
+       "max": 69,
+       "media": 14.19
+      },
+      "codigos": {
+       "200": 102157
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 79,
+     "cpuClientePct": 24.9,
+     "rssMaxMiB": 152.3
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 4.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2576.81,
+      "total": 77284,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 4,
+       "max": 35,
+       "media": 3.17
+      },
+      "codigos": {
+       "200": 77284
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 46.7,
+     "cpuClientePct": 19.3,
+     "rssMaxMiB": 162.4
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 4.8,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2583.14,
+      "total": 77479,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 4,
+       "max": 11,
+       "media": 3.15
+      },
+      "codigos": {
+       "200": 77479
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 44.5,
+     "cpuClientePct": 18.6,
+     "rssMaxMiB": 162.4
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 2.8,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 3343.07,
+      "total": 100278,
+      "latenciaMs": {
+       "p50": 14,
+       "p90": 15,
+       "p99": 19,
+       "max": 137,
+       "media": 14.45
+      },
+      "codigos": {
+       "200": 100278
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 80.5,
+     "cpuClientePct": 29,
+     "rssMaxMiB": 164.8
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 2.8,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 3351.87,
+      "total": 100543,
+      "latenciaMs": {
+       "p50": 29,
+       "p90": 31,
+       "p99": 37,
+       "max": 121,
+       "media": 29.33
+      },
+      "codigos": {
+       "200": 100543
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 81,
+     "cpuClientePct": 26.8,
+     "rssMaxMiB": 165.1
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 3.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1545.5,
+      "total": 46365,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 6,
+       "p99": 8,
+       "max": 22,
+       "media": 6.04
+      },
+      "codigos": {
+       "200": 46365
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 86.8,
+     "cpuClientePct": 12.7,
+     "rssMaxMiB": 254.4
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 3.6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1687.44,
+      "total": 50623,
+      "latenciaMs": {
+       "p50": 29,
+       "p90": 31,
+       "p99": 35,
+       "max": 69,
+       "media": 29.12
+      },
+      "codigos": {
+       "200": 50623
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.6,
+     "cpuClientePct": 15.6,
+     "rssMaxMiB": 256.2
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 7.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1654.34,
+      "total": 49630,
+      "latenciaMs": {
+       "p50": 59,
+       "p90": 63,
+       "p99": 81,
+       "max": 135,
+       "media": 59.89
+      },
+      "codigos": {
+       "200": 49630
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.8,
+     "cpuClientePct": 14.7,
+     "rssMaxMiB": 304.4
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 4.4,
+     "esperasPorCarga": 1,
+     "resultado": {
+      "pedidosPorSegundo": 1636.1,
+      "total": 49083,
+      "latenciaMs": {
+       "p50": 60,
+       "p90": 64,
+       "p99": 74,
+       "max": 122,
+       "media": 60.57
+      },
+      "codigos": {
+       "200": 49083
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.4,
+     "cpuClientePct": 15.7,
+     "rssMaxMiB": 305.9
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 4.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1631.74,
+      "total": 48952,
+      "latenciaMs": {
+       "p50": 30,
+       "p90": 32,
+       "p99": 37,
+       "max": 90,
+       "media": 30.13
+      },
+      "codigos": {
+       "200": 48952
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.2,
+     "cpuClientePct": 14.1,
+     "rssMaxMiB": 308.3
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 5.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1503.27,
+      "total": 45098,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 7,
+       "p99": 8,
+       "max": 68,
+       "media": 6.17
+      },
+      "codigos": {
+       "200": 45098
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 84.1,
+     "cpuClientePct": 13.8,
+     "rssMaxMiB": 308.6
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 4.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1495,
+      "total": 44850,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 7,
+       "p99": 8,
+       "max": 31,
+       "media": 6.2
+      },
+      "codigos": {
+       "200": 44850
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 83.2,
+     "cpuClientePct": 13.4,
+     "rssMaxMiB": 308.6
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 3.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1637.84,
+      "total": 49135,
+      "latenciaMs": {
+       "p50": 30,
+       "p90": 32,
+       "p99": 37,
+       "max": 58,
+       "media": 30.02
+      },
+      "codigos": {
+       "200": 49135
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.7,
+     "cpuClientePct": 14.9,
+     "rssMaxMiB": 309.5
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 6.8,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1630.67,
+      "total": 48920,
+      "latenciaMs": {
+       "p50": 60,
+       "p90": 64,
+       "p99": 73,
+       "max": 122,
+       "media": 60.77
+      },
+      "codigos": {
+       "200": 48920
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.3,
+     "cpuClientePct": 14.6,
+     "rssMaxMiB": 309.4
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 6.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1142.41,
+      "total": 34272,
+      "latenciaMs": {
+       "p50": 8,
+       "p90": 9,
+       "p99": 12,
+       "max": 137,
+       "media": 8.27
+      },
+      "codigos": {
+       "200": 34272
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.2,
+     "cpuClientePct": 12.2,
+     "rssMaxMiB": 330.8
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 4.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1200.47,
+      "total": 36014,
+      "latenciaMs": {
+       "p50": 41,
+       "p90": 44,
+       "p99": 49,
+       "max": 74,
+       "media": 41.13
+      },
+      "codigos": {
+       "200": 36014
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 104.1,
+     "cpuClientePct": 11.1,
+     "rssMaxMiB": 332.1
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 6.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1193.17,
+      "total": 35795,
+      "latenciaMs": {
+       "p50": 83,
+       "p90": 88,
+       "p99": 97,
+       "max": 147,
+       "media": 83.21
+      },
+      "codigos": {
+       "200": 35795
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.8,
+     "cpuClientePct": 15.5,
+     "rssMaxMiB": 333.9
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 9.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1198.91,
+      "total": 35967,
+      "latenciaMs": {
+       "p50": 82,
+       "p90": 87,
+       "p99": 96,
+       "max": 144,
+       "media": 82.81
+      },
+      "codigos": {
+       "200": 35967
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100.7,
+     "cpuClientePct": 14.2,
+     "rssMaxMiB": 335.3
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1197.87,
+      "total": 35936,
+      "latenciaMs": {
+       "p50": 41,
+       "p90": 44,
+       "p99": 50,
+       "max": 162,
+       "media": 41.21
+      },
+      "codigos": {
+       "200": 35936
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.9,
+     "cpuClientePct": 13.9,
+     "rssMaxMiB": 333.4
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 3.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1145.77,
+      "total": 34373,
+      "latenciaMs": {
+       "p50": 8,
+       "p90": 9,
+       "p99": 12,
+       "max": 19,
+       "media": 8.24
+      },
+      "codigos": {
+       "200": 34373
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 108.6,
+     "cpuClientePct": 11.8,
+     "rssMaxMiB": 333.4
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 3.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1139.87,
+      "total": 34196,
+      "latenciaMs": {
+       "p50": 8,
+       "p90": 9,
+       "p99": 12,
+       "max": 129,
+       "media": 8.29
+      },
+      "codigos": {
+       "200": 34196
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 110.7,
+     "cpuClientePct": 12.5,
+     "rssMaxMiB": 333.3
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 5.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1198.91,
+      "total": 35967,
+      "latenciaMs": {
+       "p50": 41,
+       "p90": 44,
+       "p99": 49,
+       "max": 166,
+       "media": 41.19
+      },
+      "codigos": {
+       "200": 35967
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.8,
+     "cpuClientePct": 14.7,
+     "rssMaxMiB": 334.5
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 7.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1205.3,
+      "total": 36159,
+      "latenciaMs": {
+       "p50": 82,
+       "p90": 86,
+       "p99": 97,
+       "max": 154,
+       "media": 82.37
+      },
+      "codigos": {
+       "200": 36159
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.2,
+     "cpuClientePct": 13.6,
+     "rssMaxMiB": 336.1
+    }
+   ],
+   "login": [
+    {
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 8.2,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1317.84,
+      "total": 39535,
+      "latenciaMs": {
+       "p50": 7,
+       "p90": 7,
+       "p99": 9,
+       "max": 244,
+       "media": 7.18
+      },
+      "codigos": {
+       "201": 20,
+       "429": 39515
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 226.7,
+      "total": 2267,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 5,
+       "p99": 6,
+       "max": 8,
+       "media": 3.96
+      },
+      "codigos": {
+       "200": 2267
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 141.2,
+      "total": 4236,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 7,
+       "p99": 8,
+       "max": 138,
+       "media": 6.55
+      },
+      "codigos": {
+       "200": 4236
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 61.3,
+     "rssMaxMiB": 338.8
+    },
+    {
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 6.2,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1784.77,
+      "total": 53543,
+      "latenciaMs": {
+       "p50": 27,
+       "p90": 31,
+       "p99": 36,
+       "max": 1070,
+       "media": 27.54
+      },
+      "codigos": {
+       "201": 20,
+       "429": 53523
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 230.2,
+      "total": 2302,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 11,
+       "media": 3.88
+      },
+      "codigos": {
+       "200": 2302
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 19.14,
+      "total": 574,
+      "latenciaMs": {
+       "p50": 52,
+       "p90": 58,
+       "p99": 65,
+       "max": 421,
+       "media": 51.73
+      },
+      "codigos": {
+       "200": 574
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 70.5,
+     "rssMaxMiB": 422.7
+    },
+    {
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 4.8,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1838.57,
+      "total": 55157,
+      "latenciaMs": {
+       "p50": 53,
+       "p90": 57,
+       "p99": 67,
+       "max": 2771,
+       "media": 53.98
+      },
+      "codigos": {
+       "201": 20,
+       "429": 55137
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 237.3,
+      "total": 2373,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 6,
+       "media": 3.76
+      },
+      "codigos": {
+       "200": 2373
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 9.47,
+      "total": 284,
+      "latenciaMs": {
+       "p50": 105,
+       "p90": 111,
+       "p99": 343,
+       "max": 701,
+       "media": 105.15
+      },
+      "codigos": {
+       "200": 284
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 65.5,
+     "rssMaxMiB": 349.9
+    },
+    {
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 2.8,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1837.64,
+      "total": 55129,
+      "latenciaMs": {
+       "p50": 53,
+       "p90": 57,
+       "p99": 66,
+       "max": 2741,
+       "media": 53.92
+      },
+      "codigos": {
+       "201": 20,
+       "429": 55109
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 237.3,
+      "total": 2373,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 6,
+       "media": 3.73
+      },
+      "codigos": {
+       "200": 2373
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 9.31,
+      "total": 279,
+      "latenciaMs": {
+       "p50": 105,
+       "p90": 113,
+       "p99": 140,
+       "max": 944,
+       "media": 106.93
+      },
+      "codigos": {
+       "200": 279
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 66,
+     "rssMaxMiB": 325.8
+    },
+    {
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 7,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1808.4,
+      "total": 54252,
+      "latenciaMs": {
+       "p50": 27,
+       "p90": 30,
+       "p99": 35,
+       "max": 1117,
+       "media": 27.15
+      },
+      "codigos": {
+       "201": 20,
+       "429": 54232
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 240.4,
+      "total": 2404,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 7,
+       "media": 3.67
+      },
+      "codigos": {
+       "200": 2404
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 19.14,
+      "total": 574,
+      "latenciaMs": {
+       "p50": 52,
+       "p90": 56,
+       "p99": 62,
+       "max": 416,
+       "media": 51.72
+      },
+      "codigos": {
+       "200": 574
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 67.8,
+     "rssMaxMiB": 385.2
+    },
+    {
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 3.9,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1338.07,
+      "total": 40142,
+      "latenciaMs": {
+       "p50": 7,
+       "p90": 7,
+       "p99": 8,
+       "max": 207,
+       "media": 7.08
+      },
+      "codigos": {
+       "201": 20,
+       "429": 40122
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 238.2,
+      "total": 2382,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 7,
+       "media": 3.72
+      },
+      "codigos": {
+       "200": 2382
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 143.5,
+      "total": 4305,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 7,
+       "p99": 8,
+       "max": 14,
+       "media": 6.43
+      },
+      "codigos": {
+       "200": 4305
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 61.3,
+     "rssMaxMiB": 326.3
+    },
+    {
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 5.8,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1345.7,
+      "total": 40371,
+      "latenciaMs": {
+       "p50": 7,
+       "p90": 7,
+       "p99": 8,
+       "max": 212,
+       "media": 7.04
+      },
+      "codigos": {
+       "201": 20,
+       "429": 40351
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 239.7,
+      "total": 2397,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 7,
+       "media": 3.69
+      },
+      "codigos": {
+       "200": 2397
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 143.47,
+      "total": 4304,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 7,
+       "p99": 8,
+       "max": 18,
+       "media": 6.43
+      },
+      "codigos": {
+       "200": 4304
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 62.5,
+     "rssMaxMiB": 326.3
+    },
+    {
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 7.6,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1822.14,
+      "total": 54664,
+      "latenciaMs": {
+       "p50": 26,
+       "p90": 30,
+       "p99": 36,
+       "max": 1183,
+       "media": 26.96
+      },
+      "codigos": {
+       "201": 20,
+       "429": 54644
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 240,
+      "total": 2400,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 7,
+       "media": 3.69
+      },
+      "codigos": {
+       "200": 2400
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 19.7,
+      "total": 591,
+      "latenciaMs": {
+       "p50": 51,
+       "p90": 56,
+       "p99": 69,
+       "max": 136,
+       "media": 50.31
+      },
+      "codigos": {
+       "200": 591
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 72.3,
+     "rssMaxMiB": 394.3
+    },
+    {
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 6.9,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 1872.34,
+      "total": 56170,
+      "latenciaMs": {
+       "p50": 52,
+       "p90": 57,
+       "p99": 65,
+       "max": 2932,
+       "media": 52.93
+      },
+      "codigos": {
+       "201": 20,
+       "429": 56150
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 240.6,
+      "total": 2406,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 5,
+       "max": 8,
+       "media": 3.67
+      },
+      "codigos": {
+       "200": 2406
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 9.44,
+      "total": 283,
+      "latenciaMs": {
+       "p50": 103,
+       "p90": 112,
+       "p99": 180,
+       "max": 926,
+       "media": 105.28
+      },
+      "codigos": {
+       "200": 283
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 64.2,
+     "rssMaxMiB": 358.8
+    }
+   ],
+   "ws": [
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 1,
+     "cargaPrevia": 5.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 5274,
+       "media": 1.2917527493363667,
+       "p50": 1.1127,
+       "p95": 2.3955,
+       "p99": 2.833,
+       "max": 3.5627
+      },
+      "enviados": 586,
+      "esperados": 5274,
+      "recibidos": 5274,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 20,
+     "entregasPorSegundo": 176,
+     "filasInsertadas": 588,
+     "cpuServidorPct": 2.1,
+     "cpuGeneradoresPct": 1.1,
+     "rssMaxMiB": 328.9
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 1,
+     "cargaPrevia": 3.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 5292,
+       "media": 0.9411389644746773,
+       "p50": 0.929,
+       "p95": 1.271,
+       "p99": 1.4711,
+       "max": 4.6472
+      },
+      "enviados": 588,
+      "esperados": 5292,
+      "recibidos": 5292,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 20,
+     "entregasPorSegundo": 176,
+     "filasInsertadas": 589,
+     "cpuServidorPct": 2.3,
+     "cpuGeneradoresPct": 1,
+     "rssMaxMiB": 329.2
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 1,
+     "cargaPrevia": 3.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 5292,
+       "media": 0.9617653439153475,
+       "p50": 0.9492,
+       "p95": 1.3487,
+       "p99": 1.628,
+       "max": 2.5303
+      },
+      "enviados": 588,
+      "esperados": 5292,
+      "recibidos": 5292,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 20,
+     "entregasPorSegundo": 176,
+     "filasInsertadas": 590,
+     "cpuServidorPct": 1.7,
+     "cpuGeneradoresPct": 1.7,
+     "rssMaxMiB": 329.3
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 1,
+     "cargaPrevia": 4.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 13320,
+       "media": 1.0564253003002964,
+       "p50": 1.0243,
+       "p95": 1.5398,
+       "p99": 1.8293,
+       "max": 2.274
+      },
+      "enviados": 1480,
+      "esperados": 13320,
+      "recibidos": 13320,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 49,
+     "entregasPorSegundo": 444,
+     "filasInsertadas": 1160,
+     "cpuServidorPct": 4.5,
+     "cpuGeneradoresPct": 3,
+     "rssMaxMiB": 337.1
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 1,
+     "cargaPrevia": 2.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 13320,
+       "media": 1.0797268693693651,
+       "p50": 1.0374,
+       "p95": 1.5096,
+       "p99": 1.7837,
+       "max": 5.9483
+      },
+      "enviados": 1480,
+      "esperados": 13320,
+      "recibidos": 13320,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 49,
+     "entregasPorSegundo": 444,
+     "filasInsertadas": 1167,
+     "cpuServidorPct": 4.8,
+     "cpuGeneradoresPct": 3.3,
+     "rssMaxMiB": 336.5
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 1,
+     "cargaPrevia": 2.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 13284,
+       "media": 1.2947060222824436,
+       "p50": 1.1829,
+       "p95": 1.9311,
+       "p99": 2.5529,
+       "max": 14.07
+      },
+      "enviados": 1476,
+      "esperados": 13284,
+      "recibidos": 13284,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 49,
+     "entregasPorSegundo": 443,
+     "filasInsertadas": 1162,
+     "cpuServidorPct": 4.1,
+     "cpuGeneradoresPct": 3,
+     "rssMaxMiB": 342.5
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 2,
+     "cargaPrevia": 3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 144109,
+       "media": 6.097005809491416,
+       "p50": 4.4556,
+       "p95": 17.5751,
+       "p99": 21.0344,
+       "max": 29.0526
+      },
+      "enviados": 2941,
+      "esperados": 144109,
+      "recibidos": 144109,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 98,
+     "entregasPorSegundo": 4804,
+     "filasInsertadas": 2948,
+     "cpuServidorPct": 20.5,
+     "cpuGeneradoresPct": 27.7,
+     "rssMaxMiB": 346.2
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 2,
+     "cargaPrevia": 4.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 144011,
+       "media": 4.993444228565854,
+       "p50": 4.516,
+       "p95": 8.9749,
+       "p99": 19.0675,
+       "max": 38.7138
+      },
+      "enviados": 2939,
+      "esperados": 144011,
+      "recibidos": 144011,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 98,
+     "entregasPorSegundo": 4800,
+     "filasInsertadas": 2939,
+     "cpuServidorPct": 19.1,
+     "cpuGeneradoresPct": 30.8,
+     "rssMaxMiB": 359.1
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 2,
+     "cargaPrevia": 2.8,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 144354,
+       "media": 4.593758169500033,
+       "p50": 4.4924,
+       "p95": 7.3153,
+       "p99": 9.0267,
+       "max": 17.9272
+      },
+      "enviados": 2946,
+      "esperados": 144354,
+      "recibidos": 144354,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 98,
+     "entregasPorSegundo": 4812,
+     "filasInsertadas": 2950,
+     "cpuServidorPct": 22.1,
+     "cpuGeneradoresPct": 37.8,
+     "rssMaxMiB": 360.1
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 2,
+     "cargaPrevia": 6.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 357553,
+       "media": 12.731407017141391,
+       "p50": 9.5093,
+       "p95": 34.2143,
+       "p99": 63.0454,
+       "max": 87.9968
+      },
+      "enviados": 7297,
+      "esperados": 357553,
+      "recibidos": 357553,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 243,
+     "entregasPorSegundo": 11918,
+     "filasInsertadas": 5135,
+     "cpuServidorPct": 53.1,
+     "cpuGeneradoresPct": 90.4,
+     "rssMaxMiB": 433.7
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 2,
+     "cargaPrevia": 2.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 356573,
+       "media": 16.353253666430298,
+       "p50": 8.6539,
+       "p95": 78.4968,
+       "p99": 111.0868,
+       "max": 147.819
+      },
+      "enviados": 7277,
+      "esperados": 356573,
+      "recibidos": 356573,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 243,
+     "entregasPorSegundo": 11886,
+     "filasInsertadas": 5229,
+     "cpuServidorPct": 58.5,
+     "cpuGeneradoresPct": 125.3,
+     "rssMaxMiB": 616.6
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 2,
+     "cargaPrevia": 2.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 354123,
+       "media": 24.120467652482144,
+       "p50": 10.0885,
+       "p95": 118.4463,
+       "p99": 144.6337,
+       "max": 175.2123
+      },
+      "enviados": 7227,
+      "esperados": 354123,
+      "recibidos": 354123,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 241,
+     "entregasPorSegundo": 11804,
+     "filasInsertadas": 4957,
+     "cpuServidorPct": 64,
+     "cpuGeneradoresPct": 141.8,
+     "rssMaxMiB": 688.2
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 3.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 585387,
+       "media": 79.71088754089212,
+       "p50": 65.8797,
+       "p95": 208.5663,
+       "p99": 263.778,
+       "max": 312.2454
+      },
+      "enviados": 5913,
+      "esperados": 585387,
+      "recibidos": 585387,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 197,
+     "entregasPorSegundo": 19513,
+     "filasInsertadas": 4120,
+     "cpuServidorPct": 89.8,
+     "cpuGeneradoresPct": 286,
+     "rssMaxMiB": 709.3
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 5.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 587763,
+       "media": 56.70383728254389,
+       "p50": 20.7984,
+       "p95": 183.0095,
+       "p99": 208.4265,
+       "max": 260.479
+      },
+      "enviados": 5937,
+      "esperados": 587763,
+      "recibidos": 587763,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 198,
+     "entregasPorSegundo": 19592,
+     "filasInsertadas": 3731,
+     "cpuServidorPct": 97.5,
+     "cpuGeneradoresPct": 337.6,
+     "rssMaxMiB": 771.8
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 3.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 579348,
+       "media": 71.63600779945614,
+       "p50": 31.791,
+       "p95": 217.859,
+       "p99": 241.8123,
+       "max": 281.6932
+      },
+      "enviados": 5852,
+      "esperados": 579348,
+      "recibidos": 579348,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 195,
+     "entregasPorSegundo": 19312,
+     "filasInsertadas": 3459,
+     "cpuServidorPct": 100,
+     "cpuGeneradoresPct": 334.9,
+     "rssMaxMiB": 820.9
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 5.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 695970,
+       "media": 346.68402339396096,
+       "p50": 239.6853,
+       "p95": 944.1517,
+       "p99": 1121.3834,
+       "max": 1469.0274
+      },
+      "enviados": 7030,
+      "esperados": 695970,
+      "recibidos": 695970,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 234,
+     "entregasPorSegundo": 23199,
+     "filasInsertadas": 1264,
+     "cpuServidorPct": 99.6,
+     "cpuGeneradoresPct": 370.9,
+     "rssMaxMiB": 836.9
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 7.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 613800,
+       "media": 371.84174035956516,
+       "p50": 280.9356,
+       "p95": 887.3164,
+       "p99": 1059.3432,
+       "max": 1611.568
+      },
+      "enviados": 6200,
+      "esperados": 613800,
+      "recibidos": 613800,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 207,
+     "entregasPorSegundo": 20460,
+     "filasInsertadas": 2206,
+     "cpuServidorPct": 97.6,
+     "cpuGeneradoresPct": 361.7,
+     "rssMaxMiB": 913.5
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 2.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 533808,
+       "media": 378.58294258702585,
+       "p50": 322.3941,
+       "p95": 844.8389,
+       "p99": 1054.2108,
+       "max": 1435.0107
+      },
+      "enviados": 5392,
+      "esperados": 533808,
+      "recibidos": 533808,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 180,
+     "entregasPorSegundo": 17794,
+     "filasInsertadas": 2884,
+     "cpuServidorPct": 98.4,
+     "cpuGeneradoresPct": 364.1,
+     "rssMaxMiB": 955.2
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 5.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 23492,
+       "media": 2.7319030563596147,
+       "p50": 2.4112,
+       "p95": 5.4477,
+       "p99": 7.3997,
+       "max": 10.0822
+      },
+      "enviados": 5873,
+      "esperados": 23492,
+      "recibidos": 23492,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 196,
+     "entregasPorSegundo": 783,
+     "filasInsertadas": 5903,
+     "cpuServidorPct": 11.4,
+     "cpuGeneradoresPct": 13,
+     "rssMaxMiB": 886.3
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 4.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 23432,
+       "media": 2.1259692770570093,
+       "p50": 1.9044,
+       "p95": 4.2657,
+       "p99": 5.4001,
+       "max": 7.075
+      },
+      "enviados": 5858,
+      "esperados": 23432,
+      "recibidos": 23432,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 195,
+     "entregasPorSegundo": 781,
+     "filasInsertadas": 5897,
+     "cpuServidorPct": 11.6,
+     "cpuGeneradoresPct": 11.7,
+     "rssMaxMiB": 875.5
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 5.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 23496,
+       "media": 1.9690356528770905,
+       "p50": 1.7497,
+       "p95": 3.9506,
+       "p99": 5.3534,
+       "max": 7.4735
+      },
+      "enviados": 5874,
+      "esperados": 23496,
+      "recibidos": 23496,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 196,
+     "entregasPorSegundo": 783,
+     "filasInsertadas": 5916,
+     "cpuServidorPct": 9,
+     "cpuGeneradoresPct": 9.5,
+     "rssMaxMiB": 854.7
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 7.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 59120,
+       "media": 4.404069722598101,
+       "p50": 4.1381,
+       "p95": 8.2872,
+       "p99": 10.5825,
+       "max": 15.5871
+      },
+      "enviados": 14780,
+      "esperados": 59120,
+      "recibidos": 59120,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 493,
+     "entregasPorSegundo": 1971,
+     "filasInsertadas": 11600,
+     "cpuServidorPct": 22,
+     "cpuGeneradoresPct": 23.6,
+     "rssMaxMiB": 854.6
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 6.9,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 59124,
+       "media": 4.9145572424057535,
+       "p50": 4.3038,
+       "p95": 10.478,
+       "p99": 13.2385,
+       "max": 18.721
+      },
+      "enviados": 14781,
+      "esperados": 59124,
+      "recibidos": 59124,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 493,
+     "entregasPorSegundo": 1971,
+     "filasInsertadas": 11623,
+     "cpuServidorPct": 20,
+     "cpuGeneradoresPct": 23,
+     "rssMaxMiB": 857.7
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 6.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 58996,
+       "media": 4.6868684843040604,
+       "p50": 3.8962,
+       "p95": 10.1687,
+       "p99": 13.8009,
+       "max": 20.0579
+      },
+      "enviados": 14749,
+      "esperados": 58996,
+      "recibidos": 58996,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 492,
+     "entregasPorSegundo": 1967,
+     "filasInsertadas": 11600,
+     "cpuServidorPct": 21.6,
+     "cpuGeneradoresPct": 26.4,
+     "rssMaxMiB": 864.8
+    }
+   ]
+  },
+  "linux": {
+   "entorno": {
+    "etiqueta": "linux",
+    "fecha": "2026-10-27T04:57:19.018Z",
+    "cpu": "AMD Ryzen 9 7900 12-Core Processor",
+    "hilos": 24,
+    "ramGiB": 15.1,
+    "sistema": "Linux 6.6.87.2-microsoft-standard-WSL2",
+    "node": "v24.20.0",
+    "autocannon": "8.0.0",
+    "postgres": "16.15 (Debian 16.15-1.pgdg12+2)",
+    "cargaInicial": 0.4,
+    "umbral": 10,
+    "forzado": false,
+    "rapido": false
+   },
+   "parametros": {
+    "conexiones": [
+     10,
+     50,
+     100
+    ],
+    "duracionS": 30,
+    "calentamientoS": 5,
+    "repeticiones": 3,
+    "sondaSolaS": 10,
+    "clientesW1": [
+     10,
+     50,
+     100
+    ],
+    "tasas": [
+     2,
+     5
+    ],
+    "documentosW2": 20,
+    "clientesPorDocumentoW2": 5,
+    "esperaFinalMs": 3000
+   },
+   "http": [
+    {
+     "escenario": "H1",
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 0,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10984.54,
+      "total": 329509,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 3,
+       "media": 0.15
+      },
+      "codigos": {
+       "200": 329509
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100,
+     "cpuClientePct": 51.9,
+     "rssMaxMiB": 298.1
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 0.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10985.87,
+      "total": 329580,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 8,
+       "max": 12,
+       "media": 4.09
+      },
+      "codigos": {
+       "200": 329580
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 99,
+     "cpuClientePct": 51.5,
+     "rssMaxMiB": 303.2
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10878.67,
+      "total": 326353,
+      "latenciaMs": {
+       "p50": 9,
+       "p90": 9,
+       "p99": 14,
+       "max": 21,
+       "media": 8.76
+      },
+      "codigos": {
+       "200": 326353
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 99.3,
+     "cpuClientePct": 51.7,
+     "rssMaxMiB": 309.2
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 0.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10865.6,
+      "total": 325965,
+      "latenciaMs": {
+       "p50": 9,
+       "p90": 9,
+       "p99": 13,
+       "max": 159,
+       "media": 8.78
+      },
+      "codigos": {
+       "200": 325965
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 99.3,
+     "cpuClientePct": 51.5,
+     "rssMaxMiB": 309.4
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10947.74,
+      "total": 328426,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 8,
+       "max": 12,
+       "media": 4.11
+      },
+      "codigos": {
+       "200": 328426
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 99,
+     "cpuClientePct": 51.4,
+     "rssMaxMiB": 309.5
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 11022.94,
+      "total": 330669,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 4,
+       "media": 0.14
+      },
+      "codigos": {
+       "200": 330669
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100,
+     "cpuClientePct": 51.8,
+     "rssMaxMiB": 310.3
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10992.27,
+      "total": 329727,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 4,
+       "media": 0.14
+      },
+      "codigos": {
+       "200": 329727
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 100,
+     "cpuClientePct": 51.7,
+     "rssMaxMiB": 309.9
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 0.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10984.8,
+      "total": 329521,
+      "latenciaMs": {
+       "p50": 4,
+       "p90": 4,
+       "p99": 8,
+       "max": 22,
+       "media": 4.09
+      },
+      "codigos": {
+       "200": 329521
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 99,
+     "cpuClientePct": 52,
+     "rssMaxMiB": 309.9
+    },
+    {
+     "escenario": "H1",
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 10995.47,
+      "total": 329849,
+      "latenciaMs": {
+       "p50": 9,
+       "p90": 9,
+       "p99": 15,
+       "max": 24,
+       "media": 8.62
+      },
+      "codigos": {
+       "200": 329849
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 99.4,
+     "cpuClientePct": 53.5,
+     "rssMaxMiB": 310.1
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2580.81,
+      "total": 77407,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 5,
+       "max": 9,
+       "media": 3.44
+      },
+      "codigos": {
+       "200": 77407
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.9,
+     "cpuClientePct": 16.3,
+     "rssMaxMiB": 326.6
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 1.6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2610.6,
+      "total": 78301,
+      "latenciaMs": {
+       "p50": 18,
+       "p90": 20,
+       "p99": 23,
+       "max": 27,
+       "media": 18.67
+      },
+      "codigos": {
+       "200": 78301
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.7,
+     "cpuClientePct": 17.5,
+     "rssMaxMiB": 339.5
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 0.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2566.87,
+      "total": 76994,
+      "latenciaMs": {
+       "p50": 38,
+       "p90": 41,
+       "p99": 46,
+       "max": 52,
+       "media": 38.45
+      },
+      "codigos": {
+       "200": 76994
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.7,
+     "cpuClientePct": 16.9,
+     "rssMaxMiB": 369.8
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2585.67,
+      "total": 77553,
+      "latenciaMs": {
+       "p50": 38,
+       "p90": 40,
+       "p99": 44,
+       "max": 50,
+       "media": 38.16
+      },
+      "codigos": {
+       "200": 77553
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.4,
+     "cpuClientePct": 17.3,
+     "rssMaxMiB": 369.4
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 0.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2629.14,
+      "total": 78852,
+      "latenciaMs": {
+       "p50": 18,
+       "p90": 20,
+       "p99": 23,
+       "max": 27,
+       "media": 18.55
+      },
+      "codigos": {
+       "200": 78852
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.1,
+     "cpuClientePct": 17.3,
+     "rssMaxMiB": 369.5
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2580,
+      "total": 77384,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 5,
+       "max": 9,
+       "media": 3.44
+      },
+      "codigos": {
+       "200": 77384
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102,
+     "cpuClientePct": 16.2,
+     "rssMaxMiB": 370.3
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 0.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2560.14,
+      "total": 76790,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 5,
+       "max": 14,
+       "media": 3.46
+      },
+      "codigos": {
+       "200": 76790
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.4,
+     "cpuClientePct": 16.2,
+     "rssMaxMiB": 442.8
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2644.2,
+      "total": 79308,
+      "latenciaMs": {
+       "p50": 18,
+       "p90": 20,
+       "p99": 22,
+       "max": 25,
+       "media": 18.47
+      },
+      "codigos": {
+       "200": 79308
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.1,
+     "cpuClientePct": 18,
+     "rssMaxMiB": 441.2
+    },
+    {
+     "escenario": "H2",
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 0.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 2581.27,
+      "total": 77422,
+      "latenciaMs": {
+       "p50": 38,
+       "p90": 40,
+       "p99": 45,
+       "max": 57,
+       "media": 38.23
+      },
+      "codigos": {
+       "200": 77422
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.6,
+     "cpuClientePct": 17.4,
+     "rssMaxMiB": 441.5
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 0.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1707.1,
+      "total": 51213,
+      "latenciaMs": {
+       "p50": 5,
+       "p90": 6,
+       "p99": 9,
+       "max": 15,
+       "media": 5.38
+      },
+      "codigos": {
+       "200": 51213
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 110.1,
+     "cpuClientePct": 12.1,
+     "rssMaxMiB": 455.9
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1727.34,
+      "total": 51820,
+      "latenciaMs": {
+       "p50": 28,
+       "p90": 30,
+       "p99": 34,
+       "max": 46,
+       "media": 28.44
+      },
+      "codigos": {
+       "200": 51820
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.9,
+     "cpuClientePct": 12.1,
+     "rssMaxMiB": 456.5
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 0.6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1694.84,
+      "total": 50845,
+      "latenciaMs": {
+       "p50": 58,
+       "p90": 61,
+       "p99": 67,
+       "max": 73,
+       "media": 58.46
+      },
+      "codigos": {
+       "200": 50845
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 103.4,
+     "cpuClientePct": 15.4,
+     "rssMaxMiB": 457.6
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 0.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1696.44,
+      "total": 50893,
+      "latenciaMs": {
+       "p50": 58,
+       "p90": 61,
+       "p99": 66,
+       "max": 73,
+       "media": 58.4
+      },
+      "codigos": {
+       "200": 50893
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.4,
+     "cpuClientePct": 14.9,
+     "rssMaxMiB": 458.5
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 0.6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1738.44,
+      "total": 52153,
+      "latenciaMs": {
+       "p50": 28,
+       "p90": 30,
+       "p99": 34,
+       "max": 40,
+       "media": 28.24
+      },
+      "codigos": {
+       "200": 52153
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.8,
+     "cpuClientePct": 15.3,
+     "rssMaxMiB": 467.7
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 1.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1744.27,
+      "total": 52328,
+      "latenciaMs": {
+       "p50": 5,
+       "p90": 6,
+       "p99": 8,
+       "max": 13,
+       "media": 5.23
+      },
+      "codigos": {
+       "200": 52328
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 105.9,
+     "cpuClientePct": 15.3,
+     "rssMaxMiB": 466.6
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1732.97,
+      "total": 51989,
+      "latenciaMs": {
+       "p50": 5,
+       "p90": 6,
+       "p99": 8,
+       "max": 15,
+       "media": 5.28
+      },
+      "codigos": {
+       "200": 51989
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106.3,
+     "cpuClientePct": 13.9,
+     "rssMaxMiB": 466.8
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1737.24,
+      "total": 52117,
+      "latenciaMs": {
+       "p50": 28,
+       "p90": 30,
+       "p99": 35,
+       "max": 40,
+       "media": 28.27
+      },
+      "codigos": {
+       "200": 52117
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.8,
+     "cpuClientePct": 15,
+     "rssMaxMiB": 466.8
+    },
+    {
+     "escenario": "H3",
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "pedidosPorSegundo": 1695.07,
+      "total": 50852,
+      "latenciaMs": {
+       "p50": 58,
+       "p90": 61,
+       "p99": 67,
+       "max": 74,
+       "media": 58.44
+      },
+      "codigos": {
+       "200": 50852
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 102.4,
+     "cpuClientePct": 14.8,
+     "rssMaxMiB": 467
+    }
+   ],
+   "login": [
+    {
+     "conexiones": 10,
+     "repeticion": 1,
+     "cargaPrevia": 0.1,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 5518.24,
+      "total": 165532,
+      "latenciaMs": {
+       "p50": 1,
+       "p90": 2,
+       "p99": 2,
+       "max": 284,
+       "media": 1.2
+      },
+      "codigos": {
+       "201": 20,
+       "429": 165512
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1087.7,
+      "total": 10877,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 2,
+       "media": 0.2
+      },
+      "codigos": {
+       "200": 10877
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 298.24,
+      "total": 8947,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 5,
+       "max": 25,
+       "media": 2.88
+      },
+      "codigos": {
+       "200": 8947
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 107.6,
+     "rssMaxMiB": 477.3
+    },
+    {
+     "conexiones": 50,
+     "repeticion": 1,
+     "cargaPrevia": 1.3,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 6904.27,
+      "total": 207108,
+      "latenciaMs": {
+       "p50": 7,
+       "p90": 8,
+       "p99": 11,
+       "max": 499,
+       "media": 6.69
+      },
+      "codigos": {
+       "201": 20,
+       "429": 207088
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1045.8,
+      "total": 10458,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 2,
+       "media": 0.26
+      },
+      "codigos": {
+       "200": 10458
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 68.54,
+      "total": 2056,
+      "latenciaMs": {
+       "p50": 14,
+       "p90": 16,
+       "p99": 21,
+       "max": 94,
+       "media": 14.05
+      },
+      "codigos": {
+       "200": 2056
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106,
+     "rssMaxMiB": 482.1
+    },
+    {
+     "conexiones": 100,
+     "repeticion": 1,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 6864,
+      "total": 205902,
+      "latenciaMs": {
+       "p50": 14,
+       "p90": 15,
+       "p99": 20,
+       "max": 933,
+       "media": 14.06
+      },
+      "codigos": {
+       "201": 20,
+       "429": 205882
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1049.2,
+      "total": 10492,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 4,
+       "media": 0.3
+      },
+      "codigos": {
+       "200": 10492
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 33.67,
+      "total": 1010,
+      "latenciaMs": {
+       "p50": 28,
+       "p90": 31,
+       "p99": 43,
+       "max": 183,
+       "media": 29.19
+      },
+      "codigos": {
+       "200": 1010
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106.8,
+     "rssMaxMiB": 474.6
+    },
+    {
+     "conexiones": 100,
+     "repeticion": 2,
+     "cargaPrevia": 0.2,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 7102.14,
+      "total": 213046,
+      "latenciaMs": {
+       "p50": 13,
+       "p90": 15,
+       "p99": 19,
+       "max": 939,
+       "media": 13.59
+      },
+      "codigos": {
+       "201": 20,
+       "429": 213026
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1088.91,
+      "total": 10889,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 4,
+       "media": 0.18
+      },
+      "codigos": {
+       "200": 10889
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 35.04,
+      "total": 1051,
+      "latenciaMs": {
+       "p50": 27,
+       "p90": 30,
+       "p99": 42,
+       "max": 192,
+       "media": 28.02
+      },
+      "codigos": {
+       "200": 1051
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 105.6,
+     "rssMaxMiB": 476.4
+    },
+    {
+     "conexiones": 50,
+     "repeticion": 2,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 6901.34,
+      "total": 207022,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 8,
+       "p99": 11,
+       "max": 545,
+       "media": 6.68
+      },
+      "codigos": {
+       "201": 20,
+       "429": 207002
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1056.41,
+      "total": 10564,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 3,
+       "media": 0.25
+      },
+      "codigos": {
+       "200": 10564
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 68.44,
+      "total": 2053,
+      "latenciaMs": {
+       "p50": 14,
+       "p90": 16,
+       "p99": 22,
+       "max": 54,
+       "media": 14.08
+      },
+      "codigos": {
+       "200": 2053
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106.2,
+     "rssMaxMiB": 475.8
+    },
+    {
+     "conexiones": 10,
+     "repeticion": 2,
+     "cargaPrevia": 0.7,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 5581.77,
+      "total": 167446,
+      "latenciaMs": {
+       "p50": 1,
+       "p90": 2,
+       "p99": 2,
+       "max": 234,
+       "media": 1.18
+      },
+      "codigos": {
+       "201": 20,
+       "429": 167426
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1080,
+      "total": 10800,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 3,
+       "media": 0.2
+      },
+      "codigos": {
+       "200": 10800
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 306.17,
+      "total": 9185,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 5,
+       "max": 7,
+       "media": 2.8
+      },
+      "codigos": {
+       "200": 9185
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106.6,
+     "rssMaxMiB": 474.9
+    },
+    {
+     "conexiones": 10,
+     "repeticion": 3,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 5588.57,
+      "total": 167640,
+      "latenciaMs": {
+       "p50": 1,
+       "p90": 2,
+       "p99": 2,
+       "max": 243,
+       "media": 1.18
+      },
+      "codigos": {
+       "201": 20,
+       "429": 167620
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1085.91,
+      "total": 10859,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 3,
+       "media": 0.19
+      },
+      "codigos": {
+       "200": 10859
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 307.8,
+      "total": 9234,
+      "latenciaMs": {
+       "p50": 3,
+       "p90": 4,
+       "p99": 5,
+       "max": 8,
+       "media": 2.78
+      },
+      "codigos": {
+       "200": 9234
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106.8,
+     "rssMaxMiB": 476.2
+    },
+    {
+     "conexiones": 50,
+     "repeticion": 3,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 6980.94,
+      "total": 209412,
+      "latenciaMs": {
+       "p50": 6,
+       "p90": 7,
+       "p99": 11,
+       "max": 509,
+       "media": 6.58
+      },
+      "codigos": {
+       "201": 20,
+       "429": 209392
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1086.1,
+      "total": 10861,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 3,
+       "media": 0.2
+      },
+      "codigos": {
+       "200": 10861
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 69.84,
+      "total": 2095,
+      "latenciaMs": {
+       "p50": 13,
+       "p90": 15,
+       "p99": 21,
+       "max": 57,
+       "media": 13.78
+      },
+      "codigos": {
+       "200": 2095
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 106.3,
+     "rssMaxMiB": 476.4
+    },
+    {
+     "conexiones": 100,
+     "repeticion": 3,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "login": {
+      "pedidosPorSegundo": 7025.87,
+      "total": 210759,
+      "latenciaMs": {
+       "p50": 13,
+       "p90": 15,
+       "p99": 20,
+       "max": 999,
+       "media": 13.73
+      },
+      "codigos": {
+       "201": 20,
+       "429": 210739
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaSola": {
+      "pedidosPorSegundo": 1098.2,
+      "total": 10982,
+      "latenciaMs": {
+       "p50": 0,
+       "p90": 1,
+       "p99": 1,
+       "max": 3,
+       "media": 0.18
+      },
+      "codigos": {
+       "200": 10982
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "sondaConLogin": {
+      "pedidosPorSegundo": 34.64,
+      "total": 1039,
+      "latenciaMs": {
+       "p50": 27,
+       "p90": 30,
+       "p99": 42,
+       "max": 192,
+       "media": 28.37
+      },
+      "codigos": {
+       "200": 1039
+      },
+      "errores": 0,
+      "timeouts": 0
+     },
+     "cpuServidorPct": 107.1,
+     "rssMaxMiB": 477.1
+    }
+   ],
+   "ws": [
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 1,
+     "cargaPrevia": 2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 5400,
+       "media": 0.6443120861111116,
+       "p50": 0.633495,
+       "p95": 0.98456,
+       "p99": 1.178976,
+       "max": 1.912057
+      },
+      "enviados": 600,
+      "esperados": 5400,
+      "recibidos": 5400,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 20,
+     "entregasPorSegundo": 180,
+     "filasInsertadas": 600,
+     "cpuServidorPct": 2.1,
+     "cpuGeneradoresPct": 1.4,
+     "rssMaxMiB": 474.6
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 1,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 5400,
+       "media": 0.6596147911111117,
+       "p50": 0.652904,
+       "p95": 0.97331,
+       "p99": 1.134687,
+       "max": 1.392904
+      },
+      "enviados": 600,
+      "esperados": 5400,
+      "recibidos": 5400,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 20,
+     "entregasPorSegundo": 180,
+     "filasInsertadas": 607,
+     "cpuServidorPct": 2.3,
+     "cpuGeneradoresPct": 1.6,
+     "rssMaxMiB": 474.6
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 1,
+     "cargaPrevia": 0.6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 5400,
+       "media": 0.717716027037039,
+       "p50": 0.709111,
+       "p95": 1.052519,
+       "p99": 1.241524,
+       "max": 1.600027
+      },
+      "enviados": 600,
+      "esperados": 5400,
+      "recibidos": 5400,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 20,
+     "entregasPorSegundo": 180,
+     "filasInsertadas": 604,
+     "cpuServidorPct": 2,
+     "cpuGeneradoresPct": 1.7,
+     "rssMaxMiB": 474.6
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 1,
+     "cargaPrevia": 0,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 13482,
+       "media": 0.5811668890372349,
+       "p50": 0.527607,
+       "p95": 0.930903,
+       "p99": 1.201378,
+       "max": 7.326862
+      },
+      "enviados": 1498,
+      "esperados": 13482,
+      "recibidos": 13482,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 50,
+     "entregasPorSegundo": 449,
+     "filasInsertadas": 1210,
+     "cpuServidorPct": 3.6,
+     "cpuGeneradoresPct": 3.3,
+     "rssMaxMiB": 474.8
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 1,
+     "cargaPrevia": 0.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 13482,
+       "media": 0.5864089707016749,
+       "p50": 0.552355,
+       "p95": 0.931296,
+       "p99": 1.135946,
+       "max": 1.711544
+      },
+      "enviados": 1498,
+      "esperados": 13482,
+      "recibidos": 13482,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 50,
+     "entregasPorSegundo": 449,
+     "filasInsertadas": 1210,
+     "cpuServidorPct": 3.9,
+     "cpuGeneradoresPct": 3.3,
+     "rssMaxMiB": 475.9
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 10,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 1,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 13500,
+       "media": 0.7362013307407391,
+       "p50": 0.585763,
+       "p95": 1.128894,
+       "p99": 2.144592,
+       "max": 14.852463
+      },
+      "enviados": 1500,
+      "esperados": 13500,
+      "recibidos": 13500,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 50,
+     "entregasPorSegundo": 450,
+     "filasInsertadas": 1200,
+     "cpuServidorPct": 3.5,
+     "cpuGeneradoresPct": 3.6,
+     "rssMaxMiB": 484.4
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 2,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 146951,
+       "media": 1.4914352465719947,
+       "p50": 1.255427,
+       "p95": 2.561106,
+       "p99": 9.371376,
+       "max": 19.611531
+      },
+      "enviados": 2999,
+      "esperados": 146951,
+      "recibidos": 146951,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 100,
+     "entregasPorSegundo": 4898,
+     "filasInsertadas": 3000,
+     "cpuServidorPct": 11,
+     "cpuGeneradoresPct": 24.7,
+     "rssMaxMiB": 489.3
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 2,
+     "cargaPrevia": 0,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 146951,
+       "media": 1.7979379752230367,
+       "p50": 1.537146,
+       "p95": 2.80235,
+       "p99": 10.246032,
+       "max": 32.349997
+      },
+      "enviados": 2999,
+      "esperados": 146951,
+      "recibidos": 146951,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 100,
+     "entregasPorSegundo": 4898,
+     "filasInsertadas": 3001,
+     "cpuServidorPct": 12,
+     "cpuGeneradoresPct": 31.7,
+     "rssMaxMiB": 496.6
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 2,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 146951,
+       "media": 2.2517558854448145,
+       "p50": 1.863483,
+       "p95": 3.64564,
+       "p99": 17.235637,
+       "max": 33.869762
+      },
+      "enviados": 2999,
+      "esperados": 146951,
+      "recibidos": 146951,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 100,
+     "entregasPorSegundo": 4898,
+     "filasInsertadas": 3001,
+     "cpuServidorPct": 12.5,
+     "cpuGeneradoresPct": 42.5,
+     "rssMaxMiB": 509.6
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 2,
+     "cargaPrevia": 1.8,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 367451,
+       "media": 4.762733676963797,
+       "p50": 2.975277,
+       "p95": 7.137156,
+       "p99": 61.927505,
+       "max": 100.86373
+      },
+      "enviados": 7499,
+      "esperados": 367451,
+      "recibidos": 367451,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 250,
+     "entregasPorSegundo": 12248,
+     "filasInsertadas": 5986,
+     "cpuServidorPct": 29.8,
+     "cpuGeneradoresPct": 109.8,
+     "rssMaxMiB": 541.5
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 2,
+     "cargaPrevia": 0.7,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 365442,
+       "media": 13.111895133714857,
+       "p50": 4.594887,
+       "p95": 80.719551,
+       "p99": 110.944164,
+       "max": 171.202277
+      },
+      "enviados": 7458,
+      "esperados": 365442,
+      "recibidos": 365442,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 249,
+     "entregasPorSegundo": 12181,
+     "filasInsertadas": 6027,
+     "cpuServidorPct": 33.5,
+     "cpuGeneradoresPct": 133.3,
+     "rssMaxMiB": 579.1
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 50,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 2,
+     "cargaPrevia": 0,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 353290,
+       "media": 24.67330504191469,
+       "p50": 9.856344,
+       "p95": 118.718142,
+       "p99": 154.252745,
+       "max": 230.610845
+      },
+      "enviados": 7210,
+      "esperados": 353290,
+      "recibidos": 353290,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 240,
+     "entregasPorSegundo": 11776,
+     "filasInsertadas": 5862,
+     "cpuServidorPct": 38.4,
+     "cpuGeneradoresPct": 181.5,
+     "rssMaxMiB": 628.8
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 2.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 589545,
+       "media": 22.37190275091943,
+       "p50": 8.637394,
+       "p95": 122.732191,
+       "p99": 156.065855,
+       "max": 316.134629
+      },
+      "enviados": 5955,
+      "esperados": 589545,
+      "recibidos": 589545,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 199,
+     "entregasPorSegundo": 19652,
+     "filasInsertadas": 5985,
+     "cpuServidorPct": 48.4,
+     "cpuGeneradoresPct": 280.9,
+     "rssMaxMiB": 641.5
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 0.1,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 573012,
+       "media": 51.065802617861266,
+       "p50": 24.892799,
+       "p95": 182.502412,
+       "p99": 232.113552,
+       "max": 380.562898
+      },
+      "enviados": 5788,
+      "esperados": 573012,
+      "recibidos": 573012,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 193,
+     "entregasPorSegundo": 19100,
+     "filasInsertadas": 5795,
+     "cpuServidorPct": 53,
+     "cpuGeneradoresPct": 356.7,
+     "rssMaxMiB": 677.9
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 3.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 535887,
+       "media": 95.48577717487984,
+       "p50": 60.826395,
+       "p95": 267.527852,
+       "p99": 367.709578,
+       "max": 671.048339
+      },
+      "enviados": 5413,
+      "esperados": 535887,
+      "recibidos": 535887,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 180,
+     "entregasPorSegundo": 17863,
+     "filasInsertadas": 5406,
+     "cpuServidorPct": 59.6,
+     "cpuGeneradoresPct": 367.4,
+     "rssMaxMiB": 727.8
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 3.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 654291,
+       "media": 299.40746059106044,
+       "p50": 284.9207,
+       "p95": 588.392953,
+       "p99": 705.15522,
+       "max": 938.671948
+      },
+      "enviados": 6609,
+      "esperados": 654291,
+      "recibidos": 654291,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 220,
+     "entregasPorSegundo": 21810,
+     "filasInsertadas": 5290,
+     "cpuServidorPct": 70.6,
+     "cpuGeneradoresPct": 386.5,
+     "rssMaxMiB": 739.1
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 1.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 520641,
+       "media": 364.02976417806485,
+       "p50": 339.317912,
+       "p95": 747.364592,
+       "p99": 994.394236,
+       "max": 1426.927956
+      },
+      "enviados": 5259,
+      "esperados": 520641,
+      "recibidos": 520641,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 175,
+     "entregasPorSegundo": 17355,
+     "filasInsertadas": 4592,
+     "cpuServidorPct": 67.9,
+     "cpuGeneradoresPct": 376.8,
+     "rssMaxMiB": 943.9
+    },
+    {
+     "escenario": "W1",
+     "documentos": 1,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 428868,
+       "media": 479.3512474450296,
+       "p50": 394.621318,
+       "p95": 1220.958135,
+       "p99": 1742.21579,
+       "max": 2829.733894
+      },
+      "enviados": 4332,
+      "esperados": 428868,
+      "recibidos": 428868,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 144,
+     "entregasPorSegundo": 14296,
+     "filasInsertadas": 3805,
+     "cpuServidorPct": 62.6,
+     "cpuGeneradoresPct": 410.9,
+     "rssMaxMiB": 936.2
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 24000,
+       "media": 0.4651825883333356,
+       "p50": 0.382103,
+       "p95": 1.009658,
+       "p99": 1.74153,
+       "max": 6.137234
+      },
+      "enviados": 6000,
+      "esperados": 24000,
+      "recibidos": 24000,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 200,
+     "entregasPorSegundo": 800,
+     "filasInsertadas": 6006,
+     "cpuServidorPct": 10.8,
+     "cpuGeneradoresPct": 11.5,
+     "rssMaxMiB": 919.2
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 0.2,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 23992,
+       "media": 0.41185388558686276,
+       "p50": 0.373271,
+       "p95": 0.653246,
+       "p99": 1.027041,
+       "max": 5.932346
+      },
+      "enviados": 5998,
+      "esperados": 23992,
+      "recibidos": 23992,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 200,
+     "entregasPorSegundo": 800,
+     "filasInsertadas": 6000,
+     "cpuServidorPct": 11.2,
+     "cpuGeneradoresPct": 11.6,
+     "rssMaxMiB": 919.4
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 2,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 0.6,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 23992,
+       "media": 0.43920031764754924,
+       "p50": 0.390177,
+       "p95": 0.715632,
+       "p99": 1.312451,
+       "max": 4.770206
+      },
+      "enviados": 5998,
+      "esperados": 23992,
+      "recibidos": 23992,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 200,
+     "entregasPorSegundo": 800,
+     "filasInsertadas": 6045,
+     "cpuServidorPct": 10.9,
+     "cpuGeneradoresPct": 11.8,
+     "rssMaxMiB": 880.2
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 1,
+     "generadores": 4,
+     "cargaPrevia": 0.5,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 59976,
+       "media": 0.5468124662698431,
+       "p50": 0.412753,
+       "p95": 1.288672,
+       "p99": 2.506746,
+       "max": 16.978017
+      },
+      "enviados": 14994,
+      "esperados": 59976,
+      "recibidos": 59976,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 500,
+     "entregasPorSegundo": 1999,
+     "filasInsertadas": 12000,
+     "cpuServidorPct": 23.2,
+     "cpuGeneradoresPct": 24.8,
+     "rssMaxMiB": 880.2
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 2,
+     "generadores": 4,
+     "cargaPrevia": 0.3,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 59980,
+       "media": 0.644259916405466,
+       "p50": 0.454193,
+       "p95": 1.572836,
+       "p99": 4.477767,
+       "max": 14.606709
+      },
+      "enviados": 14995,
+      "esperados": 59980,
+      "recibidos": 59980,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 500,
+     "entregasPorSegundo": 1999,
+     "filasInsertadas": 12000,
+     "cpuServidorPct": 23,
+     "cpuGeneradoresPct": 27.1,
+     "rssMaxMiB": 880.2
+    },
+    {
+     "escenario": "W2",
+     "documentos": 20,
+     "clientes": 100,
+     "tasa": 5,
+     "repeticion": 3,
+     "generadores": 4,
+     "cargaPrevia": 0.4,
+     "esperasPorCarga": 0,
+     "resultado": {
+      "latencia": {
+       "n": 59984,
+       "media": 0.719836109845955,
+       "p50": 0.499206,
+       "p95": 1.516809,
+       "p99": 5.264832,
+       "max": 28.686202
+      },
+      "enviados": 14996,
+      "esperados": 59984,
+      "recibidos": 59984,
+      "perdidos": 0,
+      "perdida": 0,
+      "converge": true,
+      "cierres": {}
+     },
+     "cambiosPorSegundo": 500,
+     "entregasPorSegundo": 1999,
+     "filasInsertadas": 12000,
+     "cpuServidorPct": 23.7,
+     "cpuGeneradoresPct": 29.3,
+     "rssMaxMiB": 881.1
+    }
+   ]
+  }
+ }
+}
