@@ -73,7 +73,8 @@ try {
   const guion = [
     'set -e',
     'cd /work/editor-ia-database && npm ci --no-audit --no-fund >/dev/null',
-    'cd /work/backend && npm ci --no-audit --no-fund >/dev/null && npm run -s build',
+    // Como el CI: lo generado (cliente de Prisma y tipos del proto) no se versiona.
+    'cd /work/backend && npm ci --no-audit --no-fund >/dev/null && npm run -s prisma:generate && npm run -s proto:generate && npm run -s build',
     `npm run -s carga -- --entorno linux ${process.argv.slice(2).join(' ')}`,
   ].join(' && ');
   codigo = docker(['exec', ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]), CONTENEDOR, 'bash', '-c', guion], { heredar: true });
