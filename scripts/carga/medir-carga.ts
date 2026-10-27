@@ -301,10 +301,15 @@ function esperar<T>(hijo: ChildProcess, tipo: string): Promise<T> {
   });
 }
 
-/** Filas insertadas en actualizaciones_documento (contador acumulado de la base; la compactación no lo baja). */
+/**
+ * Filas insertadas en actualizaciones_documento hasta ahora: el último valor de la secuencia de su `id`
+ * (IDENTITY), que avanza con cada inserción y no baja cuando la compactación borra filas. No se usa
+ * pg_stat_user_tables: la base publica esas estadísticas con demora y contaba de menos.
+ */
 async function insertadas(s: Siembra): Promise<number> {
-  const f = await s.prisma.$queryRaw<{ n: bigint }[]>`SELECT n_tup_ins AS n FROM pg_stat_user_tables WHERE relname = 'actualizaciones_documento'`;
-  return Number(f[0]?.n ?? 0);
+  const f = await s.prisma.$queryRaw<{ n: bigint; llamada: boolean }[]>`SELECT last_value AS n, is_called AS llamada FROM actualizaciones_documento_id_seq`;
+  const x = f[0];
+  return x?.llamada ? Number(x.n) : 0;
 }
 
 async function corridaWs(api: ChildProcess, s: Siembra, escenario: 'W1' | 'W2', grupos: { documento: string; cuentas: Cuenta[] }[], tasa: number, repeticion: number): Promise<CorridaWs> {
@@ -324,14 +329,15 @@ async function corridaWs(api: ChildProcess, s: Siembra, escenario: 'W1' | 'W2', 
       }),
     );
     const { carga, esperas } = await cargaPrevia(`${escenario} n=${String(todos.length)} tasa=${String(tasa)}`);
-    const filas0 = await insertadas(s);
     const arranque = ahoraNs() + 500_000_000n;
     const inicio = arranque + BigInt(PARAMETROS.calentamientoS) * 1_000_000_000n;
     const fin = inicio + BigInt(PARAMETROS.duracionS) * 1_000_000_000n;
     for (const g of generadores) g.send({ tipo: 'correr', arranqueNs: String(arranque), inicioNs: String(inicio), finNs: String(fin), tasa });
     // El API se mide solo dentro de la ventana.
     await new Promise((r) => setTimeout(r, Number(inicio - ahoraNs()) / 1e6));
+    const filas0 = await insertadas(s);
     const m = await medirApi(api, () => new Promise((r) => setTimeout(r, Number(fin - ahoraNs()) / 1e6)));
+    const filas = (await insertadas(s)) - filas0;
     const resultados = await Promise.all(
       generadores.map((g) => {
         const r = esperar<ResultadoGenerador & { huellas: (Omit<HuellaCliente, 'documento'> & { enviados: number })[]; cpu: NodeJS.CpuUsage }>(g, 'resultado');
@@ -339,8 +345,6 @@ async function corridaWs(api: ChildProcess, s: Siembra, escenario: 'W1' | 'W2', 
         return r;
       }),
     );
-    await new Promise((r) => setTimeout(r, 2000)); // las estadísticas de la base se publican con algo de demora
-    const filas = (await insertadas(s)) - filas0;
     const docDe = new Map(todos.map((t) => [t.clave, t.documento]));
     const huellas = resultados.flatMap((r) => r.huellas.map((h) => ({ ...h, documento: docDe.get(h.clave) ?? '' })));
     const porDocumento = grupos.map((g) => ({
