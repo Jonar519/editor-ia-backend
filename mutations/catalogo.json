@@ -2090,6 +2090,33 @@
       "reemplazo": "",
       "comando": "test",
       "pruebas": ["tests/integracion/http.test.ts", "tests/integracion/avatar.test.ts"]
+    },
+    {
+      "id": "R01",
+      "regla": "Verificar la cadena dice «alterada» cuando la base encuentra una versión que no encadena",
+      "archivo": "src/versiones/servicio.ts",
+      "buscar": "return { integra: alterada === null, versiones",
+      "reemplazo": "return { integra: true, versiones",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "R02",
+      "regla": "Verificar la cadena exige acceso de lectura al documento (sin acceso, 404)",
+      "archivo": "src/versiones/servicio.ts",
+      "buscar": "export async function verificarCadena(d: Deps, usuarioId: string, documentoId: string): Promise<Verificacion> {\n  await exigirDocumento(d.prisma, usuarioId, documentoId, 'lector', '');\n",
+      "reemplazo": "export async function verificarCadena(d: Deps, usuarioId: string, documentoId: string): Promise<Verificacion> {\n",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
+    },
+    {
+      "id": "R03",
+      "regla": "Verificar la cadena tiene límite por cuenta",
+      "archivo": "src/versiones/rutas.ts",
+      "buscar": "r.get('/:documentoId/versiones/verificacion', limVerificar, async",
+      "reemplazo": "r.get('/:documentoId/versiones/verificacion', async",
+      "comando": "test",
+      "pruebas": ["tests/integracion/versiones.test.ts"]
     }
   ]
 }

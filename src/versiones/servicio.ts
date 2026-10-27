@@ -78,6 +78,26 @@ export async function obtenerVersion(d: Deps, usuarioId: string, documentoId: st
   return { ...v, texto };
 }
 
+export interface Verificacion {
+  integra: boolean;
+  versiones: number;
+  /** El número de la primera versión que no encadena (o null si la cadena está íntegra). */
+  alteradaDesde: number | null;
+}
+
+/**
+ * Verifica la cadena de hash del documento (bloque R). La recalcula LA BASE (verificar_cadena_versiones,
+ * migración 0010) sobre todas las versiones, no solo las 200 que lista el historial. Cualquier rol.
+ */
+export async function verificarCadena(d: Deps, usuarioId: string, documentoId: string): Promise<Verificacion> {
+  await exigirDocumento(d.prisma, usuarioId, documentoId, 'lector', '');
+  const filas = await d.prisma.$queryRaw<{ alterada: bigint | null; total: bigint }[]>`
+    SELECT verificar_cadena_versiones(${documentoId}::uuid) AS alterada,
+           (SELECT count(*) FROM versiones WHERE documento_id = ${documentoId}::uuid) AS total`;
+  const alterada = filas[0]?.alterada ?? null;
+  return { integra: alterada === null, versiones: Number(filas[0]?.total ?? 0), alteradaDesde: alterada === null ? null : Number(alterada) };
+}
+
 /** El texto actual del documento (el de la memoria del servidor, que incluye lo aún no guardado). */
 export async function textoActual(d: Deps, usuarioId: string, documentoId: string): Promise<string> {
   await exigirDocumento(d.prisma, usuarioId, documentoId, 'lector', '');

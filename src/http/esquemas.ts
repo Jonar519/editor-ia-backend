@@ -321,6 +321,13 @@ export const Version = z
 export const ListaVersiones = z.object({ versiones: z.array(Version) }).meta({ id: 'ListaVersiones', description: 'Las 200 más nuevas, de la más nueva a la más vieja' });
 export const VersionConTexto = Version.extend({ texto: z.string() }).meta({ id: 'VersionConTexto' });
 export const TextoActual = z.object({ texto: z.string() }).meta({ id: 'TextoActual' });
+export const VerificacionCadena = z
+  .object({
+    integra: z.boolean(),
+    versiones: z.number().int().meta({ description: 'Cuántas versiones se recalcularon (todas, no solo las 200 del historial)' }),
+    alteradaDesde: z.number().int().nullable().meta({ description: 'Número de la primera versión que no encadena; null si la cadena está íntegra' }),
+  })
+  .meta({ id: 'VerificacionCadena', description: 'La base recalcula la cadena de hash (verificar_cadena_versiones)' });
 
 /** Lo mismo que exige la base (comentarios_cuerpo_longitud). */
 const CuerpoComentario = z.string().trim().min(1).max(5000);

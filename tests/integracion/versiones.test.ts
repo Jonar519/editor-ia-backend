@@ -8,6 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { versionAutomatica } from '../../src/tiempo-real/compactacion.js';
 import { DocumentoVivo } from '../../src/tiempo-real/documento.js';
 import { LIMITES_PRODUCCION } from '../../src/tiempo-real/limites.js';
+import { LIMITES_VERSIONES } from '../../src/versiones/rutas.js';
+import { comoDuenoEnTransaccion } from '../_dueno.js';
 import { conectar, esperar, levantar, type Entorno, type Persona } from '../_tiempo-real.js';
 
 const proto = (ticket: string) => ['cuaderno.v1', `ticket.${ticket}`];
@@ -96,6 +98,43 @@ describe('versiones', () => {
     expect((await api(extrano).get(`/documentos/${documentoId}/texto`)).status).toBe(404);
     expect((await api(ana).get(`/documentos/${documentoId}/versiones/99`)).status).toBe(404);
     expect((await api(ana).post(`/documentos/${documentoId}/versiones/99/restaurar`)).status).toBe(404);
+  });
+
+  it('verificar la cadena (bloque R): íntegra para cualquier rol; alterada desde la versión manipulada por el dueño de la base', async () => {
+    const ana = await t.persona();
+    const lucia = await t.persona();
+    const extrano = await t.persona();
+    const { documentoId } = await t.documentoCon(ana, [[lucia, 'lector']]);
+    const verificar = (p: Persona) => api(p).get(`/documentos/${documentoId}/versiones/verificacion`);
+
+    // Sin versiones: íntegra (no hay nada que no encadene).
+    expect((await verificar(lucia)).body).toEqual({ integra: true, versiones: 0, alteradaDesde: null });
+    for (let i = 0; i < 3; i++) expect((await api(ana).post(`/documentos/${documentoId}/versiones`)).status).toBe(201);
+    const integra = await verificar(lucia);
+    expect(integra.status).toBe(200);
+    expect(integra.body).toEqual({ integra: true, versiones: 3, alteradaDesde: null });
+
+    // Alguien con acceso directo a la base (el dueño, no el API) cambia el texto de la versión 2.
+    await comoDuenoEnTransaccion(async (c) => {
+      await c.query('ALTER TABLE versiones DISABLE TRIGGER versiones_solo_insercion');
+      const r = await c.query(`UPDATE versiones SET contenido_texto = 'manipulado' WHERE documento_id = $1 AND numero = 2`, [documentoId]);
+      expect(r.rowCount).toBe(1);
+      await c.query('ALTER TABLE versiones ENABLE TRIGGER versiones_solo_insercion');
+    });
+    expect((await verificar(lucia)).body).toEqual({ integra: false, versiones: 3, alteradaDesde: 2 });
+    expect((await verificar(ana)).body).toEqual({ integra: false, versiones: 3, alteradaDesde: 2 });
+
+    // Sin acceso: 404 (no se distingue de un documento que no existe).
+    expect((await verificar(extrano)).status).toBe(404);
+  });
+
+  it('verificar la cadena tiene límite por cuenta (la base recalcula cada hash)', async () => {
+    const ana = await t.persona();
+    const { documentoId } = await t.documentoCon(ana);
+    const estados: number[] = [];
+    for (let i = 0; i <= LIMITES_VERSIONES.verificar.max; i++) estados.push((await api(ana).get(`/documentos/${documentoId}/versiones/verificacion`)).status);
+    expect(estados.slice(0, -1).every((s) => s === 200)).toBe(true);
+    expect(estados.at(-1)).toBe(429);
   });
 
   it('versión automática: solo si el texto cambió desde la última', async () => {
