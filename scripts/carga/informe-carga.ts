@@ -27,6 +27,7 @@ const LIMITES = [
   '- **Latencias altas exactas en HTTP.** autocannon mide en lazo cerrado: cada conexión espera su respuesta antes de mandar otra, así que con el servidor lento baja el ritmo (omisión coordinada) y las latencias altas pueden quedar subestimadas. Su resolución es de 1 ms: lo que tarda menos se ve como 0 o 1 ms.',
   '- **El costo de muchos inicios de sesión.** Con una sola IP de cliente, el límite por IP del login (20 cada 15 minutos) se alcanza enseguida: H4 mide sobre todo las respuestas 429 del limitador, no miles de verificaciones de contraseña.',
   '- **Solo la latencia del servidor en WebSocket.** La latencia de ida y vuelta incluye el bucle de eventos de los generadores (en la misma máquina) y aplicar el cambio de Yjs en el cliente que lo recibe.',
+  '- **Que se mandó lo que se pidió.** Si los generadores no llegan a su ritmo (sus procesos saturados o el servidor sin responder a tiempo), se mandan menos cambios de los pedidos. La tabla muestra los dos («pedidos» y «enviados»). Una fila donde no coinciden no mide ese ritmo, sino lo que la máquina logró.',
   '- **Windows frente a Linux como comparación de sistemas.** Las dos corridas usan el mismo equipo y los MISMOS contenedores de PostgreSQL y Redis (Docker sobre WSL2). En Windows, el API y los clientes corren en Windows y llegan a ellos por el puerto publicado; en Linux, el API y los clientes corren en un contenedor y llegan por la red de Docker. La virtualización suma su costo en los dos casos, distinto en cada uno. La referencia es Linux.',
   '- **Carga ajena del lado Windows durante la corrida de Linux.** Dentro del contenedor, la comprobación de carga previa ve la CPU de la máquina virtual de WSL2, no los procesos de Windows. Por eso la corrida de Linux se hizo con el equipo sin otros programas abiertos, igual que la de Windows.',
   '- **Comparaciones con otros sistemas** ni un "máximo" de clientes: no se buscó el punto de quiebre.',
@@ -122,6 +123,7 @@ function seccionWs(w: CorridaWs[], duracionS: number): string {
       x.escenario,
       `${String(x.documentos)} × ${String(x.clientes / x.documentos)}`,
       String(x.tasa),
+      String(x.clientes * x.tasa),
       mediana(g.map((c) => c.cambiosPorSegundo), 0),
       mediana(g.map((c) => c.entregasPorSegundo), 0),
       lat.length ? mediana(lat.map((r) => r.p50)) : '—',
@@ -138,7 +140,7 @@ function seccionWs(w: CorridaWs[], duracionS: number): string {
     ];
   });
   return tabla(
-    ['Escenario', 'Documentos × clientes', 'Cambios/s por cliente', 'Cambios/s total', 'Entregas/s', 'p50 ms', 'p95 ms', 'p99 ms', 'Máx ms', 'Entregas perdidas', 'Convergió', 'Cierres', 'Filas insertadas/s', 'CPU API %', 'CPU generadores %', 'RSS API máx MiB'],
+    ['Escenario', 'Documentos × clientes', 'Cambios/s por cliente', 'Cambios/s pedidos', 'Cambios/s enviados', 'Entregas/s', 'p50 ms', 'p95 ms', 'p99 ms', 'Máx ms', 'Entregas perdidas', 'Convergió', 'Cierres', 'Filas insertadas/s', 'CPU API %', 'CPU generadores %', 'RSS API máx MiB'],
     filas,
   );
 }
