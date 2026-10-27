@@ -238,7 +238,7 @@ Los embeddings son de **1024 dimensiones** (`vector(1024)` de la migración 0011
 | Límites | Mensaje de 1 MiB + 1 → 1009; ráfaga por encima del límite → 4429. |
 | SSE y cancelación (P2) | Abortar el `fetch` a mitad → la llamada gRPC queda `CANCELLED` y el proveedor mock deja de generar. |
 | Mapeo de errores (P1) | Una prueba por fila de la tabla gRPC → HTTP. |
-| Carga (R) | HTTP con autocannon. WebSocket: autocannon no lo soporta, así que se usa un script propio con `ws` (N clientes, M cambios por segundo, latencia p50/p95/p99 de ida y vuelta). |
+| Carga (R) | HTTP con autocannon. WebSocket: autocannon no lo soporta, así que se usa un script propio con `ws` (N clientes, M cambios por segundo, latencia p50/p95/p99 de ida y vuelta). **Medido en R3**, en Windows y en el contenedor de Linux: [`docs/carga-r.md`](../carga-r.md), generado por `scripts\carga.bat` y `scripts\carga-linux.bat`. |
 
 ## Estado de verificación al cerrar K2
 
