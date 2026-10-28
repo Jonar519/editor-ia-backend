@@ -2180,6 +2180,33 @@
       "reemplazo": "export const LIMITE_GENERAL = { max: 6000, ventanaMs: 60_000 } as const;",
       "comando": "test",
       "pruebas": ["tests/integracion/limite-general.test.ts"]
+    },
+    {
+      "id": "R11",
+      "regla": "OpenAPI: todo 429 de /api documenta la cabecera Retry-After",
+      "archivo": "src/openapi.ts",
+      "buscar": "r[429] = { ...r429, headers: { 'Retry-After': { $ref: '#/components/headers/RetryAfter' } } };",
+      "reemplazo": "r[429] = r429;",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/openapi.test.ts"]
+    },
+    {
+      "id": "R12",
+      "regla": "OpenAPI: toda operación con cuerpo documenta el 415 del cuerpo comprimido",
+      "archivo": "src/openapi.ts",
+      "buscar": "if (conCuerpo) r[415] = sumar(",
+      "reemplazo": "if (false) r[415] = sumar(",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/openapi.test.ts"]
+    },
+    {
+      "id": "R13",
+      "regla": "OpenAPI: cada ruta de Express está documentada con su dirección real",
+      "archivo": "src/openapi.ts",
+      "buscar": "path: '/api/ia/uso',",
+      "reemplazo": "path: '/api/ia/consumo',",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/openapi.test.ts"]
     }
   ]
 }
