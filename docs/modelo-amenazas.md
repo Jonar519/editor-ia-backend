@@ -178,7 +178,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 
 | | Amenaza | Mitigación | Evidencia | Queda |
 |---|---|---|---|---|
-| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más (ADR 0003); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). Aviso moderado pendiente: fast-uri hasta el 2-11. |
+| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más ([ADR 0008](adr/0008-dependencias.md)); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). Aviso moderado pendiente: fast-uri hasta el 2-11. |
 
 ## Riesgos residuales
 
@@ -275,7 +275,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 ### R-05 · Dependencias publicadas hace menos de 14 días (excepción por GHSA-27r3-jxmh-p828)
 
 - **Origen:** 23-10-2026. Aviso alto en `body-parser` 2.0.0–2.3.0 (por Express 5.3.0): un cuerpo comprimido con bytes sobrantes al final provoca denegación de servicio. Era alcanzable en el API (`express.json()` y `express.raw()` del avatar).
-- **Qué se hizo:** `body-parser` 2.4.0 y `qs` 6.16.1 con overrides exactos, por una **excepción escrita** a la regla de los 14 días (ADR 0003). Y, aparte, `inflate: false` en los dos parsers: un cuerpo con `Content-Encoding` comprimido recibe 415 sin descomprimirse (pruebas y mutaciones B01–B03). Con eso, la ruta vulnerable no se recorre aunque una versión futura reintrodujera el problema.
+- **Qué se hizo:** `body-parser` 2.4.0 y `qs` 6.16.1 con overrides exactos, por una **excepción escrita** a la regla de los 14 días (registrada en el [ADR 0008](adr/0008-dependencias.md), que reemplaza a la tabla del ADR 0003). Y, aparte, `inflate: false` en los dos parsers: un cuerpo con `Content-Encoding` comprimido recibe 415 sin descomprimirse (pruebas y mutaciones B01–B03). Con eso, la ruta vulnerable no se recorre aunque una versión futura reintrodujera el problema.
 - **Qué riesgo queda:** el que la regla de los 14 días busca evitar: una versión muy nueva puede traer un error o un cambio malicioso que todavía nadie detectó. Lo acotan:
   - la lectura del diff de las dos versiones antes de aprobarlas (cambio acotado, sin red, archivos ni procesos nuevos);
   - el lockfile cambiado solo en esas dos entradas, con su integridad;
