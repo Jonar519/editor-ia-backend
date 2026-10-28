@@ -12,7 +12,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -56,7 +56,9 @@ const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
 function evidenciaDe(salida) {
   const lineas = salida.split(/\r?\n/).map((l) => l.replace(ANSI, '').trim());
   const caso = lineas.find((l) => /^(FAIL|FALLA)\s/.test(l)) ?? lineas.find((l) => /^×\s/.test(l));
-  return (caso ?? lineas.find((l) => l.startsWith('ERROR')) ?? '').slice(0, 160);
+  // Sin prueba fallida, Vitest igual sale con 1 si hubo errores no manejados: que eso se vea.
+  const general = lineas.find((l) => l.startsWith('ERROR')) ?? lineas.find((l) => /Unhandled|^\w*Error:/.test(l));
+  return (caso ?? general ?? '').slice(0, 160);
 }
 
 /** @type {{ ruta: string, original: string } | undefined} */
@@ -85,8 +87,28 @@ if (elegidas.length === 0) {
 
 /** @param {string} comando */
 function correr(comando) {
-  const r = spawnSync('npm', ['run', ...comando.split(' ')], { cwd: RAIZ, shell: true, encoding: 'utf8', timeout: 600_000 });
-  return { codigo: r.status ?? 1, salida: `${r.stdout ?? ''}${r.stderr ?? ''}` };
+  const inicio = Date.now();
+  const r = spawnSync('npm', ['run', ...comando.split(' ')], { cwd: RAIZ, shell: true, encoding: 'utf8', timeout: 600_000, maxBuffer: 64 * 1024 * 1024 });
+  return {
+    codigo: r.status ?? 1,
+    salida: `${r.stdout ?? ''}${r.stderr ?? ''}`,
+    // Sin código de salida (status null): lo mató una señal o el tiempo límite; la salida puede venir vacía.
+    detalle: `status=${String(r.status)} signal=${String(r.signal)} error=${r.error?.message ?? 'ninguno'} duracion=${String(Date.now() - inicio)} ms`,
+  };
+}
+
+/**
+ * Guarda la salida COMPLETA de una corrida que falló (en mutations/fallas/, sin versionar) y devuelve la
+ * ruta. La evidencia de una línea no alcanza para una prueba inestable que falla sin dejar FAIL.
+ * @param {string} comando
+ * @param {{ codigo: number, salida: string, detalle: string }} r
+ */
+function guardarFalla(comando, r) {
+  const dir = path.join(RAIZ, 'mutations', 'fallas');
+  mkdirSync(dir, { recursive: true });
+  const archivo = path.join(dir, `final-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
+  writeFileSync(archivo, `comando: npm run ${comando}\n${r.detalle}\n\n${r.salida}`);
+  return archivo;
 }
 
 // Corrida base: sin mutaciones, cada comando debe pasar. Si no, un fallo por el entorno
@@ -147,7 +169,13 @@ for (const comando of new Set(elegidas.map(comandoDe))) {
   process.stdout.write(`Final sin mutaciones: "npm run ${comando}"… `);
   const fin = correr(comando);
   finalOk &&= fin.codigo === 0;
-  console.log(fin.codigo === 0 ? 'OK' : `FALLA\n   evidencia: ${evidenciaDe(fin.salida)}`);
+  if (fin.codigo === 0) {
+    console.log('OK');
+  } else {
+    const archivo = guardarFalla(comando, fin);
+    console.log(`FALLA\n   evidencia: ${evidenciaDe(fin.salida) || '(ninguna línea FAIL)'}\n   ${fin.detalle}\n   salida completa: ${path.relative(RAIZ, archivo)}`);
+    console.log(fin.salida.split(/\r?\n/).slice(-40).join('\n'));
+  }
 }
 
 console.log('\nResumen de mutaciones');
