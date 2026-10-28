@@ -8,6 +8,19 @@ El esquema de la base **no vive aquí**: vive en [editor-ia-database](https://gi
 
 > Visión general del proyecto y tabla "cómo demostrar cada tema": [docs/README-general.md](docs/README-general.md).
 
+## Estado
+
+Al cierre de R8 (28-10-2026), el backend tiene completos los bloques D a R7:
+- identidad (D–G);
+- espacios, documentos y tiempo real (K1–N);
+- IA por gRPC con proveedor simulado (P1–P3);
+- verificación de la cadena, carga, modelo de amenazas, límite general, ADRs, OpenAPI revisado y protocolo (R1–R7).
+
+**Sin despliegue y sin IA real.** Lo que exige el despliegue está en el README general. Quedan del bloque R:
+- R9: guía de demostración consolidada;
+- R10: lista de revisión;
+- R11: dependencias. El 2-11-2026 entra `fast-uri` 3.1.9; el 5-11-2026 se revisa el override de `body-parser` 2.4.0, riesgo R-05.
+
 ## Requisitos
 
 - Node.js 24 o superior
@@ -60,6 +73,7 @@ Los dos procesos comparten `.env` (el mismo `IA_SERVICE_TOKEN`). Sin el servicio
 | `mutar.bat [id...]` | Pruebas de mutación (`mutations/catalogo.json`). |
 | `gitleaks.bat` | Busca secretos en todo el historial. |
 | `ci.bat` | Corre los mismos pasos que el CI y muestra el código de salida de cada uno. |
+| `demo-linux.bat sigterm\|produccion` | En el contenedor de Linux y contra la base de pruebas: SIGTERM real y el apagado, o las negativas de producción (`npm run build` antes). |
 | `invitar.bat --correo .. --nombre ".." --rol ..` | CLI de operador: invita una cuenta (por ejemplo, el primer admin). El enlace va **solo** al correo. |
 | `buzon.bat <correo>` | Buzón simulado (solo desarrollo y solo con el proveedor mock): los correos recibidos por una dirección. |
 | `totp.bat <secreto>` | Código TOTP vigente de un secreto base32, como una app autenticadora (para la demo). No lee la base ni el `.env`. |
@@ -96,6 +110,15 @@ Detalle completo en [docs/openapi.json](docs/openapi.json). Decisiones de sesió
 | `GET /api/usuarios/{id}/avatar` | Avatar de una cuenta (con ETag). |
 | `POST /api/cuenta/exportacion` | Exportar los datos en JSON, sin secretos (exige la contraseña). |
 | `DELETE /api/cuenta` | Eliminar la cuenta por lápida (contraseña y, con MFA, un código). 409 si hay propiedad compartida. |
+| `GET/POST /api/espacios`, `GET/PATCH/DELETE /api/espacios/{id}` | Espacios con tu rol en cada uno; crear, renombrar y borrar (solo si el propietario es el único miembro). |
+| `/api/espacios/{id}/miembros`, `/miembros/{usuarioId}`, `/propiedad` | Agregar miembros por correo, cambiar su rol, quitarlos o salir, y transferir el espacio. |
+| `GET/POST /api/espacios/{id}/documentos` | Documentos del espacio con tu rol efectivo; crear uno. |
+| `GET/PATCH/DELETE /api/documentos/{id}`, `/propiedad`, `/permisos`, `/permisos/{usuarioId}` | Metadatos, renombrar, borrar, transferir y permisos propios ("editor"). |
+| `GET /api/documentos/{id}/texto` | El texto actual, desde la memoria del servidor. |
+| `POST /api/tiempo-real/tickets` | Ticket de un solo uso (30 s) para abrir el WebSocket del documento. Protocolo en [docs/protocolo-tiempo-real.md](docs/protocolo-tiempo-real.md). |
+| `GET/POST /api/documentos/{id}/versiones`, `/versiones/{numero}`, `/versiones/{numero}/restaurar` | Historial, guardar una versión, ver su texto y restaurarla como cambio nuevo. |
+| `GET /api/documentos/{id}/versiones/verificacion` | Verificar la cadena de hash de todas las versiones (la recalcula la base). |
+| `GET/POST /api/documentos/{id}/comentarios`, `PATCH/DELETE /api/comentarios/{id}` | Hilos anclados y respuestas: comentar, editar, resolver y borrar. |
 | `POST /api/ia/explicar` | Explicar un fragmento (cualquier rol con acceso al documento). |
 | `POST /api/ia/resumir`, `/mejorar` | Respuesta en streaming (SSE sobre `fetch` POST). Mejorar exige editor. Abortar el `fetch` cancela la generación. |
 | `POST /api/espacios/{id}/buscar` | Búsqueda semántica: solo el espacio pedido y documentos con acceso hoy. |
@@ -130,4 +153,51 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | Trabajos | BullMQ. Retención diaria a las 03:15 UTC: llama a `purgar_retencion()` de la base. Ver [docs/data-retention.md](docs/data-retention.md). |
 | Errores | JSON `{ error: { codigo, mensaje, solicitud } }`. Un error inesperado responde 500 genérico: el detalle solo va al log. |
 | Logs | pino en JSON. Nunca registra `Authorization`, cookies, contraseñas ni tokens. |
-| OpenAPI | Generada desde los esquemas zod (`docs/openapi.json`). `npm run openapi:check` falla si quedó desactualizada. |
+| OpenAPI | Generada desde los esquemas zod (`docs/openapi.json`). `npm run openapi:check` falla si quedó desactualizada. Los errores comunes de `/api` (400, 401, 413, 415, 429 con `Retry-After`, 503) se agregan en un solo lugar, y `openapi.test.ts` exige que toda ruta de Express esté documentada. |
+| Tiempo real | WebSocket en `/api/tiempo-real`, en el mismo proceso: ticket de un solo uso en el subprotocolo, guardia por mensaje, revocación por los avisos de la base y persistencia con búfer de 250 ms. [ADR 0002](docs/adr/0002-comunicacion.md), [ADR 0003](docs/adr/0003-crdt.md) y [protocolo](docs/protocolo-tiempo-real.md). |
+| Límites | Por ruta sensible (login, MFA, recuperación, miembros, versiones, comentarios, IA, tickets) y un límite general de 600 pedidos por minuto y cuenta en todo `/api`. Todos en Redis y fallan cerrado (503). |
+
+## Documentación
+
+| Documento | Qué tiene |
+|---|---|
+| [docs/README-general.md](docs/README-general.md) | Los tres repos, la tabla de demostración de A a R, lo que exige el despliegue y las decisiones vigentes |
+| [docs/adr/](docs/adr/) | ADR 0001–0008, cada uno con su estado de verificación |
+| [docs/modelo-amenazas.md](docs/modelo-amenazas.md) | STRIDE por elemento y riesgos residuales R-01–R-07 |
+| [docs/protocolo-tiempo-real.md](docs/protocolo-tiempo-real.md) | Ticket, comprobaciones del upgrade, mensajes, límites y códigos de cierre |
+| [docs/openapi.json](docs/openapi.json) | El API REST, generado |
+| [docs/medicion-p3.md](docs/medicion-p3.md), [docs/carga-r.md](docs/carga-r.md), [docs/almacenamiento-r.md](docs/almacenamiento-r.md), [docs/limite-r/carga-r.md](docs/limite-r/carga-r.md) | Mediciones generadas por sus scripts, cada una con lo que no permite concluir |
+| [docs/data-retention.md](docs/data-retention.md) | Plazos de retención |
+| `docs/demo-D.md` … `docs/demo-K1.md` | Pasos de demostración para cmd.exe de los bloques D, E, F, G y K1 |
+
+## Problema conocido: el trabajador de Vitest muere en Windows con la CPU saturada
+
+**Aceptado y sin causa raíz** (decisión escrita del cierre de R7).
+
+**Qué pasa:** muy de vez en cuando, una corrida de pruebas en Windows termina con un error así y **sin ninguna línea FAIL**:
+
+```
+Unhandled Error: [vitest-pool]: Worker forks emitted error
+Worker exited unexpectedly with exit code 3221226505
+```
+
+El código 3221226505 es `0xC0000409` (`STATUS_STACK_BUFFER_OVERRUN`): un crash nativo de `node.exe` (`abort` o `__fastfail`) en el proceso trabajador de Vitest. No es una aserción que falla ni un cuelgue.
+
+**Cuándo se vio**, investigado en R7 con `tests/integracion/ia-autocompletado.test.ts`:
+
+| Condición | Corridas | Fallas |
+|---|---|---|
+| Windows, sin carga | 198, más 20 vueltas del runner de mutaciones | 0 |
+| Windows, con la CPU al 100 % (procesos de carga aparte) | 390 | 1, después de que pasaran 4 de las 6 pruebas |
+| Linux: el CI y cada réplica local en el contenedor | sin serie aparte | nunca se vio |
+
+- **Frecuencia y entorno:** alrededor de 1 cada 400 corridas, y solo con la CPU saturada. Node v24.13.1 en Windows 11, Vitest 5.0.4 con el pool `forks`.
+- **Sin la causa nativa.** 200 corridas más con `--report-on-fatalerror` no lo reprodujeron, así que no hay informe.
+- **No se va más lejos:** no se instala `procdump` ni se activan los volcados de Windows Error Reporting, porque exigen tocar el registro.
+
+**Qué hacer si aparece:**
+- **Repetir la corrida.** Si se repite sin carga en la máquina, o en Linux, es otra cosa y se investiga.
+- **En la corrida final de las mutaciones,** `scripts/mutar.mjs` ya deja la evidencia:
+  - imprime el error no manejado como evidencia;
+  - imprime `status`, `signal`, la duración y las últimas 40 líneas;
+  - guarda la salida completa en `mutations/fallas/final-<fecha>.log`, que no se versiona.
