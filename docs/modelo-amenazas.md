@@ -345,5 +345,8 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - **Pedidos sin token:** no cuentan en este límite. Cuestan una verificación HMAC y un 401, sin consultar la base. Las rutas públicas tienen su límite por IP.
   - **Una sola instancia del API:** el tiempo real vive en la memoria del proceso (ADR 0002).
   - **El límite cuesta entre un 10 % y un 16 % de capacidad en H2,** según la medición de arriba.
-- **Salida para el despliegue (no hecha: sin despliegue en R):** un límite por IP en el proxy inverso, para lo que este límite no cubre.
-- **Estado:** **mitigado en parte en R4**, por decisión escrita. Lo que no cubre queda anotado arriba («Lo que queda»), pendiente de que lo confirmes al cerrar R4.
+- **Condición para el despliegue (no hecha: sin despliegue en R):** un **límite por IP en el proxy inverso**, para lo que este límite no cubre. Va en «Antes del despliegue» del [README general](README-general.md).
+- **Estado:** **mitigado en parte en R4 y aceptado por escrito (27-10-2026):**
+  - los cuatro residuales tal como están en «Lo que queda»;
+  - el costo medido;
+  - el límite por IP en el proxy inverso como condición del despliegue.
