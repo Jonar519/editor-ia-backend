@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { Request, RequestHandler, Response } from 'express';
 import type { Redis } from 'ioredis';
 import { ErrorHttp } from '../http/errores.js';
+import { verificarAcceso } from './tokens.js';
 
 // INCR + PEXPIRE atómicos: ventana fija que empieza con el primer intento.
 const SCRIPT_CONSUMIR = `
@@ -42,11 +43,17 @@ export function crearLimitador(o: OpcionesLimitador): Limitador {
  * Middleware de límite. FALLA CERRADO: si Redis no responde, la petición se rechaza con 503 en vez de
  * quedar sin protección (un atacante no gana nada tumbando Redis).
  */
-export function limitarTasa(limitador: Limitador, claveDe: (req: Request, res: Response) => string): RequestHandler {
+export function limitarTasa(limitador: Limitador, claveDe: (req: Request, res: Response) => string | null): RequestHandler {
   return async (req, res, next) => {
+    const clave = claveDe(req, res);
+    // Sin clave, este límite no aplica a la petición (lo usa el límite general: sin access token).
+    if (clave === null) {
+      next();
+      return;
+    }
     let r: ResultadoLimite;
     try {
-      r = await limitador.consumir(claveDe(req, res));
+      r = await limitador.consumir(clave);
     } catch (err) {
       req.log.error({ err }, 'límite de tasa no disponible (Redis)');
       next(new ErrorHttp(503, 'limites_no_disponibles', 'Servicio temporalmente no disponible'));
@@ -64,6 +71,26 @@ export function limitarTasa(limitador: Limitador, claveDe: (req: Request, res: R
 
 /** IP del cliente para las claves de límite (respeta TRUST_PROXY vía req.ip). */
 export const claveIp = (req: Request): string => req.ip ?? 'desconocida';
+
+// ─── Límite general por cuenta (riesgo R-07) ──────────────────────────────────────
+
+/** Pedidos por minuto y cuenta a todo /api (LIMITE_PEDIDOS_MINUTO; las mediciones lo suben). */
+export const LIMITE_GENERAL = { max: 600, ventanaMs: 60_000 } as const;
+
+/**
+ * Límite general de /api por CUENTA: la del access token, con la firma verificada (HMAC, sin ir a la
+ * base). Un pedido sin token, o con uno inválido, no cuenta aquí: las rutas públicas tienen su límite
+ * por IP y un token inválido recibe 401 sin consultar la base. /health, /ready, /metrics y el WebSocket
+ * (el upgrade no pasa por Express) quedan fuera. Falla cerrado como todos (503 si Redis no responde).
+ */
+export function limiteGeneral(o: { redis: Redis; prefijo: string; claveAcceso: Buffer; max?: number }): RequestHandler {
+  const limitador = crearLimitador({ redis: o.redis, prefijo: o.prefijo, nombre: 'general', max: o.max ?? LIMITE_GENERAL.max, ventanaMs: LIMITE_GENERAL.ventanaMs });
+  return limitarTasa(limitador, (req) => {
+    const cabecera = req.headers.authorization;
+    const reclamos = cabecera?.startsWith('Bearer ') ? verificarAcceso(cabecera.slice(7), o.claveAcceso) : null;
+    return reclamos ? `cuenta:${reclamos.sub}` : null;
+  });
+}
 
 // ─── Bloqueo progresivo de cuentas ────────────────────────────────────────────────
 

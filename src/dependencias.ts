@@ -40,4 +40,6 @@ export interface DependenciasApi {
   topesIa?: TopesIa;
   /** Similitud coseno mínima de un resultado de búsqueda (IA_SIMILITUD_MINIMA). */
   similitudMinimaIa?: number;
+  /** Límite general de pedidos por minuto y cuenta (LIMITE_PEDIDOS_MINUTO). Sin él, 600. */
+  limitePedidosMinuto?: number;
 }

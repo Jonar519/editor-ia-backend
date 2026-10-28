@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { limiteGeneral } from './auth/limites.js';
 import { rutasAuth } from './auth/rutas.js';
 import { rutasComentarios, rutasComentariosDeDocumento } from './comentarios/rutas.js';
 import { rutasCuenta } from './cuenta/rutas.js';
@@ -19,6 +20,8 @@ export function crearApi(d: DependenciasApi): Router {
     res.setHeader('Cache-Control', 'no-store');
     next();
   });
+  // R-07: antes que cualquier ruta, el límite general por cuenta.
+  api.use(limiteGeneral({ redis: d.redis, prefijo: d.prefijoRedis, claveAcceso: d.claveAcceso, ...(d.limitePedidosMinuto ? { max: d.limitePedidosMinuto } : {}) }));
   api.use('/auth', rutasAuth(d));
   api.use('/invitaciones', rutasInvitacionPublica(d));
   api.use('/cuenta', rutasCuenta(d));

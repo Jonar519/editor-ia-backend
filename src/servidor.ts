@@ -86,6 +86,7 @@ async function main(): Promise<void> {
     contenido: tiempoReal,
     topesIa,
     similitudMinimaIa: config.IA_SIMILITUD_MINIMA,
+    limitePedidosMinuto: config.LIMITE_PEDIDOS_MINUTO,
     ...(ia ? { ia } : {}),
     ...(indexador ? { indexador } : {}),
     prisma,
