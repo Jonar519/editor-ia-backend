@@ -25,6 +25,16 @@ function variables(archivo) {
   return r;
 }
 
+// --salida <carpeta> (relativa al repo, por defecto docs): de dónde salen y adónde vuelven los resultados.
+const args = process.argv.slice(2);
+const iSalida = args.indexOf('--salida');
+const SALIDA = (iSalida >= 0 ? args[iSalida + 1] : undefined) ?? 'docs';
+if (path.isAbsolute(SALIDA) || SALIDA.split(/[\\/]/).includes('..')) {
+  console.error('--salida tiene que ser una carpeta dentro del repo (relativa).');
+  process.exit(1);
+}
+const salidaPosix = SALIDA.split(/[\\/]/).join('/');
+
 const back = variables(path.join(RAIZ, '.env'));
 const repoBase = path.resolve(RAIZ, back.DATABASE_REPO_PATH || '../editor-ia-database');
 const base = variables(path.join(repoBase, '.env'));
@@ -55,9 +65,10 @@ try {
   docker(['exec', CONTENEDOR, 'mkdir', '-p', '/work/backend', '/work/editor-ia-database']);
   docker(['exec', '-i', CONTENEDOR, 'tar', '-x', '-C', '/work/backend'], { entrada: tarDe(RAIZ) });
   docker(['exec', '-i', CONTENEDOR, 'tar', '-x', '-C', '/work/editor-ia-database'], { entrada: tarDe(repoBase) });
-  // Los datos de Windows que ya estén en docs/ (sin versionar todavía) entran también, para juntarlos.
+  // Los datos de Windows que ya estén en la salida (sin versionar todavía) entran también, para juntarlos.
+  docker(['exec', CONTENEDOR, 'mkdir', '-p', `/work/backend/${salidaPosix}`]);
   for (const f of ['carga-r.json']) {
-    if (existsSync(path.join(RAIZ, 'docs', f))) docker(['cp', path.join(RAIZ, 'docs', f), `${CONTENEDOR}:/work/backend/docs/${f}`]);
+    if (existsSync(path.join(RAIZ, SALIDA, f))) docker(['cp', path.join(RAIZ, SALIDA, f), `${CONTENEDOR}:/work/backend/${salidaPosix}/${f}`]);
   }
   const env = {
     PGHOST: 'cuaderno_postgres',
@@ -75,12 +86,12 @@ try {
     'cd /work/editor-ia-database && npm ci --no-audit --no-fund >/dev/null',
     // Como el CI: lo generado (cliente de Prisma y tipos del proto) no se versiona.
     'cd /work/backend && npm ci --no-audit --no-fund >/dev/null && npm run -s prisma:generate && npm run -s proto:generate && npm run -s build',
-    `npm run -s carga -- --entorno linux ${process.argv.slice(2).join(' ')}`,
+    `npm run -s carga -- --entorno linux ${args.join(' ')}`,
   ].join(' && ');
   codigo = docker(['exec', ...Object.entries(env).flatMap(([k, v]) => ['-e', `${k}=${v}`]), CONTENEDOR, 'bash', '-c', guion], { heredar: true });
   if (codigo === 0) {
-    for (const f of ['carga-r.json', 'carga-r.md']) docker(['cp', `${CONTENEDOR}:/work/backend/docs/${f}`, path.join(RAIZ, 'docs', f)]);
-    console.log('Copiados docs/carga-r.json y docs/carga-r.md desde el contenedor.');
+    for (const f of ['carga-r.json', 'carga-r.md']) docker(['cp', `${CONTENEDOR}:/work/backend/${salidaPosix}/${f}`, path.join(RAIZ, SALIDA, f)]);
+    console.log(`Copiados ${salidaPosix}/carga-r.json y ${salidaPosix}/carga-r.md desde el contenedor.`);
   }
 } finally {
   spawnSync('docker', ['rm', '-f', CONTENEDOR], { stdio: 'ignore' });

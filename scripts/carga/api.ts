@@ -15,8 +15,9 @@ export const ORIGEN = 'http://127.0.0.1:5175';
 export const URL_WS = `ws://127.0.0.1:${String(PUERTO)}/api/tiempo-real`;
 
 /** NODE_ENV=development (producción exige TLS y proveedores reales), IA y correo simulados, secretos al azar. */
-export function entornoApi(c: Conexiones, claveAcceso: Buffer): Record<string, string> {
+export function entornoApi(c: Conexiones, claveAcceso: Buffer, limitePedidosMinuto?: number): Record<string, string> {
   return {
+    ...(limitePedidosMinuto === undefined ? {} : { LIMITE_PEDIDOS_MINUTO: String(limitePedidosMinuto) }),
     PATH: process.env.PATH ?? '',
     ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
     TZ: 'UTC',

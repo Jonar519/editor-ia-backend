@@ -44,8 +44,11 @@ const { values: a } = parseArgs({
     forzar: { type: 'boolean', default: false },
     escenarios: { type: 'string', default: 'H1,H2,H3,H4,W1,W2' },
     salida: { type: 'string', default: path.join(RAIZ, 'docs') },
+    // Costo del límite general (R-07): LIMITE_PEDIDOS_MINUTO del API para esta corrida.
+    'limite-general': { type: 'string' },
   },
 });
+const LIMITE_GENERAL_API = a['limite-general'] === undefined ? undefined : Number(a['limite-general']);
 const SALIDA_JSON = path.join(a.salida, 'carga-r.json');
 const SALIDA_MD = path.join(a.salida, 'carga-r.md');
 const UMBRAL = Number(a.umbral);
@@ -380,7 +383,7 @@ async function principal(): Promise<void> {
 
   const claveAcceso = randomBytes(32);
   const contrasenaLogin = `clave-de-carga-${randomBytes(6).toString('hex')}`;
-  const api = await levantarApi(entornoApi(c, claveAcceso));
+  const api = await levantarApi(entornoApi(c, claveAcceso, LIMITE_GENERAL_API));
   let s: Siembra | undefined;
   try {
     s = await sembrar(c.urlApp, claveAcceso, contrasenaLogin);
@@ -434,6 +437,7 @@ async function principal(): Promise<void> {
       umbral: UMBRAL,
       forzado: a.forzar,
       rapido: a.rapido,
+      ...(LIMITE_GENERAL_API === undefined ? {} : { limitePedidosMinuto: LIMITE_GENERAL_API }),
     };
     const previo = existsSync(SALIDA_JSON) ? (JSON.parse(readFileSync(SALIDA_JSON, 'utf8')) as DatosCarga) : { corridas: {} };
     const datos: DatosCarga = { ...previo, corridas: { ...previo.corridas, [a.entorno]: { entorno, parametros: PARAMETROS, http, login, ws } } };

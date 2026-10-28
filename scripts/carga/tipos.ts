@@ -58,6 +58,8 @@ export interface EntornoCarga {
   umbral: number;
   forzado: boolean;
   rapido: boolean;
+  /** LIMITE_PEDIDOS_MINUTO del API, si la corrida lo cambió (medición del costo del límite general, R-07). */
+  limitePedidosMinuto?: number;
 }
 
 export interface MedicionEntorno {

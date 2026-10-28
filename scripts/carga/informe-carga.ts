@@ -50,6 +50,7 @@ function seccionEntorno(m: MedicionEntorno): string {
         ['autocannon', e.autocannon],
         ['PostgreSQL', e.postgres],
         ['Carga de CPU antes de empezar', `${n(e.cargaInicial)} % (umbral ${String(e.umbral)} %)${e.forzado ? ' — FORZADO' : ''}`],
+        ...(e.limitePedidosMinuto === undefined ? [] : [['Límite general del API (LIMITE_PEDIDOS_MINUTO)', String(e.limitePedidosMinuto)]]),
         ['Parámetros', `HTTP: ${p.conexiones.join(', ')} conexiones; WS: ${p.clientesW1.join(', ')} clientes (W1), ${String(p.documentosW2)} × ${String(p.clientesPorDocumentoW2)} (W2), ${p.tasas.join(' y ')} cambios/s; ${String(p.duracionS)} s por corrida, ${String(p.calentamientoS)} s de calentamiento, ${String(p.repeticiones)} repeticiones${e.rapido ? ' (RÁPIDO: no es una medición)' : ''}`],
       ],
     ),
