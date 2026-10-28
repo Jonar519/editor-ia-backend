@@ -89,7 +89,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 | I | Enumerar cuentas por login, recuperación, invitación o miembros | Mismo tiempo y misma respuesta exista o no el correo (hash señuelo); la recuperación responde antes de trabajar; agregar miembros: 404 genérico y 30 cada 15 min | back E15, E16, G18, W09, W16 | — |
 | I | Que el log o la exportación filtren secretos | Redacción de cabeceras y campos; nunca el cuerpo; exportación con lista blanca de columnas | back S12, S13, G01, G02, U26; `tests/integracion/secretos.test.ts` | — |
 | I | Ver contenido ajeno adivinando ids | Sin acceso, 404 igual que «no existe»; el rol efectivo lo calcula la base | back W05, W06; base C26–C29 | — |
-| D | Agotar el único proceso del API con pedidos válidos | Límites por ruta sensible (login, recuperación, MFA, cuenta, invitaciones, versiones, comentarios, IA, tickets); `statement_timeout` | back S26, E17, R03; R3 | **R-07**: no hay un límite global de pedidos por cuenta o por IP. |
+| D | Agotar el único proceso del API con pedidos válidos | Límite general de 600 pedidos por minuto y cuenta en todo `/api` (429 con `Retry-After`; 503 si Redis falla); límites por ruta sensible (login, recuperación, MFA, cuenta, invitaciones, versiones, comentarios, IA, tickets); `statement_timeout` | back R08–R10, S26, E17, R03; `tests/integracion/limite-general.test.ts`; costo medido ([limite-r](limite-r/carga-r.md)) | **R-07**: muchas cuentas a la vez, o pedidos sin token, no los frena este límite. |
 | E | Hacer más de lo que el rol permite | Una sola función de acceso (`src/contenido/acceso.ts`) y la base como segunda capa (rol efectivo, techo del rol de cuenta, triggers de escritura) | back W01–W21; base C09–C11, C26–C34 | — |
 | E | Un admin creado sin MFA, o cuentas creadas sin invitación | Alta solo por invitación (la base lo exige); un admin activo siempre tiene MFA confirmado | back E24, E30; base B13, B20, B38 | — |
 
@@ -116,7 +116,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 | I | `/metrics` abierto | Exige el token, comparado completo; etiquetas por patrón de ruta, no por URL | back S08, S09, S18 | — |
 | I | Respuestas guardadas en cachés intermedias | `Cache-Control: no-store` | back E36 | — |
 | I | Metadatos (GPS) en las fotos de perfil | Lista blanca de segmentos JPEG y chunks PNG; se guarda solo la versión limpia; se sirve con CSP `default-src 'none'; sandbox` | back U01–U11; base G03–G08 | — |
-| D | Saturar el proceso con lecturas | Ver R-07: un solo proceso, sin límite global | R3: con 10 conexiones, `GET /api/espacios` ya usa un núcleo entero (2 580 pedidos/s en Linux) | **R-07** |
+| D | Saturar el proceso con lecturas | Límite general por cuenta (600 por minuto): una cuenta sola ya no ocupa el proceso con pedidos válidos | back R08–R10. R3: con 10 conexiones, `GET /api/espacios` ya usaba un núcleo entero (2 580 pedidos/s en Linux). R4: con el límite, a esa cuenta se le responde 429 a 5 761–6 337 pedidos/s | **R-07** |
 | D | Una consulta larga que bloquee la base | `statement_timeout` de 5 s | back S26 | — |
 | D | Saturar la IA o su presupuesto | 30 pedidos por minuto, topes diarios de tokens y de pedidos, presupuesto del espacio para el indexado, salida recortada | back P15, P16, P36–P43 | Depende del proveedor real (R-04 y despliegue). |
 | E | Que el API corra con privilegios de dueño o superusuario | Se detecta al arrancar y producción aborta | back S22–S24 | — |
@@ -304,12 +304,12 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - **`frame-ancestors 'none'` por cabecera:** no funciona en `<meta>`.
 - **Estado:** aceptado por escrito al cerrar R2 (opción 1).
 
-### R-07 · Sin límite global de pedidos: una cuenta puede ocupar el único proceso del API
+### R-07 · Un solo proceso del API frente a muchos pedidos (límite general por cuenta desde R4)
 
 - **Origen:** bloque R4, con los números de R3 ([carga-r.md](carga-r.md)). Lo encontró el análisis STRIDE (D en P2): hay límites por ruta sensible, pero no uno general.
-- **Qué puede pasar:** una persona con sesión (o un script con su token) pide sin parar rutas de lectura que no tienen límite, como `GET /api/espacios` o el texto de un documento, y ocupa el proceso del API. Las demás personas ven sus pedidos más lentos. El tiempo real comparte ese proceso.
+- **Qué podía pasar antes de R4:** una persona con sesión (o un script con su token) pedía sin parar rutas de lectura que no tenían límite, como `GET /api/espacios` o el texto de un documento, y ocupaba el proceso del API. Las demás personas ven sus pedidos más lentos. El tiempo real comparte ese proceso.
 - **Medido en R3** (Linux, una máquina, todo local):
-  - con **10 conexiones**, `GET /api/espacios` ya usa un núcleo entero: 2 580 pedidos por segundo, CPU del API 102 %;
+  - antes del límite general, con **10 conexiones**, `GET /api/espacios` ya usaba un núcleo entero: 2 580 pedidos por segundo, CPU del API 102 %;
   - con el login bajo carga (H4), una sonda de `GET /api/espacios` pasó de p99 1 ms sola a 5, 21 y 42 ms con 10, 50 y 100 conexiones de login. No falló ningún pedido de la sonda.
 - **Lo que lo acota hoy:**
   - hace falta una sesión válida para las rutas caras (las públicas tienen límite por IP);
@@ -317,8 +317,33 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - el WebSocket tiene sus límites por conexión (R-01 y la sección de P3);
   - `statement_timeout` corta las consultas largas;
   - el log y la sesión identifican a la cuenta.
-- **Lo que no hay:**
-  - un límite general de pedidos por cuenta o por IP;
-  - más de una instancia del API (el tiempo real vive en la memoria del proceso; ADR 0002).
-- **Salida para el despliegue (no hecha: sin despliegue en R):** un límite por IP en el proxy inverso, o un limitador general por cuenta en el API con Redis, medido con la misma herramienta de R3.
-- **Estado:** **abierto, pendiente de tu decisión.** Se anota en R4; no se cambia código en este bloque.
+- **Mitigación hecha en R4 (decisión escrita del 27-10-2026, opción a):** límite general de **600 pedidos por minuto y cuenta** en todo `/api` (`limiteGeneral` en `src/auth/limites.ts`).
+  - **Clave:** la cuenta del access token, con la firma verificada, sin ir a la base.
+  - **Al pasarse:** 429 `demasiados_intentos` con `Retry-After`.
+  - **Si Redis no responde:** 503 `limites_no_disponibles` (falla cerrado, como los demás límites).
+  - **Fuera del límite:** `/health`, `/ready`, `/metrics` y el WebSocket, porque el upgrade no pasa por Express.
+  - **Sin token o con uno inválido:** no cuenta; responde 401 sin consultar la base.
+  - **Evidencia:** `tests/integracion/limite-general.test.ts`, con 6 pruebas, entre ellas que con el límite agotado `/health` responde y el WebSocket abierto sigue editando. Mutaciones back R08–R10, detectadas.
+- **Costo medido** con la herramienta de R3 ([limite-r/carga-r.md](limite-r/carga-r.md)): H2 (`GET /api/espacios`), 10, 50 y 100 conexiones, 3 repeticiones de 30 s, en Windows y Linux. Linux es la referencia.
+  - **Sin el limitador:** el mismo commit de herramientas sobre R4 antes del limitador (rama local de medición, no publicada).
+  - **Con el limitador, sin que corte:** `LIMITE_PEDIDOS_MINUTO=1000000000`. Es el mismo código que en producción (un EVAL en Redis por pedido); solo se sube el máximo.
+
+  | H2, pedidos/s (mediana [mín–máx]) | 10 conexiones | 50 conexiones | 100 conexiones |
+  |---|---|---|---|
+  | Linux, sin limitador | 2 494 [2 328–2 631] | 2 504 [2 429–2 642] | 2 608 [2 414–2 651] |
+  | Linux, con limitador (sin cortar) | 2 219 [2 210–2 223] | 2 260 [2 251–2 263] | 2 190 [2 160–2 208] |
+  | Diferencia en Linux | −11,0 % | −9,7 % | −16,0 % |
+  | Windows, sin limitador | 1 489 [1 488–1 493] | 1 640 [1 637–1 643] | 1 630 [1 624–1 636] |
+  | Windows, con limitador (sin cortar) | 1 318 [1 314–1 324] | 1 472 [1 468–1 476] | 1 460 [1 449–1 468] |
+  | Diferencia en Windows | −11,5 % | −10,2 % | −10,4 % |
+
+  - **Latencia p50 en Linux:** de 3, 19 y 37 ms a 4, 21 y 45 ms. Sin fallos en ninguna de las dos variantes. El API está a un núcleo entero (102–103 %) en las dos: el costo se ve como pedidos por segundo de menos.
+  - **Con el valor de producción (600):** a la cuenta se le respondió 429 al pasar el límite. En total pasaron 600, 1 200 y 1 200 pedidos con 2xx (10, 50 y 100 conexiones, sumando las 3 repeticiones y los calentamientos), nunca más de 600 por ventana de un minuto. El resto fueron 429, servidos a 5 761, 6 337 y 6 335 pedidos por segundo en Linux: responder 429 cuesta menos que un pedido válido. Los totales de 2xx concuerdan con una ventana fija de un minuto; no se midió cuántos pasaron en cada ventana.
+  - **Lo que esta medición no permite concluir:** las variantes con y sin limitador son dos builds. La diferencia incluye todo lo que cambió entre ellas, que es solo el limitador. Es una sola máquina con Redis local: con Redis en otra máquina, cada pedido sumaría la latencia de esa red. Ver también los límites del informe de carga.
+- **Lo que queda:**
+  - **Muchas cuentas a la vez:** el límite es por cuenta. N cuentas suman N × 600 pedidos por minuto (las cuentas son solo por invitación).
+  - **Pedidos sin token:** no cuentan en este límite. Cuestan una verificación HMAC y un 401, sin consultar la base. Las rutas públicas tienen su límite por IP.
+  - **Una sola instancia del API:** el tiempo real vive en la memoria del proceso (ADR 0002).
+  - **El límite cuesta entre un 10 % y un 16 % de capacidad en H2,** según la medición de arriba.
+- **Salida para el despliegue (no hecha: sin despliegue en R):** un límite por IP en el proxy inverso, para lo que este límite no cubre.
+- **Estado:** **mitigado en parte en R4**, por decisión escrita. Lo que no cubre queda anotado arriba («Lo que queda»), pendiente de que lo confirmes al cerrar R4.
