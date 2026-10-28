@@ -9,6 +9,7 @@ import { readSyncMessage, writeSyncStep1 } from 'y-protocols/sync';
 import * as Y from 'yjs';
 import { WebSocket } from 'ws';
 import { crearApi } from '../src/api.js';
+import type { DependenciasApi } from '../src/dependencias.js';
 import type { IaTiempoReal } from '../src/ia/autocompletado.js';
 import { iniciarAvisos, type Avisos } from '../src/tiempo-real/avisos.js';
 import { LIMITES_PRODUCCION, type LimitesTiempoReal } from '../src/tiempo-real/limites.js';
@@ -18,8 +19,8 @@ import { appDePrueba, loggerEnMemoria, urlBdPruebas } from './_apoyo.js';
 
 export type Persona = Awaited<ReturnType<typeof cuentaActiva>> & { sesionId: string; auth: string };
 
-export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean; ia?: IaTiempoReal } = {}) {
-  const e = await entornoApi();
+export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean; ia?: IaTiempoReal; api?: Partial<DependenciasApi> } = {}) {
+  const e = await entornoApi(o.api);
   const { log, lineas } = loggerEnMemoria();
   const rt = new ServidorTiempoReal({
     prisma: e.prisma,

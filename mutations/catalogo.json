@@ -2144,6 +2144,42 @@
       "reemplazo": "    '## Cómo se midió',",
       "comando": "test",
       "pruebas": ["tests/unitarias/carga-contabilidad.test.ts"]
+    },
+    {
+      "id": "R07",
+      "regla": "Almacenamiento (R-02): el peor caso por hora sale del límite vigente de versiones",
+      "archivo": "scripts/carga/informe-almacenamiento.ts",
+      "buscar": "bytesPorVersion * LIMITES_VERSIONES.versiones.max *",
+      "reemplazo": "bytesPorVersion *",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/almacenamiento.test.ts"]
+    },
+    {
+      "id": "R08",
+      "regla": "R-07: el límite general por cuenta se aplica a todo /api",
+      "archivo": "src/api.ts",
+      "buscar": "api.use(limiteGeneral(",
+      "reemplazo": "void (limiteGeneral)(",
+      "comando": "test",
+      "pruebas": ["tests/integracion/limite-general.test.ts"]
+    },
+    {
+      "id": "R09",
+      "regla": "R-07: un pedido sin token válido no cuenta en el límite general (recibe 401, no 429)",
+      "archivo": "src/auth/limites.ts",
+      "buscar": "return reclamos ? `cuenta:${reclamos.sub}` : null;",
+      "reemplazo": "return reclamos ? `cuenta:${reclamos.sub}` : 'anonimo';",
+      "comando": "test",
+      "pruebas": ["tests/integracion/limite-general.test.ts"]
+    },
+    {
+      "id": "R10",
+      "regla": "R-07: el límite general es de 600 pedidos por minuto",
+      "archivo": "src/auth/limites.ts",
+      "buscar": "export const LIMITE_GENERAL = { max: 600, ventanaMs: 60_000 } as const;",
+      "reemplazo": "export const LIMITE_GENERAL = { max: 6000, ventanaMs: 60_000 } as const;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/limite-general.test.ts"]
     }
   ]
 }

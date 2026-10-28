@@ -93,6 +93,8 @@ const esquema = z
     IA_TOPE_INDEXADO_ESPACIO_DIA: z.coerce.number().int().min(1).max(1_000_000_000).default(200_000),
     // Similitud coseno mínima de un resultado de búsqueda. Se recalibra con el modelo real.
     IA_SIMILITUD_MINIMA: z.coerce.number().min(0, { error: 'entre 0 y 1' }).max(1, { error: 'entre 0 y 1' }).default(0.2),
+    // Límite general de /api por cuenta (riesgo R-07). La medición de su costo (R3) lo sube para que no corte.
+    LIMITE_PEDIDOS_MINUTO: z.coerce.number().int().min(1).max(1_000_000_000).default(600),
   })
   .superRefine((c, ctx) => {
     reglaTransporte(c, ctx);

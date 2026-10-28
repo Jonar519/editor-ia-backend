@@ -28,6 +28,7 @@ import { emitirAcceso } from '../../src/auth/tokens.js';
 import { COSTO_HASH_MINIMO_PRODUCCION } from '../../src/config/entorno.js';
 import { crearPool, crearPrisma } from '../../src/infra/bd.js';
 import { cargaCpu } from '../medicion/cpu.js';
+import { BASE, ORIGEN, URL_WS, cerrarApi, entornoApi, levantarApi } from './api.js';
 import { BASE_CARGA, conexiones, prepararBase } from './base.js';
 import { ClienteCarga, ahoraNs } from './cliente-ws.js';
 import { resumirHttp, resumirWs, type HuellaCliente, type ResultadoGenerador } from './contabilidad.js';
@@ -43,8 +44,11 @@ const { values: a } = parseArgs({
     forzar: { type: 'boolean', default: false },
     escenarios: { type: 'string', default: 'H1,H2,H3,H4,W1,W2' },
     salida: { type: 'string', default: path.join(RAIZ, 'docs') },
+    // Costo del límite general (R-07): LIMITE_PEDIDOS_MINUTO del API para esta corrida.
+    'limite-general': { type: 'string' },
   },
 });
+const LIMITE_GENERAL_API = a['limite-general'] === undefined ? undefined : Number(a['limite-general']);
 const SALIDA_JSON = path.join(a.salida, 'carga-r.json');
 const SALIDA_MD = path.join(a.salida, 'carga-r.md');
 const UMBRAL = Number(a.umbral);
@@ -54,10 +58,6 @@ const PARAMETROS = a.rapido
   ? { conexiones: [10], duracionS: 3, calentamientoS: 1, repeticiones: 1, sondaSolaS: 2, clientesW1: [10], tasas: [2], documentosW2: 4, clientesPorDocumentoW2: 5, esperaFinalMs: 1500 }
   : { conexiones: [10, 50, 100], duracionS: 30, calentamientoS: 5, repeticiones: 3, sondaSolaS: 10, clientesW1: [10, 50, 100], tasas: [2, 5], documentosW2: 20, clientesPorDocumentoW2: 5, esperaFinalMs: 3000 };
 
-const PUERTO = 4290;
-const BASE = `http://127.0.0.1:${String(PUERTO)}`;
-const ORIGEN = 'http://127.0.0.1:5175';
-const URL_WS = `ws://127.0.0.1:${String(PUERTO)}/api/tiempo-real`;
 const ESPERAS_MAXIMAS = 12;
 
 class CargaAjena extends Error {
@@ -116,20 +116,6 @@ async function medirApi<T>(api: ChildProcess, f: () => Promise<T>): Promise<{ va
   const u1 = await pedirUso(api);
   const cpuMs = (u1.cpu.user - u0.cpu.user + u1.cpu.system - u0.cpu.system) / 1000;
   return { valor, cpuServidorPct: Math.round((cpuMs / (Date.now() - t0)) * 1000) / 10, rssMaxMiB: Math.round((Math.max(rssMax, u1.rss) / 2 ** 20) * 10) / 10 };
-}
-
-async function levantarApi(entornoApi: Record<string, string>): Promise<ChildProcess> {
-  const api = fork(path.join(RAIZ, 'scripts', 'carga', 'proceso-api.ts'), [], { execArgv: ['--import', 'tsx'], env: entornoApi, stdio: 'inherit' });
-  for (let i = 0; i < 120; i++) {
-    try {
-      if ((await fetch(`${BASE}/health`)).ok) return api;
-    } catch {
-      // todavía no escucha
-    }
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  api.kill();
-  throw new Error('el API no respondió /health en 30 s');
 }
 
 // ─── Datos ficticios ────────────────────────────────────────────────────────────
@@ -397,28 +383,7 @@ async function principal(): Promise<void> {
 
   const claveAcceso = randomBytes(32);
   const contrasenaLogin = `clave-de-carga-${randomBytes(6).toString('hex')}`;
-  const entornoApi: Record<string, string> = {
-    PATH: process.env.PATH ?? '',
-    ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
-    TZ: 'UTC',
-    NODE_ENV: 'development',
-    HOST: '127.0.0.1',
-    PORT: String(PUERTO),
-    LOG_LEVEL: 'warn',
-    DATABASE_URL: c.urlApp,
-    REDIS_URL: c.urlRedis,
-    ACCESS_TOKEN_SECRET: claveAcceso.toString('base64'),
-    MFA_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
-    METRICS_TOKEN: randomBytes(32).toString('base64url'),
-    APP_URL: ORIGEN,
-    COOKIE_SECURE: 'true',
-    TRUST_PROXY: 'false',
-    AI_PROVIDER: 'mock',
-    EMAIL_PROVIDER: 'mock',
-    GEO_PROVIDER: 'mock',
-    PASSWORD_HASH_COST: String(COSTO_HASH_MINIMO_PRODUCCION),
-  };
-  const api = await levantarApi(entornoApi);
+  const api = await levantarApi(entornoApi(c, claveAcceso, LIMITE_GENERAL_API));
   let s: Siembra | undefined;
   try {
     s = await sembrar(c.urlApp, claveAcceso, contrasenaLogin);
@@ -472,6 +437,7 @@ async function principal(): Promise<void> {
       umbral: UMBRAL,
       forzado: a.forzar,
       rapido: a.rapido,
+      ...(LIMITE_GENERAL_API === undefined ? {} : { limitePedidosMinuto: LIMITE_GENERAL_API }),
     };
     const previo = existsSync(SALIDA_JSON) ? (JSON.parse(readFileSync(SALIDA_JSON, 'utf8')) as DatosCarga) : { corridas: {} };
     const datos: DatosCarga = { ...previo, corridas: { ...previo.corridas, [a.entorno]: { entorno, parametros: PARAMETROS, http, login, ws } } };
@@ -480,8 +446,7 @@ async function principal(): Promise<void> {
     console.log(`Escritos ${path.relative(RAIZ, SALIDA_JSON)} y ${path.relative(RAIZ, SALIDA_MD)}.`);
   } finally {
     await s?.cerrar();
-    api.send({ tipo: 'cerrar' });
-    await new Promise((r) => api.once('exit', r));
+    await cerrarApi(api);
   }
 }
 

@@ -105,6 +105,10 @@ Además, producción se niega a arrancar si:
 
 `MFA_ENCRYPTION_KEY` se genera **una vez** para producción y no se cambia después: si cambia, los MFA ya configurados dejan de poder verificarse.
 
+**Monitoreo del tamaño de las versiones** (riesgo R-02, aceptado sin tope en R4). Las versiones no tienen tope ni retención: una cuenta editora puede sumar hasta 534,5 MiB por hora (medido en [almacenamiento-r.md](almacenamiento-r.md)).
+- Antes de abrir el servicio, una alerta sobre `pg_total_relation_size('versiones')` y el tamaño de la base.
+- Si salta, se ve quién guardó (`versiones.creado_por`) y se decide la cuota o la retención.
+
 ## Decisiones vigentes
 
 - **Redis sin contraseña en desarrollo.** Solo escucha en `127.0.0.1` y la decisión se reevaluó en el bloque D. En producción, la configuración exige contraseña o TLS.
