@@ -69,3 +69,26 @@ Esto cuesta una consulta por petición, indexada por la clave primaria de la ses
 - TOTP: RFC 6238 (SHA-1, 6 dígitos, 30 s) con tolerancia de ±1 paso. Solo se acepta un paso **mayor** al último aceptado: el código y la base lo exigen (UPDATE condicional y trigger), también bajo carrera.
 - Los fallos de MFA suman a `fallos_login` y al bloqueo progresivo. El contador vuelve a cero solo al superar el segundo paso.
 - La sesión resultante queda con `mfa_verificada`.
+
+## Estado de verificación al cierre (R6)
+
+**Verificado** con pruebas y mutaciones del backend (`tests/unitarias/tokens.test.ts`, `contrasenas.test.ts`, `totp.test.ts`, `cliente-y-bloqueo.test.ts`; `tests/integracion/auth.test.ts`, `mfa.test.ts`, `limites.test.ts`, `reloj.test.ts`) y del frontend:
+
+| Decisión | Evidencia |
+|---|---|
+| Access token: firma HMAC, vencido rechazado, cabecera fija (sin confusión de algoritmo), 15 minutos | back E01–E04 |
+| Sesión viva en cada petición, no solo la firma | back E05, E06 |
+| Refresh rotativo: reutilizar revoca la sesión (familia), un refresh ya usado cuenta como reutilización | back E07–E09; base B30, B31 |
+| Cookie `HttpOnly`, `SameSite=Strict`, `Path=/api/auth`; `Origin` ajeno rechazado (CSRF) | back E10–E13 |
+| Bloqueo progresivo, también para correos inexistentes, sin verificar mientras está bloqueada | back E14, E15, E19 |
+| Mismo tiempo exista o no el correo (hash señuelo; la prueba usa costo 15) | back E16 |
+| 20 inicios por IP cada 15 minutos; los límites fallan cerrado | back E17, E18 |
+| Política de contraseñas (12 a 128, comunes, repetidas, con el correo o el nombre), verificación en tiempo constante y scrypt con costo 15+ en producción | back E21 (tiempo constante), E22, E23, E33; `tests/unitarias/contrasenas.test.ts` (128, repetidas, correo y nombre, sin mutación propia); base B18 |
+| Sesión de 7 días, calculada por la base | `tests/integracion/reloj.test.ts` (sin mutación) |
+| Segundo paso MFA: el desafío es de un solo uso, vence en 5 minutos y en Redis solo su hash; anti-replay; los fallos suman al bloqueo | back E20, G03–G14; base B34, F15 |
+| Límite general de 600 pedidos por minuto y cuenta (R4, riesgo R-07) | back R08–R10 |
+| Frontend: el token solo en memoria, un solo refresco a la vez (también entre pestañas), un reintento, olvidar la sesión si el refresco falla | front H26–H31; E2E `api.spec.mjs` (el token no queda en ningún almacenamiento ni en la URL) |
+
+**Implementado, sin prueba propia:** los límites de refresco (60 por minuto), de invitación pública (30 cada 15 minutos) y de invitar (50 por hora). Usan `limitarTasa`, que sí está probado (falla cerrado, 429 con `Retry-After`), pero no hay una prueba de cada valor.
+
+**Consecuencia sin prueba:** cambiar `ACCESS_TOKEN_SECRET` invalida los access tokens. Se sigue de la firma (E01), sin prueba aparte.
