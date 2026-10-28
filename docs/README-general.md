@@ -148,7 +148,7 @@ Este README general viaja dentro del repo del backend. Reúne el estado de los t
 
 | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|
-| Pruebas de mutación | `mutations/catalogo.json` en cada repo; al cierre de R8: base 173, back 226 (2 equivalentes), front 105 | `scripts\mutar.bat` | todas |
+| Pruebas de mutación | `mutations/catalogo.json` en cada repo; al cierre de R8: base 173 (3 equivalentes), back 226 (2 equivalentes), front 105 | `scripts\mutar.bat` | todas |
 | CI con los mismos pasos en local | `.github/workflows/ci.yml` y `scripts\ci.bat` en cada repo | Pestaña Actions de cada PR; `scripts\ci.bat` muestra el código de salida real de cada paso | todas |
 | Dependencias: versiones exactas, 14 días de publicadas y `npm audit` | [ADR 0008](adr/0008-dependencias.md) | `npm audit --audit-level=high` en el CI | — |
 | Ningún secreto en los repos públicos | gitleaks sobre todo el historial (`scripts\gitleaks.bat` y job `gitleaks`) | `scripts\gitleaks.bat` | todas |
