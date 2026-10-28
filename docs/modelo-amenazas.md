@@ -241,7 +241,11 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - **El texto real queda entre los dos extremos**, sin saber dónde: un texto repetitivo ocupa unas 80 veces menos.
   - **Verificar la cadena** de 30 versiones del caso más grande tardó 552 ms. Está limitado a 10 por minuto por cuenta.
   - **Una sola corrida, en Windows.** Los bytes no dependen del sistema, porque Windows y Linux usan el mismo contenedor de PostgreSQL. Los tiempos son de esa corrida.
-- **Estado:** aceptado al cerrar el bloque N (decisión escrita: límites aprobados, versiones sin tope). **Revisado en R4 con la medición: sigue aceptado hasta tu decisión.** Las opciones van en el reporte de R4; ninguna se implementa sin aprobación escrita.
+- **Estado:** aceptado al cerrar el bloque N (decisión escrita: límites aprobados, versiones sin tope). **Revisado en R4 con la medición y aceptado tal cual por decisión escrita (27-10-2026, opción a):** sin tope ni cuota en el código.
+- **Condición para el despliegue: monitoreo del tamaño de las versiones.** No está hecho: no hay despliegue en R. Va en «Antes del despliegue» del [README general](README-general.md).
+  - Se mide `pg_total_relation_size('versiones')` y el tamaño de la base, con alerta.
+  - Referencia para el umbral: una sola cuenta puede sumar hasta 534,5 MiB por hora.
+  - Si la alerta salta, se identifica la cuenta por `creado_por` de las versiones manuales y de restauración, y se decide entonces la cuota o la retención.
 
 ### R-03 · Tráfico entre el API y el servicio de IA con `IA_RED_PRIVADA=true`
 
