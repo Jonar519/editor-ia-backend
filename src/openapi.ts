@@ -82,7 +82,7 @@ import {
 
 const json = <T>(schema: T) => ({ content: { 'application/json': { schema } } });
 const error = (description: string) => ({ description, ...json(ErrorRespuesta) });
-const ERRORES_COMUNES = { 400: error('Datos inválidos'), 429: error('Demasiados intentos'), 503: error('Límites no disponibles (falla cerrado)') };
+// 400, 401, 413, 415, 429 y 503 comunes los agrega completarErroresComunes; aquí solo lo propio de cada ruta.
 
 function registrarAuth(registro: OpenAPIRegistry): void {
   registro.registerComponent('securitySchemes', 'acceso', { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' });
@@ -95,8 +95,8 @@ function registrarAuth(registro: OpenAPIRegistry): void {
     responses: {
       201: { description: 'Sesión abierta. Fija la cookie de refresco.', ...json(SesionRespuesta) },
       202: { description: 'La cuenta usa MFA: falta el segundo paso (POST /api/auth/mfa)', ...json(DesafioMfa) },
-      401: error('Correo o contraseña incorrectos'),
-      ...ERRORES_COMUNES,
+      401: error('credenciales_invalidas: correo o contraseña incorrectos (misma respuesta exista o no el correo)'),
+      429: error('demasiados_intentos (20 por IP cada 15 minutos) o cuenta_bloqueada (bloqueo progresivo)'),
     },
   });
   registro.registerPath({
@@ -106,9 +106,8 @@ function registrarAuth(registro: OpenAPIRegistry): void {
     summary: 'Rotar el refresh (cookie) y obtener un access token nuevo. Reutilizar uno usado revoca la sesión.',
     responses: {
       200: { description: 'Access nuevo; la cookie trae el refresh nuevo', ...json(SesionRespuesta) },
-      401: error('Sin cookie, inválido o reutilizado (refresco_reutilizado: la sesión quedó revocada)'),
-      403: error('Origin distinto al del frontend'),
-      ...ERRORES_COMUNES,
+      401: error('sin_refresco, refresco_invalido o refresco_reutilizado (la sesión quedó revocada)'),
+      403: error('origen_no_permitido: Origin distinto al del frontend'),
     },
   });
   registro.registerPath({
@@ -138,7 +137,7 @@ function registrarInvitaciones(registro: OpenAPIRegistry): void {
     ...admin,
     summary: 'Invitar (crea la cuenta pendiente y envía el enlace por correo; la respuesta NUNCA trae el enlace)',
     request: { body: json(InvitacionSolicitud) },
-    responses: { 201: { description: 'Invitación creada', ...json(InvitacionCreada) }, 409: error('Correo en uso'), ...permisos, ...ERRORES_COMUNES },
+    responses: { 201: { description: 'Invitación creada', ...json(InvitacionCreada) }, 409: error('Correo en uso'), ...permisos },
   });
   registro.registerPath({
     method: 'get',
@@ -154,7 +153,7 @@ function registrarInvitaciones(registro: OpenAPIRegistry): void {
     ...admin,
     summary: 'Reenviar con un enlace nuevo (el anterior deja de servir)',
     request: { params: IdUsuario },
-    responses: { 200: { description: 'Reenviada', ...json(InvitacionCreada) }, 404: error('No hay invitación pendiente'), ...permisos, ...ERRORES_COMUNES },
+    responses: { 200: { description: 'Reenviada', ...json(InvitacionCreada) }, 404: error('No hay invitación pendiente'), ...permisos },
   });
   registro.registerPath({
     method: 'delete',
@@ -170,7 +169,7 @@ function registrarInvitaciones(registro: OpenAPIRegistry): void {
     tags: ['invitaciones'],
     summary: 'Datos de la invitación para el formulario (el token va en el cuerpo, nunca en la URL)',
     request: { body: json(TokenInvitacion) },
-    responses: { 200: { description: 'Invitación vigente', ...json(InvitacionConsulta) }, 404: error('Enlace inválido o usado'), 410: error('Enlace vencido'), ...ERRORES_COMUNES },
+    responses: { 200: { description: 'Invitación vigente', ...json(InvitacionConsulta) }, 404: error('invitacion_invalida: enlace inválido o usado'), 410: error('invitacion_vencida') },
   });
   registro.registerPath({
     method: 'post',
@@ -180,10 +179,10 @@ function registrarInvitaciones(registro: OpenAPIRegistry): void {
     request: { body: json(CompletarConMfa) },
     responses: {
       201: { description: 'Cuenta activa y sesión abierta (fija la cookie de refresco). Un admin recibe sus códigos de respaldo.', ...json(CompletarRespuesta) },
-      404: error('Enlace inválido o usado'),
-      409: error('Cuenta admin sin el primer código TOTP: configurar MFA (POST /api/invitaciones/mfa)'),
-      410: error('Enlace vencido'),
-      ...ERRORES_COMUNES,
+      404: error('invitacion_invalida: enlace inválido o usado'),
+      409: error('mfa_requerido: cuenta admin sin el primer código TOTP (configurar con POST /api/invitaciones/mfa)'),
+      410: error('invitacion_vencida'),
+      400: error('contrasena_debil (error.detalles con los motivos), codigo_mfa_invalido, mfa_reiniciar (5 códigos incorrectos: volver a configurar la app) o datos inválidos'),
     },
   });
   registro.registerPath({
@@ -194,10 +193,9 @@ function registrarInvitaciones(registro: OpenAPIRegistry): void {
     request: { body: json(TokenInvitacion) },
     responses: {
       200: { description: 'Secreto y otpauth:// (el QR lo dibuja el cliente)', ...json(InscripcionMfa) },
-      404: error('Enlace inválido o usado'),
-      409: error('La invitación no es de una cuenta admin'),
-      410: error('Enlace vencido'),
-      ...ERRORES_COMUNES,
+      404: error('invitacion_invalida: enlace inválido o usado'),
+      409: error('mfa_no_aplica: la invitación no es de una cuenta admin'),
+      410: error('invitacion_vencida'),
     },
   });
 }
@@ -345,8 +343,8 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
     request: { body: json(MfaSolicitud) },
     responses: {
       201: { description: 'Sesión abierta con MFA verificado (fija la cookie de refresco)', ...json(SesionRespuesta) },
-      401: error('Código inválido o desafío vencido/usado (misma respuesta: no revela si la cuenta existe)'),
-      ...ERRORES_COMUNES,
+      401: error('mfa_invalido: código inválido o desafío vencido/usado (misma respuesta: no revela si la cuenta existe)'),
+      429: error('demasiados_intentos (por IP) o cuenta_bloqueada (los fallos de MFA suman al bloqueo)'),
     },
   });
   const cuenta = { tags: ['cuenta'], security: [{ acceso: [] }] };
@@ -363,7 +361,12 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
     ...cuenta,
     summary: 'Confirmar con el primer código: activa MFA y entrega 10 códigos de respaldo (una sola vez)',
     request: { body: json(CodigoMfa) },
-    responses: { 200: { description: 'Códigos de respaldo', ...json(CodigosRespaldo) }, 400: error('Código inválido (suma al bloqueo)'), 401: error('Sin sesión viva') },
+    responses: {
+      200: { description: 'Códigos de respaldo', ...json(CodigosRespaldo) },
+      400: error('codigo_mfa_invalido (suma al bloqueo)'),
+      409: error('mfa_no_iniciado (falta POST /api/cuenta/mfa/iniciar) o mfa_ya_activo'),
+      401: error('Sin sesión viva'),
+    },
   });
   registro.registerPath({
     method: 'post',
@@ -371,7 +374,7 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
     ...cuenta,
     summary: 'Regenerar los códigos de respaldo (invalida los anteriores)',
     request: { body: json(CodigoMfa) },
-    responses: { 200: { description: 'Códigos nuevos', ...json(CodigosRespaldo) }, 400: error('Código inválido (suma al bloqueo)'), 401: error('Sin sesión viva') },
+    responses: { 200: { description: 'Códigos nuevos', ...json(CodigosRespaldo) }, 400: error('codigo_mfa_invalido (suma al bloqueo; también si la cuenta no tiene MFA activo)'), 401: error('Sin sesión viva') },
   });
   registro.registerPath({
     method: 'delete',
@@ -379,7 +382,7 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
     ...cuenta,
     summary: 'Desactivar MFA (no permitido para admin)',
     request: { body: json(CodigoMfa) },
-    responses: { 204: { description: 'Desactivado' }, 400: error('Código inválido (suma al bloqueo)'), 409: error('Obligatorio para admin'), 401: error('Sin sesión viva') },
+    responses: { 204: { description: 'Desactivado' }, 400: error('codigo_mfa_invalido (suma al bloqueo)'), 409: error('mfa_obligatorio: una cuenta admin no lo desactiva'), 401: error('Sin sesión viva') },
   });
   registro.registerPath({
     method: 'post',
@@ -387,7 +390,7 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
     tags: ['auth'],
     summary: 'Pedir un enlace para restablecer la contraseña. Respuesta idéntica e inmediata exista o no el correo.',
     request: { body: json(RecuperacionSolicitud) },
-    responses: { 202: { description: 'Siempre la misma', ...json(RecuperacionRespuesta) }, ...ERRORES_COMUNES },
+    responses: { 202: { description: 'Siempre la misma', ...json(RecuperacionRespuesta) } },
   });
   registro.registerPath({
     method: 'post',
@@ -395,14 +398,17 @@ function registrarMfaYRecuperacion(registro: OpenAPIRegistry): void {
     tags: ['auth'],
     summary: 'Restablecer la contraseña con el enlace (15 min, un solo uso). Cierra todas las sesiones.',
     request: { body: json(RestablecerSolicitud) },
-    responses: { 204: { description: 'Contraseña restablecida' }, ...ERRORES_COMUNES },
+    responses: {
+      204: { description: 'Contraseña restablecida' },
+      400: error('enlace_invalido (inválido, usado o vencido), contrasena_debil (error.detalles con los motivos) o datos inválidos'),
+    },
   });
 }
 
 function registrarEspaciosYDocumentos(registro: OpenAPIRegistry): void {
   const espacios = { tags: ['espacios'], security: [{ acceso: [] }] };
   const documentos = { tags: ['documentos'], security: [{ acceso: [] }] };
-  const comunes = { 401: error('Sin sesión viva'), 400: error('Datos inválidos') };
+  const comunes = { 401: error('Sin sesión viva') };
   const sinEspacio = { 404: error('El espacio no existe o no eres miembro (no se distingue)') };
   const sinDocumento = { 404: error('El documento no existe o no tienes acceso (no se distingue)') };
   const sinRol = { 403: error('Eres miembro, pero tu rol no alcanza') };
@@ -622,6 +628,8 @@ function registrarTiempoReal(registro: OpenAPIRegistry): void {
     security: [{ acceso: [] }],
     summary:
       'Ticket de un solo uso (30 s) para abrir el WebSocket del documento: GET /api/tiempo-real con Upgrade, Origin del frontend y Sec-WebSocket-Protocol "cuaderno.v1, ticket.<valor>"',
+    description:
+      'El WebSocket no se describe en OpenAPI: sus mensajes, el ticket en el subprotocolo y los códigos de cierre están en docs/protocolo-tiempo-real.md.',
     request: { body: json(SolicitudTicket) },
     responses: {
       201: { description: 'Ticket', ...json(TicketTiempoReal) },
@@ -636,7 +644,7 @@ function registrarTiempoReal(registro: OpenAPIRegistry): void {
 function registrarVersionesYComentarios(registro: OpenAPIRegistry): void {
   const versiones = { tags: ['versiones'], security: [{ acceso: [] }] };
   const comentarios = { tags: ['comentarios'], security: [{ acceso: [] }] };
-  const comunes = { 401: error('Sin sesión viva'), 400: error('Datos inválidos') };
+  const comunes = { 401: error('Sin sesión viva') };
   const sinDocumento = { 404: error('El documento no existe o no tienes acceso (no se distingue)') };
   const sinRol = { 403: error('Tu rol no alcanza') };
   const sinTiempoReal = { 503: error('El servidor de tiempo real no está disponible') };
@@ -760,8 +768,14 @@ function registrarIa(registro: OpenAPIRegistry): void {
   const sinDocumento = { 404: error('El documento no existe o no tienes acceso (no se distingue)') };
   const sse = {
     200: {
-      description:
-        'text/event-stream: `event: fragmento` {texto}, … y al final `event: fin` {tokensEntrada, tokensSalida}. Un error a mitad llega como `event: error` {codigo, mensaje}. Abortar el fetch cancela la generación.',
+      description: [
+        'text/event-stream (cabeceras Cache-Control: no-cache, no-store y X-Accel-Buffering: no). Cada evento es `event: <nombre>` + `data: <JSON>` + línea en blanco:',
+        '- `fragmento` {texto}: un trozo del texto generado, en orden; se concatenan;',
+        '- `fin` {tokensEntrada, tokensSalida}: terminó bien; siempre es el último;',
+        '- `error` {codigo, mensaje}: falló A MITAD (los códigos del mapeo gRPC → HTTP, como ia_tiempo_agotado, o interno); también es el último. Una corriente que se corta sin `fin` ni `error` es un error;',
+        '- `: latido` (comentario SSE, sin evento) cada 15 s, para que ningún proxy la corte por inactividad.',
+        'Un error ANTES del primer fragmento no abre la corriente: es una respuesta HTTP normal (400, 403, 404, 429, 502, 503 o 504). Abortar el fetch cancela la generación en el servicio de IA.',
+      ].join('\n'),
       content: { 'text/event-stream': { schema: { type: 'string' as const } } },
     },
   };
@@ -822,7 +836,78 @@ function registrarIa(registro: OpenAPIRegistry): void {
   });
 }
 
-export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocument']> {
+/**
+ * Decisión de R7: /health, /ready y /metrics se documentan aquí, pero están FUERA de /api a propósito. Son para
+ * el orquestador y Prometheus, no para el navegador: no tienen límite de tasa (se consultan cada pocos segundos
+ * y no tocan datos de nadie), no piden sesión ni pasan por Cache-Control: no-store, y no tienen los errores
+ * comunes de /api.
+ */
+const SALUD_FUERA_DE_API =
+  'Fuera de /api a propósito: para el orquestador y Prometheus, no para el navegador. Sin límite de tasa, sin sesión y sin los errores comunes de /api.';
+
+type DocumentoOpenApi = ReturnType<OpenApiGeneratorV31['generateDocument']>;
+interface Respuesta {
+  description: string;
+  headers?: Record<string, unknown>;
+  content?: unknown;
+}
+interface Operacion {
+  security?: Record<string, string[]>[];
+  parameters?: unknown[];
+  requestBody?: unknown;
+  responses: Partial<Record<string, Respuesta>>;
+}
+
+const METODOS = ['get', 'post', 'put', 'patch', 'delete'] as const;
+const CON_ERROR = { content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorRespuesta' } } } };
+const conError = (description: string): Respuesta => ({ description, ...CON_ERROR });
+const sumar = (r: Respuesta | undefined, texto: string): Respuesta => (r ? { ...r, description: `${r.description}. ${texto}` } : conError(texto));
+
+/**
+ * Errores que pueden salir de CUALQUIER operación de /api por la cadena común de middlewares (R7), además
+ * de los propios de cada ruta. Se agregan aquí, en un solo lugar, para que ninguna operación los omita:
+ *   - 401 si pide sesión (requiereSesion);
+ *   - 400 si tiene parámetros o cuerpo (zod), y json_invalido si tiene cuerpo;
+ *   - 413 (cuerpo de más de 100 kB) y 415 (cuerpo comprimido, inflate: false) si tiene cuerpo;
+ *   - 429 con Retry-After: TODAS tienen un límite (las públicas, por IP; las de sesión, además, el general);
+ *   - 503 limites_no_disponibles: los límites fallan cerrado si Redis no responde.
+ * /health, /ready y /metrics quedan fuera a propósito (ver su descripción).
+ */
+export function completarErroresComunes(doc: DocumentoOpenApi): DocumentoOpenApi {
+  doc.components = {
+    ...doc.components,
+    headers: {
+      ...doc.components?.headers,
+      RetryAfter: { description: 'Segundos que hay que esperar antes de reintentar', schema: { type: 'integer', minimum: 0 } },
+    },
+  };
+  for (const [ruta, item] of Object.entries(doc.paths ?? {})) {
+    if (!ruta.startsWith('/api/')) continue;
+    for (const metodo of METODOS) {
+      const op = (item as Partial<Record<(typeof METODOS)[number], Operacion>>)[metodo];
+      if (!op) continue;
+      const r = op.responses;
+      const conSesion = (op.security ?? []).some((s) => 'acceso' in s);
+      const conCuerpo = op.requestBody !== undefined;
+      // El avatar llega como imagen (express.raw, 1 MiB): ni JSON ni el tope de 100 kB.
+      const conJson = conCuerpo && 'application/json' in ((op.requestBody as { content?: object }).content ?? {});
+      if (conSesion) r[401] ??= conError('Sin sesión viva (no_autenticado)');
+      if (conJson || (op.parameters?.length ?? 0) > 0) {
+        const datos = conJson ? 'Datos inválidos (validacion) o JSON mal formado (json_invalido)' : 'Datos inválidos (validacion)';
+        const r400 = r[400];
+        r[400] = r400 && /validacion|Datos inválidos/.test(r400.description) ? r400 : sumar(r400, datos);
+      }
+      if (conJson) r[413] ??= conError('El cuerpo supera los 100 kB (cuerpo_demasiado_grande)');
+      if (conCuerpo) r[415] = sumar(r[415], 'Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)');
+      const r429 = conSesion ? sumar(r[429], 'También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)') : (r[429] ?? conError('Límite por IP (demasiados_intentos)'));
+      r[429] = { ...r429, headers: { 'Retry-After': { $ref: '#/components/headers/RetryAfter' } } };
+      r[503] = sumar(r[503], 'limites_no_disponibles: Redis no responde y los límites fallan cerrado');
+    }
+  }
+  return doc;
+}
+
+export function generarOpenApi(): DocumentoOpenApi {
   const registro = new OpenAPIRegistry();
 
   registro.registerPath({
@@ -830,6 +915,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
     path: '/health',
     tags: ['salud'],
     summary: 'Vivo: el proceso responde (no revisa dependencias)',
+    description: SALUD_FUERA_DE_API,
     responses: { 200: { description: 'Proceso vivo', content: { 'application/json': { schema: SaludRespuesta } } } },
   });
 
@@ -838,6 +924,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
     path: '/ready',
     tags: ['salud'],
     summary: 'Listo: base, versión del esquema y Redis disponibles. La IA se muestra ("ia") pero su falla no da 503',
+    description: SALUD_FUERA_DE_API,
     responses: {
       200: { description: 'Listo para recibir tráfico', content: { 'application/json': { schema: ListoRespuesta } } },
       503: {
@@ -853,6 +940,7 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
     path: '/metrics',
     tags: ['salud'],
     summary: 'Métricas Prometheus (token obligatorio en producción)',
+    description: `${SALUD_FUERA_DE_API} /metrics exige METRICS_TOKEN en producción (comparado completo); sin token configurado (desarrollo) responde sin pedirlo.`,
     security: [{ tokenMetricas: [] }],
     responses: {
       200: { description: 'Métricas en formato de texto de Prometheus', content: { 'text/plain': { schema: { type: 'string' } } } },
@@ -869,13 +957,27 @@ export function generarOpenApi(): ReturnType<OpenApiGeneratorV31['generateDocume
   registrarVersionesYComentarios(registro);
   registrarIa(registro);
 
-  return new OpenApiGeneratorV31(registro.definitions).generateDocument({
+  return completarErroresComunes(new OpenApiGeneratorV31(registro.definitions).generateDocument({
     openapi: '3.1.0',
     info: {
       title: 'Cuaderno API',
       version: '0.1.0',
-      description: 'API de Cuaderno, editor colaborativo de documentación técnica con IA. Generada desde los esquemas zod.',
+      description: [
+        'API de Cuaderno, editor colaborativo de documentación técnica con IA. Generada desde los esquemas zod.',
+        '',
+        'Errores comunes de toda operación de /api, además de los propios de cada una:',
+        '- 400: datos inválidos (validacion) o JSON mal formado (json_invalido);',
+        '- 401: sin sesión viva (no_autenticado), si la operación pide sesión;',
+        '- 413: cuerpo de más de 100 kB (cuerpo_demasiado_grande);',
+        '- 415: cuerpo comprimido (codificacion_no_admitida);',
+        '- 429 con Retry-After: el límite de la ruta, y en las de sesión además el general de 600 pedidos por minuto y cuenta;',
+        '- 503: limites_no_disponibles (Redis no responde: los límites fallan cerrado);',
+        '- 500: error interno, sin mensaje ni pila (el detalle va solo al log, con el x-request-id).',
+        'Todas las respuestas de /api llevan Cache-Control: no-store. Sin acceso a un recurso se responde 404, igual que si no existiera.',
+        '',
+        'El WebSocket de colaboración (GET /api/tiempo-real) se describe en docs/protocolo-tiempo-real.md.',
+      ].join('\n'),
     },
     servers: [{ url: 'http://127.0.0.1:4200', description: 'Desarrollo local' }],
-  });
+  }));
 }

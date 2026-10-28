@@ -3,7 +3,7 @@
   "info": {
     "title": "Cuaderno API",
     "version": "0.1.0",
-    "description": "API de Cuaderno, editor colaborativo de documentación técnica con IA. Generada desde los esquemas zod."
+    "description": "API de Cuaderno, editor colaborativo de documentación técnica con IA. Generada desde los esquemas zod.\n\nErrores comunes de toda operación de /api, además de los propios de cada una:\n- 400: datos inválidos (validacion) o JSON mal formado (json_invalido);\n- 401: sin sesión viva (no_autenticado), si la operación pide sesión;\n- 413: cuerpo de más de 100 kB (cuerpo_demasiado_grande);\n- 415: cuerpo comprimido (codificacion_no_admitida);\n- 429 con Retry-After: el límite de la ruta, y en las de sesión además el general de 600 pedidos por minuto y cuenta;\n- 503: limites_no_disponibles (Redis no responde: los límites fallan cerrado);\n- 500: error interno, sin mensaje ni pila (el detalle va solo al log, con el x-request-id).\nTodas las respuestas de /api llevan Cache-Control: no-store. Sin acceso a un recurso se responde 404, igual que si no existiera.\n\nEl WebSocket de colaboración (GET /api/tiempo-real) se describe en docs/protocolo-tiempo-real.md."
   },
   "servers": [
     {
@@ -1832,7 +1832,16 @@
         ]
       }
     },
-    "parameters": {}
+    "parameters": {},
+    "headers": {
+      "RetryAfter": {
+        "description": "Segundos que hay que esperar antes de reintentar",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
   },
   "paths": {
     "/health": {
@@ -1841,6 +1850,7 @@
           "salud"
         ],
         "summary": "Vivo: el proceso responde (no revisa dependencias)",
+        "description": "Fuera de /api a propósito: para el orquestador y Prometheus, no para el navegador. Sin límite de tasa, sin sesión y sin los errores comunes de /api.",
         "responses": {
           "200": {
             "description": "Proceso vivo",
@@ -1861,6 +1871,7 @@
           "salud"
         ],
         "summary": "Listo: base, versión del esquema y Redis disponibles. La IA se muestra (\"ia\") pero su falla no da 503",
+        "description": "Fuera de /api a propósito: para el orquestador y Prometheus, no para el navegador. Sin límite de tasa, sin sesión y sin los errores comunes de /api.",
         "responses": {
           "200": {
             "description": "Listo para recibir tráfico",
@@ -1891,6 +1902,7 @@
           "salud"
         ],
         "summary": "Métricas Prometheus (token obligatorio en producción)",
+        "description": "Fuera de /api a propósito: para el orquestador y Prometheus, no para el navegador. Sin límite de tasa, sin sesión y sin los errores comunes de /api. /metrics exige METRICS_TOKEN en producción (comparado completo); sin token configurado (desarrollo) responde sin pedirlo.",
         "security": [
           {
             "tokenMetricas": []
@@ -1957,7 +1969,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1967,7 +1979,27 @@
             }
           },
           "401": {
-            "description": "Correo o contraseña incorrectos",
+            "description": "credenciales_invalidas: correo o contraseña incorrectos (misma respuesta exista o no el correo)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1977,17 +2009,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "demasiados_intentos (20 por IP cada 15 minutos) o cuenta_bloqueada (bloqueo progresivo)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2021,6 +2058,31 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -2042,18 +2104,8 @@
               }
             }
           },
-          "400": {
-            "description": "Datos inválidos",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorRespuesta"
-                }
-              }
-            }
-          },
           "401": {
-            "description": "Sin cookie, inválido o reutilizado (refresco_reutilizado: la sesión quedó revocada)",
+            "description": "sin_refresco, refresco_invalido o refresco_reutilizado (la sesión quedó revocada)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2063,7 +2115,7 @@
             }
           },
           "403": {
-            "description": "Origin distinto al del frontend",
+            "description": "origen_no_permitido: Origin distinto al del frontend",
             "content": {
               "application/json": {
                 "schema": {
@@ -2073,17 +2125,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "Límite por IP (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2119,6 +2176,31 @@
           },
           "401": {
             "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2162,7 +2244,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2201,8 +2283,8 @@
               }
             }
           },
-          "429": {
-            "description": "Demasiados intentos",
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2211,8 +2293,33 @@
               }
             }
           },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2270,6 +2377,16 @@
               }
             }
           },
+          "400": {
+            "description": "Datos inválidos (validacion)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión viva",
             "content": {
@@ -2282,6 +2399,31 @@
           },
           "403": {
             "description": "Solo admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2327,7 +2469,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2367,17 +2509,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2415,6 +2562,16 @@
           "204": {
             "description": "Cancelada"
           },
+          "400": {
+            "description": "Datos inválidos (validacion)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión viva",
             "content": {
@@ -2437,6 +2594,31 @@
           },
           "404": {
             "description": "No hay invitación pendiente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2475,7 +2657,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2485,7 +2667,7 @@
             }
           },
           "404": {
-            "description": "Enlace inválido o usado",
+            "description": "invitacion_invalida: enlace inválido o usado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2495,7 +2677,27 @@
             }
           },
           "410": {
-            "description": "Enlace vencido",
+            "description": "invitacion_vencida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2505,17 +2707,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "Límite por IP (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2554,7 +2761,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "contrasena_debil (error.detalles con los motivos), codigo_mfa_invalido, mfa_reiniciar (5 códigos incorrectos: volver a configurar la app) o datos inválidos. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2564,7 +2771,7 @@
             }
           },
           "404": {
-            "description": "Enlace inválido o usado",
+            "description": "invitacion_invalida: enlace inválido o usado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2574,7 +2781,7 @@
             }
           },
           "409": {
-            "description": "Cuenta admin sin el primer código TOTP: configurar MFA (POST /api/invitaciones/mfa)",
+            "description": "mfa_requerido: cuenta admin sin el primer código TOTP (configurar con POST /api/invitaciones/mfa)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2584,7 +2791,27 @@
             }
           },
           "410": {
-            "description": "Enlace vencido",
+            "description": "invitacion_vencida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2594,17 +2821,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "Límite por IP (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2643,7 +2875,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2653,7 +2885,7 @@
             }
           },
           "404": {
-            "description": "Enlace inválido o usado",
+            "description": "invitacion_invalida: enlace inválido o usado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2663,7 +2895,7 @@
             }
           },
           "409": {
-            "description": "La invitación no es de una cuenta admin",
+            "description": "mfa_no_aplica: la invitación no es de una cuenta admin",
             "content": {
               "application/json": {
                 "schema": {
@@ -2673,7 +2905,27 @@
             }
           },
           "410": {
-            "description": "Enlace vencido",
+            "description": "invitacion_vencida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2683,17 +2935,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "Límite por IP (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2732,7 +2989,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2742,7 +2999,27 @@
             }
           },
           "401": {
-            "description": "Código inválido o desafío vencido/usado (misma respuesta: no revela si la cuenta existe)",
+            "description": "mfa_invalido: código inválido o desafío vencido/usado (misma respuesta: no revela si la cuenta existe)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2752,17 +3029,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "demasiados_intentos (por IP) o cuenta_bloqueada (los fallos de MFA suman al bloqueo)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2815,6 +3097,31 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -2851,7 +3158,7 @@
             }
           },
           "400": {
-            "description": "Código inválido (suma al bloqueo)",
+            "description": "codigo_mfa_invalido (suma al bloqueo). Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2862,6 +3169,61 @@
           },
           "401": {
             "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "mfa_no_iniciado (falta POST /api/cuenta/mfa/iniciar) o mfa_ya_activo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2905,7 +3267,7 @@
             }
           },
           "400": {
-            "description": "Código inválido (suma al bloqueo)",
+            "description": "codigo_mfa_invalido (suma al bloqueo; también si la cuenta no tiene MFA activo). Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2916,6 +3278,51 @@
           },
           "401": {
             "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -2952,7 +3359,7 @@
             "description": "Desactivado"
           },
           "400": {
-            "description": "Código inválido (suma al bloqueo)",
+            "description": "codigo_mfa_invalido (suma al bloqueo). Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2972,7 +3379,52 @@
             }
           },
           "409": {
-            "description": "Obligatorio para admin",
+            "description": "mfa_obligatorio: una cuenta admin no lo desactiva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3011,7 +3463,27 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3021,17 +3493,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "Límite por IP (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3063,7 +3540,27 @@
             "description": "Contraseña restablecida"
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "enlace_invalido (inválido, usado o vencido), contrasena_debil (error.detalles con los motivos) o datos inválidos. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3073,17 +3570,22 @@
             }
           },
           "429": {
-            "description": "Demasiados intentos",
+            "description": "Límite por IP (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "Límites no disponibles (falla cerrado)",
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3119,6 +3621,31 @@
           },
           "401": {
             "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3178,6 +3705,51 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       },
@@ -3212,7 +3784,7 @@
             }
           },
           "400": {
-            "description": "Falta el código MFA",
+            "description": "Falta el código MFA. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3251,8 +3823,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiados intentos o cuenta bloqueada",
+            "description": "Demasiados intentos o cuenta bloqueada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3296,7 +3903,7 @@
             }
           },
           "400": {
-            "description": "Es el mismo correo",
+            "description": "Es el mismo correo. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3325,8 +3932,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiados intentos o cuenta bloqueada",
+            "description": "Demasiados intentos o cuenta bloqueada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3358,7 +4000,7 @@
             "description": "Correo cambiado; se avisa al anterior"
           },
           "400": {
-            "description": "Enlace inválido, usado o vencido",
+            "description": "Enlace inválido, usado o vencido. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3369,6 +4011,51 @@
           },
           "409": {
             "description": "La dirección ya tiene cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Límite por IP (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3412,7 +4099,7 @@
             }
           },
           "400": {
-            "description": "No cumple la política",
+            "description": "No cumple la política. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3441,8 +4128,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiados intentos o cuenta bloqueada",
+            "description": "Demasiados intentos o cuenta bloqueada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3485,6 +4207,31 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -3515,6 +4262,16 @@
           "204": {
             "description": "Cerrada"
           },
+          "400": {
+            "description": "Datos inválidos (validacion)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión viva",
             "content": {
@@ -3527,6 +4284,31 @@
           },
           "404": {
             "description": "No hay una sesión activa con ese id en tu cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3562,6 +4344,31 @@
           },
           "401": {
             "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3632,7 +4439,7 @@
             }
           },
           "415": {
-            "description": "Content-Type distinto de image/jpeg o image/png",
+            "description": "Content-Type distinto de image/jpeg o image/png. Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3643,6 +4450,31 @@
           },
           "422": {
             "description": "No es un JPEG o PNG analizable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3669,6 +4501,31 @@
           },
           "401": {
             "description": "Sin sesión viva",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3723,6 +4580,16 @@
           "304": {
             "description": "Sin cambios (If-None-Match)"
           },
+          "400": {
+            "description": "Datos inválidos (validacion)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión viva",
             "content": {
@@ -3735,6 +4602,31 @@
           },
           "404": {
             "description": "Sin avatar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3777,6 +4669,16 @@
               }
             }
           },
+          "400": {
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión viva",
             "content": {
@@ -3797,8 +4699,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiados intentos o cuenta bloqueada",
+            "description": "Demasiados intentos o cuenta bloqueada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3832,8 +4769,8 @@
               }
             }
           },
-          "400": {
-            "description": "Datos inválidos",
+          "401": {
+            "description": "Sin sesión viva",
             "content": {
               "application/json": {
                 "schema": {
@@ -3842,8 +4779,23 @@
               }
             }
           },
-          "401": {
-            "description": "Sin sesión viva",
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3885,7 +4837,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3906,6 +4858,51 @@
           },
           "403": {
             "description": "Cuenta de solo lectura",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -3951,7 +4948,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -3972,6 +4969,31 @@
           },
           "404": {
             "description": "El espacio no existe o no eres miembro (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4024,7 +5046,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4055,6 +5077,51 @@
           },
           "404": {
             "description": "El espacio no existe o no eres miembro (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4098,7 +5165,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4139,6 +5206,31 @@
           },
           "409": {
             "description": "espacio_compartido: tiene otros miembros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4193,7 +5285,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4241,6 +5333,51 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -4279,7 +5416,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4300,6 +5437,31 @@
           },
           "404": {
             "description": "El espacio no existe o no eres miembro (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4352,7 +5514,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4401,8 +5563,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiadas altas seguidas",
+            "description": "Demasiadas altas seguidas. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4466,7 +5663,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4514,6 +5711,51 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       },
@@ -4552,7 +5794,7 @@
             "description": "Quitado"
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4600,6 +5842,31 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -4638,7 +5905,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4659,6 +5926,31 @@
           },
           "404": {
             "description": "El espacio no existe o no eres miembro (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4711,7 +6003,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4742,6 +6034,51 @@
           },
           "404": {
             "description": "El espacio no existe o no eres miembro (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4787,7 +6124,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4808,6 +6145,31 @@
           },
           "404": {
             "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4860,7 +6222,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4891,6 +6253,51 @@
           },
           "404": {
             "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -4927,7 +6334,7 @@
             "description": "Borrado"
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -4958,6 +6365,31 @@
           },
           "404": {
             "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5012,7 +6444,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5060,6 +6492,51 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -5098,7 +6575,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5119,6 +6596,31 @@
           },
           "404": {
             "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5182,7 +6684,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5230,6 +6732,51 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       },
@@ -5268,7 +6815,7 @@
             "description": "Quitado"
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5316,6 +6863,31 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -5331,6 +6903,7 @@
           }
         ],
         "summary": "Ticket de un solo uso (30 s) para abrir el WebSocket del documento: GET /api/tiempo-real con Upgrade, Origin del frontend y Sec-WebSocket-Protocol \"cuaderno.v1, ticket.<valor>\"",
+        "description": "El WebSocket no se describe en OpenAPI: sus mensajes, el ticket en el subprotocolo y los códigos de cierre están en docs/protocolo-tiempo-real.md.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5381,8 +6954,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiados tickets seguidos",
+            "description": "Demasiados tickets seguidos. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5428,7 +7036,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5457,8 +7065,23 @@
               }
             }
           },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
           "503": {
-            "description": "El servidor de tiempo real no está disponible",
+            "description": "El servidor de tiempo real no está disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5504,7 +7127,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5525,6 +7148,31 @@
           },
           "404": {
             "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5568,7 +7216,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5608,17 +7256,22 @@
             }
           },
           "429": {
-            "description": "Demasiadas versiones seguidas",
+            "description": "Demasiadas versiones seguidas. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "El servidor de tiempo real no está disponible",
+            "description": "El servidor de tiempo real no está disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5664,7 +7317,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5694,7 +7347,22 @@
             }
           },
           "429": {
-            "description": "Demasiadas verificaciones seguidas",
+            "description": "Demasiadas verificaciones seguidas. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5750,7 +7418,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5771,6 +7439,31 @@
           },
           "404": {
             "description": "El documento o la versión no existen, o no tienes acceso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5826,7 +7519,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5866,17 +7559,22 @@
             }
           },
           "429": {
-            "description": "Demasiadas versiones seguidas",
+            "description": "Demasiadas versiones seguidas. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "El servidor de tiempo real no está disponible",
+            "description": "El servidor de tiempo real no está disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5922,7 +7620,7 @@
             }
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5943,6 +7641,31 @@
           },
           "404": {
             "description": "El documento no existe o no tienes acceso (no se distingue)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -5995,7 +7718,7 @@
             }
           },
           "400": {
-            "description": "ancla_invalida, falta_ancla, ancla_en_respuesta, respuesta_a_respuesta o datos inválidos",
+            "description": "ancla_invalida, falta_ancla, ancla_en_respuesta, respuesta_a_respuesta o datos inválidos. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -6024,8 +7747,43 @@
               }
             }
           },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Demasiados comentarios seguidos",
+            "description": "Demasiados comentarios seguidos. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -6080,7 +7838,7 @@
             }
           },
           "400": {
-            "description": "resolver_respuesta o datos inválidos",
+            "description": "resolver_respuesta o datos inválidos. Datos inválidos (validacion) o JSON mal formado (json_invalido)",
             "content": {
               "application/json": {
                 "schema": {
@@ -6118,6 +7876,51 @@
                 }
               }
             }
+          },
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       },
@@ -6147,7 +7950,7 @@
             "description": "Borrado"
           },
           "400": {
-            "description": "Datos inválidos",
+            "description": "Datos inválidos (validacion)",
             "content": {
               "application/json": {
                 "schema": {
@@ -6178,6 +7981,31 @@
           },
           "404": {
             "description": "El comentario no existe o no tienes acceso al documento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -6250,13 +8078,38 @@
               }
             }
           },
-          "429": {
-            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
               }
             }
           },
@@ -6271,7 +8124,7 @@
             }
           },
           "503": {
-            "description": "ia_no_disponible",
+            "description": "ia_no_disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -6315,7 +8168,7 @@
         },
         "responses": {
           "200": {
-            "description": "text/event-stream: `event: fragmento` {texto}, … y al final `event: fin` {tokensEntrada, tokensSalida}. Un error a mitad llega como `event: error` {codigo, mensaje}. Abortar el fetch cancela la generación.",
+            "description": "text/event-stream (cabeceras Cache-Control: no-cache, no-store y X-Accel-Buffering: no). Cada evento es `event: <nombre>` + `data: <JSON>` + línea en blanco:\n- `fragmento` {texto}: un trozo del texto generado, en orden; se concatenan;\n- `fin` {tokensEntrada, tokensSalida}: terminó bien; siempre es el último;\n- `error` {codigo, mensaje}: falló A MITAD (los códigos del mapeo gRPC → HTTP, como ia_tiempo_agotado, o interno); también es el último. Una corriente que se corta sin `fin` ni `error` es un error;\n- `: latido` (comentario SSE, sin evento) cada 15 s, para que ningún proxy la corte por inactividad.\nUn error ANTES del primer fragmento no abre la corriente: es una respuesta HTTP normal (400, 403, 404, 429, 502, 503 o 504). Abortar el fetch cancela la generación en el servicio de IA.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -6354,13 +8207,38 @@
               }
             }
           },
-          "429": {
-            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
               }
             }
           },
@@ -6375,7 +8253,7 @@
             }
           },
           "503": {
-            "description": "ia_no_disponible",
+            "description": "ia_no_disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -6419,7 +8297,7 @@
         },
         "responses": {
           "200": {
-            "description": "text/event-stream: `event: fragmento` {texto}, … y al final `event: fin` {tokensEntrada, tokensSalida}. Un error a mitad llega como `event: error` {codigo, mensaje}. Abortar el fetch cancela la generación.",
+            "description": "text/event-stream (cabeceras Cache-Control: no-cache, no-store y X-Accel-Buffering: no). Cada evento es `event: <nombre>` + `data: <JSON>` + línea en blanco:\n- `fragmento` {texto}: un trozo del texto generado, en orden; se concatenan;\n- `fin` {tokensEntrada, tokensSalida}: terminó bien; siempre es el último;\n- `error` {codigo, mensaje}: falló A MITAD (los códigos del mapeo gRPC → HTTP, como ia_tiempo_agotado, o interno); también es el último. Una corriente que se corta sin `fin` ni `error` es un error;\n- `: latido` (comentario SSE, sin evento) cada 15 s, para que ningún proxy la corte por inactividad.\nUn error ANTES del primer fragmento no abre la corriente: es una respuesta HTTP normal (400, 403, 404, 429, 502, 503 o 504). Abortar el fetch cancela la generación en el servicio de IA.",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -6468,13 +8346,38 @@
               }
             }
           },
-          "429": {
-            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
               }
             }
           },
@@ -6489,7 +8392,7 @@
             }
           },
           "503": {
-            "description": "ia_no_disponible",
+            "description": "ia_no_disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -6583,13 +8486,38 @@
               }
             }
           },
-          "429": {
-            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada",
+          "413": {
+            "description": "El cuerpo supera los 100 kB (cuerpo_demasiado_grande)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
+              }
+            }
+          },
+          "415": {
+            "description": "Cuerpo comprimido: Content-Encoding distinto de identity (codificacion_no_admitida)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "demasiados_intentos (por minuto), tope_diario_ia (por día, Retry-After hasta la medianoche UTC) o ia_saturada. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
               }
             }
           },
@@ -6604,7 +8532,7 @@
             }
           },
           "503": {
-            "description": "ia_no_disponible",
+            "description": "ia_no_disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
@@ -6657,6 +8585,31 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
+            }
+          },
+          "503": {
+            "description": "limites_no_disponibles: Redis no responde y los límites fallan cerrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
           }
         }
       }
@@ -6694,6 +8647,16 @@
               }
             }
           },
+          "400": {
+            "description": "Datos inválidos (validacion)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorRespuesta"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Sin sesión viva",
             "content": {
@@ -6725,17 +8688,22 @@
             }
           },
           "429": {
-            "description": "Demasiados pedidos por minuto",
+            "description": "Demasiados pedidos por minuto. También el límite general de 600 pedidos por minuto y cuenta (demasiados_intentos)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorRespuesta"
                 }
               }
+            },
+            "headers": {
+              "Retry-After": {
+                "$ref": "#/components/headers/RetryAfter"
+              }
             }
           },
           "503": {
-            "description": "ia_no_disponible",
+            "description": "ia_no_disponible. limites_no_disponibles: Redis no responde y los límites fallan cerrado",
             "content": {
               "application/json": {
                 "schema": {
