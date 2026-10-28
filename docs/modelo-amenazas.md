@@ -178,7 +178,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 
 | | Amenaza | Mitigación | Evidencia | Queda |
 |---|---|---|---|---|
-| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más (ADR 0003); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). Aviso moderado pendiente: fast-uri hasta el 2-11. |
+| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más ([ADR 0008](adr/0008-dependencias.md)); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). Aviso moderado pendiente: fast-uri hasta el 2-11. |
 
 ## Riesgos residuales
 
@@ -275,7 +275,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 ### R-05 · Dependencias publicadas hace menos de 14 días (excepción por GHSA-27r3-jxmh-p828)
 
 - **Origen:** 23-10-2026. Aviso alto en `body-parser` 2.0.0–2.3.0 (por Express 5.3.0): un cuerpo comprimido con bytes sobrantes al final provoca denegación de servicio. Era alcanzable en el API (`express.json()` y `express.raw()` del avatar).
-- **Qué se hizo:** `body-parser` 2.4.0 y `qs` 6.16.1 con overrides exactos, por una **excepción escrita** a la regla de los 14 días (ADR 0003). Y, aparte, `inflate: false` en los dos parsers: un cuerpo con `Content-Encoding` comprimido recibe 415 sin descomprimirse (pruebas y mutaciones B01–B03). Con eso, la ruta vulnerable no se recorre aunque una versión futura reintrodujera el problema.
+- **Qué se hizo:** `body-parser` 2.4.0 y `qs` 6.16.1 con overrides exactos, por una **excepción escrita** a la regla de los 14 días (registrada en el [ADR 0008](adr/0008-dependencias.md), que reemplaza a la tabla del ADR 0003). Y, aparte, `inflate: false` en los dos parsers: un cuerpo con `Content-Encoding` comprimido recibe 415 sin descomprimirse (pruebas y mutaciones B01–B03). Con eso, la ruta vulnerable no se recorre aunque una versión futura reintrodujera el problema.
 - **Qué riesgo queda:** el que la regla de los 14 días busca evitar: una versión muy nueva puede traer un error o un cambio malicioso que todavía nadie detectó. Lo acotan:
   - la lectura del diff de las dos versiones antes de aprobarlas (cambio acotado, sin red, archivos ni procesos nuevos);
   - el lockfile cambiado solo en esas dos entradas, con su integridad;
@@ -345,5 +345,8 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - **Pedidos sin token:** no cuentan en este límite. Cuestan una verificación HMAC y un 401, sin consultar la base. Las rutas públicas tienen su límite por IP.
   - **Una sola instancia del API:** el tiempo real vive en la memoria del proceso (ADR 0002).
   - **El límite cuesta entre un 10 % y un 16 % de capacidad en H2,** según la medición de arriba.
-- **Salida para el despliegue (no hecha: sin despliegue en R):** un límite por IP en el proxy inverso, para lo que este límite no cubre.
-- **Estado:** **mitigado en parte en R4**, por decisión escrita. Lo que no cubre queda anotado arriba («Lo que queda»), pendiente de que lo confirmes al cerrar R4.
+- **Condición para el despliegue (no hecha: sin despliegue en R):** un **límite por IP en el proxy inverso**, para lo que este límite no cubre. Va en «Antes del despliegue» del [README general](README-general.md).
+- **Estado:** **mitigado en parte en R4 y aceptado por escrito (27-10-2026):**
+  - los cuatro residuales tal como están en «Lo que queda»;
+  - el costo medido;
+  - el límite por IP en el proxy inverso como condición del despliegue.

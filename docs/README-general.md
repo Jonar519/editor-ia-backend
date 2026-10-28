@@ -109,6 +109,8 @@ Además, producción se niega a arrancar si:
 - Antes de abrir el servicio, una alerta sobre `pg_total_relation_size('versiones')` y el tamaño de la base.
 - Si salta, se ve quién guardó (`versiones.creado_por`) y se decide la cuota o la retención.
 
+**Límite por IP en el proxy inverso** (riesgo R-07, aceptado en R4). El API limita 600 pedidos por minuto y **cuenta**. No frena muchas cuentas a la vez ni los pedidos sin token: eso lo tiene que cortar un límite por IP delante del API.
+
 ## Decisiones vigentes
 
 - **Redis sin contraseña en desarrollo.** Solo escucha en `127.0.0.1` y la decisión se reevaluó en el bloque D. En producción, la configuración exige contraseña o TLS.

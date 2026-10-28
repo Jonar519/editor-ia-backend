@@ -318,6 +318,25 @@ Los embeddings son de **1024 dimensiones** (`vector(1024)` de la migración 0011
 | `scripts\reindexar.bat` (se probó en vivo contra la base de pruebas, sin prueba automática) | `scripts/reindexar.ts` |
 | Prompts del esqueleto Anthropic (se arman, pero no se mandan a ningún modelo) | `src/ia/proveedor-anthropic.ts` |
 
+## Estado de verificación al cierre (R6)
+
+**Lo de K2, P1 y P2 sigue igual** (arriba). **Lo nuevo del bloque R:**
+
+| Qué | Evidencia |
+|---|---|
+| **Carga medida** (H1–H4 por HTTP, W1–W2 por WebSocket), en Windows y en Linux | [`docs/carga-r.md`](../carga-r.md). En todas las corridas de WebSocket: 0 entregas perdidas y convergencia. W1 con 100 clientes a 5 cambios por segundo no llega al ritmo pedido (175 de 500 en Linux). |
+| **Límite general de 600 pedidos por minuto y cuenta en `/api`**, fuera del WebSocket (riesgo R-07) | back R08–R10; `tests/integracion/limite-general.test.ts`, que comprueba que con el límite agotado el WebSocket abierto sigue editando. Costo medido: [`docs/limite-r/carga-r.md`](../limite-r/carga-r.md), −10 a −16 % en H2. |
+| **STRIDE de punta a punta**, con R-01 y la fila del tiempo real | [modelo de amenazas](../modelo-amenazas.md) |
+
+**Sigue implementado, sin prueba propia:**
+- de K2: el latido (4408), la cola de envío (1013), el cierre al vencer la sesión con la conexión abierta (4401), Redis caído al entrar (503), revalidar todo al reconectar, el apagado ordenado (1001) y el mensaje de más de 1 MiB (1009);
+- de P1 y P2: lo que dicen sus tablas.
+
+**Sigue abierto, sin despliegue ni IA real en R:**
+- TLS mutuo o red privada entre el API y la IA (riesgo R-03);
+- la batería de inyección contra un modelo real (R-04);
+- latidos y proxies reales para WebSocket y SSE.
+
 ## Decisiones tomadas (por escrito, 2026-10-17)
 
 1. **Rol del guardia: en memoria por conexión, verificado en cada mensaje.** Se invalida al instante por pub/sub y se revalida en la base cada 30 s. **Condición:** la ventana no puede dejar que alguien sin permiso siga siendo retransmitido a los demás. Por eso:
