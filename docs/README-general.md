@@ -147,7 +147,7 @@ Además, producción se niega a arrancar si:
   - **Sin paginar en K1**: las listas de espacios, miembros y documentos devuelven todo. Se pagina si un espacio llega a cientos de documentos.
   - **Sin auditoría de cambios de permisos** en `eventos_seguridad` (sus tipos los fija un CHECK de la base): queda propuesta.
 - **Compactación del log Yjs (migración 0021).** El backend ya no borra actualizaciones por su cuenta: solo `compactar_documento()`, que escribe el estado y borra en la misma llamada (ADR 0003). La usa la compactación de K2.
-- **Tiempo real (bloque K2).** WebSocket en `/api/tiempo-real`, en el mismo proceso y puerto que el API.
+- **Tiempo real (bloque K2).** WebSocket en `/api/tiempo-real`, en el mismo proceso y puerto que el API. Mensajes, ticket y códigos de cierre: [protocolo-tiempo-real.md](protocolo-tiempo-real.md).
   - **Entrar:** ticket de un solo uso (`POST /api/tiempo-real/tickets`, en `Sec-WebSocket-Protocol`).
   - **Guardia:** verifica el permiso en cada mensaje.
   - **Rol al día:** por los avisos de la base reenviados por Redis (revocación medida: 8–19 ms), por el rechazo de la base al guardar, y revalidándose cada 30 s.
