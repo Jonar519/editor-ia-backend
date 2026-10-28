@@ -93,6 +93,32 @@ Cuaderno es para **documentación técnica**: títulos, listas, bloques de códi
 | Sin HTML embebido | Batería de cargas XSS escritas en el Markdown (`<script>`, `<img onerror>`, `javascript:`, SVG, `<iframe>`…): se muestran como texto y el DOM no tiene ninguna de esas etiquetas (O). Mutación que activa el HTML → falla. |
 | El Markdown se conserva | Lo que se escribe es lo que se guarda: misma cadena exacta en `versiones.contenido_texto` (N). |
 
+## Estado de verificación al cierre (R6)
+
+**Verificado** en el frontend:
+
+| Qué | Evidencia |
+|---|---|
+| Dos personas a la vez: el mismo texto, los cursores con su nombre, deshacer solo lo propio, Tab sale del editor y `Ctrl+]` indenta | E2E `editor.spec.mjs`, en Chromium y Firefox |
+| Accesibilidad con el editor abierto y cursores remotos, en los dos temas | axe en `editor.spec.mjs` y `markdown.spec.mjs` |
+| La presencia se dibuja con la cuenta que pone el servidor | front L01–L03; back T07, T09 |
+| Sin HTML embebido, en las tres capas: el HTML escrito se ve como texto, segunda capa con lista blanca, enlaces seguros, batería XSS unitaria y sobre el DOM real | `tests/unitarias/xss.test.mjs`, E2E `markdown.spec.mjs`; front O01–O04, Q02 |
+| CSP con `script-src 'self'` estricto | front R03–R05; E2E `csp.spec.mjs` |
+| Peso al cierre: rol editor 203,54 KiB (tope 210), rol lector 88,92 (tope 140), chunk más grande 74,94 (tope 160) | `npm run presupuestos` del 27-10-2026 ([ADR 0005](0005-frontend-sin-framework.md)) |
+
+**Indirecto:** que el rol lector no traiga CodeMirror lo asegura su tope de 140 KiB. La prueba directa sobre el manifiesto existe solo para el panel de IA (front Q17); la de «Cómo se prueba» para el rol lector entero no se escribió.
+
+**El Markdown se conserva:** lo escrito es lo que guarda `versiones.contenido_texto`. Lo cubren la ida y vuelta por la base y las pruebas de versiones; no hay una prueba que compare la cadena exacta escrita en el editor con la guardada.
+
+**No verificado:**
+- un lector de pantalla real;
+- IME y teclados de móvil;
+- Safari.
+
+Están en la lista de revisión del bloque R del frontend.
+
+**Desviación aceptada:** los estilos en línea de CodeMirror y `y-codemirror.next` obligan a `'unsafe-inline'` en `style-src-elem` y `style-src-attr` (riesgo R-06, aceptado al cerrar R2).
+
 ## Decisiones tomadas (por escrito, 2026-10-17)
 
 1. **Los lectores no descargan CodeMirror**: solo Yjs y el renderizador.
