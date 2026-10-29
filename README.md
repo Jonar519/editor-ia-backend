@@ -18,8 +18,7 @@ Al cierre de R8 (28-10-2026), el backend tiene completos los bloques D a R7:
 
 **Cómo levantarlo todo y demostrarlo, desde un clon limpio:** [docs/guia-demostracion.md](docs/guia-demostracion.md) (R9).
 
-**Sin despliegue y sin IA real.** Lo que exige el despliegue está en el README general. Quedan del bloque R:
-- R10: lista de revisión;
+**Sin despliegue y sin IA real.** Lo que exige el despliegue está en el README general y en la [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend (R10). Queda del bloque R:
 - R11: dependencias. El 2-11-2026 entra `fast-uri` 3.1.9; el 5-11-2026 se revisa el override de `body-parser` 2.4.0, riesgo R-05.
 
 ## Requisitos
