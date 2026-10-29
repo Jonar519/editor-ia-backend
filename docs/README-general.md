@@ -20,7 +20,7 @@ Este README general viaja dentro del repo del backend. Reúne el estado de los t
 | 2. Frontend de identidad | H1, H2, I, J | Cerrado (confirmado por escrito al cerrar J) |
 | 3. Editor colaborativo | K1, K2, L, M, N, O | Cerrado. ADR [0002](adr/0002-comunicacion.md), [0003](adr/0003-crdt.md) y [0004](adr/0004-motor-de-edicion.md). |
 | 4. IA | P1, P2, P3, Q | Cerrado. IA con proveedor simulado: **sin IA real** en el proyecto. |
-| 5. Cierre | R1–R11 | En curso. Hechos: R1–R8. Faltan R9 (guía de demostración consolidada), R10 (lista de revisión) y R11 (fechas de dependencias: 2-11 y 5-11-2026). |
+| 5. Cierre | R1–R11 | En curso. Hechos: R1–R9 ([guía de demostración](guia-demostracion.md)). Faltan R10 (lista de revisión) y R11 (fechas de dependencias: 2-11 y 5-11-2026). |
 
 **Sin despliegue.** Todo corre en local. Lo que exige el despliegue está en «Antes del despliegue», más abajo.
 
@@ -38,120 +38,120 @@ Este README general viaja dentro del repo del backend. Reúne el estado de los t
 
 ## Cómo demostrar cada tema de la materia
 
-- **Demo** indica el archivo `docs/demo-<bloque>.md` del repo correspondiente, con los pasos exactos para cmd.exe.
-- **R9** indica la guía de demostración consolidada del bloque R9, **todavía sin escribir**. Hasta entonces, la columna «Cómo demostrarlo» dice qué prueba, script o informe lo muestra.
+- **Demo** enlaza la sección de la [guía de demostración](guia-demostracion.md) (cmd.exe, desde un clon limpio) y, cuando existe, la demo detallada del bloque (`docs/demo-<bloque>.md` de su repo).
+- Lo que no se mide ni se cubre está reunido en la guía, sección [«Lo no medido o no cubierto»](guia-demostracion.md#10-lo-no-medido-o-no-cubierto).
 - Las mutaciones se corren con `scripts\mutar.bat <id>...` en el repo que se indica («back», «front», «base»). Cada una rompe la regla a propósito y alguna prueba tiene que fallar.
 
 ### Tramo 1: base e identidad (A–G)
 
 | Bloque | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|---|
-| A | Migraciones SQL numeradas, con checksum, que no se editan | `editor-ia-database/migrations`, `scripts/migrate.mjs` | Editar una migración aplicada y ver que `db-migrate` se niega; pruebas que solo tocan bases `*_test` | base: A |
-| A | Pruebas SQL con SQLSTATE exacto | `tests/sql/*.test.sql` del repo de base | `scripts\db-test.bat`; mutaciones base A01–A21 | base: A |
-| B | Seguridad desde el diseño: cuenta pendiente sin sesiones ni tokens | CHECK + clave foránea compuesta (0003–0006) | Mutaciones base B01–B41 | base: B |
-| C | Historial a prueba de manipulación | `versiones`: solo inserción y cadena de hash (0010) | Bloque psql de la demo C; mutaciones base C01–C08 | base: C |
-| C | Aislamiento de datos para la IA | trigger + clave foránea compuesta + búsqueda filtrada (0011, 0023) | Mutaciones base C19–C23 y P04 | base: C |
-| D | Privilegios mínimos | rol `cuaderno_app` (0012) y verificación al arrancar | Pruebas SQL 0012; arrancar en producción con el usuario dueño y ver que se niega; mutaciones base D01–D04 y back S22–S24 | back: D (pasos 1 y 6) |
-| D | Configuración validada y segura por defecto | `src/config/entorno.ts` (zod) | Arrancar en producción con proveedores mock y ver que se niega; mutaciones back S01–S04 | back: D |
-| D | Observabilidad | `/health`, `/ready`, `/metrics`, logs pino con redacción | Pasos 3–5 de la demo D; mutaciones back S05–S09, S12–S13 y S18 | back: D |
-| D | Apagado ordenado | `src/apagado.ts` | SIGTERM real en el contenedor Linux (`scripts\demo-linux.bat sigterm`); mutaciones back S19–S21 | back: D (paso 6) |
-| D | Documentación de API generada | `docs/openapi.json` desde zod | `npm run openapi:check` | back: D |
-| E | Alta solo por invitación (el que invita no ve el enlace) | `src/invitaciones`, CLI `invitar.bat` + `buzon.bat` | Invitar, leer el buzón y completar | back: E |
-| E | Sesión: access 15 min en memoria + refresh rotativo | `src/auth`, [ADR 0001](adr/0001-sesion.md) | Refrescar, reutilizar el viejo y ver la familia revocada | back: E |
-| E | Sesión viva en cada petición | `requiereSesion` | Cerrar sesión y usar el access token viejo: 401 | back: E |
-| E | Bloqueo progresivo sin enumeración de cuentas | `src/auth/servicio.ts`, `limites.ts` | 5 fallos con un correo real y con uno inexistente: mismo 429 | back: E |
-| E | Límites de intentos con Redis (fallan cerrado) | `limitarTasa` | Prueba `limites.test.ts`; mutación back E18 | back: E |
-| F | MFA TOTP sin librería (RFC 6238/4226) | `src/auth/totp.ts`, vectores del RFC en `totp.test.ts` | Admin: completar la invitación exige el primer código; login en dos pasos | back: F |
-| F | Secreto MFA cifrado y ligado a la cuenta | AES-256-GCM con la cuenta como datos asociados (`cifrado.ts`) | Mutación back G07 | back: F |
-| F | Anti-replay de códigos | `verificarTotp` + UPDATE condicional + trigger de la base (0016) | Mismo código dos veces: 401; mutaciones back G05 y G06, base F15 | back: F |
-| F | Códigos de respaldo de un solo uso | 10 códigos, en la base solo su HMAC con subclave | Usar el mismo dos veces: 401 | back: F |
-| F | Recuperación sin enumeración | `src/auth/recuperacion.ts`: responde antes de trabajar | Correo real e inexistente: misma respuesta y mismo tiempo | back: F |
-| F | Auditoría de seguridad | `eventos_seguridad`: solo inserción, IP truncada, sin texto libre (0015) | Paso 9 de la demo F; mutaciones base F08–F14 y back G23 | back: F |
-| F | Ningún token en logs ni en la base | `secretos.test.ts`: captura de logs + barrido de todas las tablas | Mutaciones back G01 y G02 | back: F |
-| G | Limpieza de metadatos sin dependencias | `src/imagen/limpiar.ts`: lista blanca de segmentos JPEG y chunks PNG | Subir un JPEG con EXIF/GPS y ver que no queda; mutaciones back U01–U11 | back: G |
-| G | Cambio de correo con re-verificación | `src/cuenta/perfil.ts`: enlace al correo nuevo, aviso al anterior | Pasos 3–4 de la demo G; mutaciones back U12–U17 | back: G |
-| G | Sesiones activas y cierre remoto | `GET /api/cuenta/sesiones`, `src/geo` | Cerrar una sesión desde otra y ver el 401 | back: G |
-| G | Exportación sin secretos | `src/cuenta/datos.ts` | Mutación back U26 (barrido de secretos en el JSON) | back: G |
-| G | Eliminación por lápida sin huérfanos | `eliminar_cuenta()` en la base (0018) | 409 con propiedad compartida; mutaciones base G09–G15 y back U28–U31 | back: G |
-| G | Retención con job agendado | `purgar_retencion()` (0019, 0023) + BullMQ (`src/trabajos/retencion.ts`) | [data-retention.md](data-retention.md); mutaciones base G16–G20 y back U32–U34 | back: G |
+| A | Migraciones SQL numeradas, con checksum, que no se editan | `editor-ia-database/migrations`, `scripts/migrate.mjs` | Editar una migración aplicada y ver que `db-migrate` se niega; pruebas que solo tocan bases `*_test` | [guía A](guia-demostracion.md#bloque-a-migraciones-y-pruebas-sql) · [demo-A](https://github.com/Jonar519/editor-ia-database/blob/main/docs/demo-A.md) |
+| A | Pruebas SQL con SQLSTATE exacto | `tests/sql/*.test.sql` del repo de base | `scripts\db-test.bat`; mutaciones base A01–A21 | [guía A](guia-demostracion.md#bloque-a-migraciones-y-pruebas-sql) · [demo-A](https://github.com/Jonar519/editor-ia-database/blob/main/docs/demo-A.md) |
+| B | Seguridad desde el diseño: cuenta pendiente sin sesiones ni tokens | CHECK + clave foránea compuesta (0003–0006) | Mutaciones base B01–B41 | [guía B](guia-demostracion.md#bloque-b-cuenta-pendiente-sin-sesiones) · [demo-B](https://github.com/Jonar519/editor-ia-database/blob/main/docs/demo-B.md) |
+| C | Historial a prueba de manipulación | `versiones`: solo inserción y cadena de hash (0010) | Bloque psql de la demo C; mutaciones base C01–C08 | [guía C](guia-demostracion.md#bloque-c-historial-y-aislamiento-en-la-base) · [demo-C](https://github.com/Jonar519/editor-ia-database/blob/main/docs/demo-C.md) |
+| C | Aislamiento de datos para la IA | trigger + clave foránea compuesta + búsqueda filtrada (0011, 0023) | Mutaciones base C19–C23 y P04 | [guía C](guia-demostracion.md#bloque-c-historial-y-aislamiento-en-la-base) · [demo-C](https://github.com/Jonar519/editor-ia-database/blob/main/docs/demo-C.md) |
+| D | Privilegios mínimos | rol `cuaderno_app` (0012) y verificación al arrancar | Pruebas SQL 0012; arrancar en producción con el usuario dueño y ver que se niega; mutaciones base D01–D04 y back S22–S24 | [guía D](guia-demostracion.md#bloque-d-esqueleto-del-backend) · [demo-D](demo-D.md), pasos 1 y 6 |
+| D | Configuración validada y segura por defecto | `src/config/entorno.ts` (zod) | Arrancar en producción con proveedores mock y ver que se niega; mutaciones back S01–S04 | [guía D](guia-demostracion.md#bloque-d-esqueleto-del-backend) · [demo-D](demo-D.md) |
+| D | Observabilidad | `/health`, `/ready`, `/metrics`, logs pino con redacción | Pasos 3–5 de la demo D; mutaciones back S05–S09, S12–S13 y S18 | [guía D](guia-demostracion.md#bloque-d-esqueleto-del-backend) · [demo-D](demo-D.md) |
+| D | Apagado ordenado | `src/apagado.ts` | SIGTERM real en el contenedor Linux (`scripts\demo-linux.bat sigterm`); mutaciones back S19–S21 | [guía D](guia-demostracion.md#bloque-d-esqueleto-del-backend) · [demo-D](demo-D.md), paso 6 |
+| D | Documentación de API generada | `docs/openapi.json` desde zod | `npm run openapi:check` | [guía D](guia-demostracion.md#bloque-d-esqueleto-del-backend) · [demo-D](demo-D.md) |
+| E | Alta solo por invitación (el que invita no ve el enlace) | `src/invitaciones`, CLI `invitar.bat` + `buzon.bat` | Invitar, leer el buzón y completar | [guía E](guia-demostracion.md#bloque-e-invitaciones-y-sesión) · [demo-E](demo-E.md) |
+| E | Sesión: access 15 min en memoria + refresh rotativo | `src/auth`, [ADR 0001](adr/0001-sesion.md) | Refrescar, reutilizar el viejo y ver la familia revocada | [guía E](guia-demostracion.md#bloque-e-invitaciones-y-sesión) · [demo-E](demo-E.md) |
+| E | Sesión viva en cada petición | `requiereSesion` | Cerrar sesión y usar el access token viejo: 401 | [guía E](guia-demostracion.md#bloque-e-invitaciones-y-sesión) · [demo-E](demo-E.md) |
+| E | Bloqueo progresivo sin enumeración de cuentas | `src/auth/servicio.ts`, `limites.ts` | 5 fallos con un correo real y con uno inexistente: mismo 429 | [guía E](guia-demostracion.md#bloque-e-invitaciones-y-sesión) · [demo-E](demo-E.md) |
+| E | Límites de intentos con Redis (fallan cerrado) | `limitarTasa` | Prueba `limites.test.ts`; mutación back E18 | [guía E](guia-demostracion.md#bloque-e-invitaciones-y-sesión) · [demo-E](demo-E.md) |
+| F | MFA TOTP sin librería (RFC 6238/4226) | `src/auth/totp.ts`, vectores del RFC en `totp.test.ts` | Admin: completar la invitación exige el primer código; login en dos pasos | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| F | Secreto MFA cifrado y ligado a la cuenta | AES-256-GCM con la cuenta como datos asociados (`cifrado.ts`) | Mutación back G07 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| F | Anti-replay de códigos | `verificarTotp` + UPDATE condicional + trigger de la base (0016) | Mismo código dos veces: 401; mutaciones back G05 y G06, base F15 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| F | Códigos de respaldo de un solo uso | 10 códigos, en la base solo su HMAC con subclave | Usar el mismo dos veces: 401 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| F | Recuperación sin enumeración | `src/auth/recuperacion.ts`: responde antes de trabajar | Correo real e inexistente: misma respuesta y mismo tiempo | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| F | Auditoría de seguridad | `eventos_seguridad`: solo inserción, IP truncada, sin texto libre (0015) | Paso 9 de la demo F; mutaciones base F08–F14 y back G23 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| F | Ningún token en logs ni en la base | `secretos.test.ts`: captura de logs + barrido de todas las tablas | Mutaciones back G01 y G02 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) · [demo-F](demo-F.md) |
+| G | Limpieza de metadatos sin dependencias | `src/imagen/limpiar.ts`: lista blanca de segmentos JPEG y chunks PNG | Subir un JPEG con EXIF/GPS y ver que no queda; mutaciones back U01–U11 | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-G](demo-G.md) |
+| G | Cambio de correo con re-verificación | `src/cuenta/perfil.ts`: enlace al correo nuevo, aviso al anterior | Pasos 3–4 de la demo G; mutaciones back U12–U17 | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-G](demo-G.md) |
+| G | Sesiones activas y cierre remoto | `GET /api/cuenta/sesiones`, `src/geo` | Cerrar una sesión desde otra y ver el 401 | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-G](demo-G.md) |
+| G | Exportación sin secretos | `src/cuenta/datos.ts` | Mutación back U26 (barrido de secretos en el JSON) | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-G](demo-G.md) |
+| G | Eliminación por lápida sin huérfanos | `eliminar_cuenta()` en la base (0018) | 409 con propiedad compartida; mutaciones base G09–G15 y back U28–U31 | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-G](demo-G.md) |
+| G | Retención con job agendado | `purgar_retencion()` (0019, 0023) + BullMQ (`src/trabajos/retencion.ts`) | [data-retention.md](data-retention.md); mutaciones base G16–G20 y back U32–U34 | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-G](demo-G.md) |
 
 ### Tramo 2: frontend de identidad (H1–J)
 
 | Bloque | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|---|
-| H1 | Router por hash con carga bajo demanda por rol | `src/rutas.js` y `src/router.js` del frontend | Una persona lectora nunca descarga el editor ni la administración (`npm run presupuestos`) | front: H1 |
-| H1 | Significado del color auditado y contraste AA medido | `scripts/colores.mjs` y `scripts/contraste.mjs` del frontend | `scripts\revisar.bat`; mutaciones front H01–H13, H40 y H41 | front: H1 |
-| H1 | Presupuestos de peso por rol y por pantalla | `presupuestos.json` + `scripts/presupuestos.mjs` del frontend | `npm run presupuestos`; mutaciones front H14–H17, H24, H25 y H64 | front: H1, J |
-| H2 | Token solo en memoria y un solo refresco a la vez | `src/api/cliente.js` del frontend (promesa compartida + Web Locks) | Pruebas `cliente.test.mjs`; mutaciones front H26–H34 | front: H2 |
-| H2 | Service Worker que nunca cachea el API | `src/sw/sw.js` del frontend, [ADR 0007](adr/0007-sin-conexion.md) | `sw.spec.mjs` sin red; mutaciones front H35–H39 | front: H2 |
-| H2 | Fuentes autoalojadas por subconjunto | `@fontsource-variable` con `unicode-range` | Pestaña Red: solo los subconjuntos usados, del mismo origen | front: H2 |
-| H1–J | Accesibilidad WCAG 2.1 AA en los dos temas | axe en cada pantalla (Playwright, Chromium y Firefox) | `scripts\e2e.bat` | front: H1–J |
-| I | Token de un enlace fuera de la URL antes de usarlo | `src/token-url.js` del frontend | Mutación front H42 | front: I |
-| I | Entrada en dos pasos y recuperación desde la interfaz | `src/vistas/publico/` | Completar una invitación de admin con MFA y volver a entrar | front: I |
-| J | Recorte del avatar en el cliente, sin metadatos | `src/vistas/lector/foto.js` y `src/reglas-cuenta.js` | E2E: el PNG subido no trae su trozo de texto; mutaciones front H51–H53 | front: J |
-| J | Administración sin ver nunca el enlace de invitación | `src/vistas/admin/panel.js` | Invitar desde `#/admin` y comprobar que el enlace solo llega al buzón | front: J |
+| H1 | Router por hash con carga bajo demanda por rol | `src/rutas.js` y `src/router.js` del frontend | Una persona lectora nunca descarga el editor ni la administración (`npm run presupuestos`) | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) · [demo-H1](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-H1.md) |
+| H1 | Significado del color auditado y contraste AA medido | `scripts/colores.mjs` y `scripts/contraste.mjs` del frontend | `scripts\revisar.bat`; mutaciones front H01–H13, H40 y H41 | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) · [demo-H1](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-H1.md) |
+| H1 | Presupuestos de peso por rol y por pantalla | `presupuestos.json` + `scripts/presupuestos.mjs` del frontend | `npm run presupuestos`; mutaciones front H14–H17, H24, H25 y H64 | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) · [demo-H1](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-H1.md), [J](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-J.md) |
+| H2 | Token solo en memoria y un solo refresco a la vez | `src/api/cliente.js` del frontend (promesa compartida + Web Locks) | Pruebas `cliente.test.mjs`; mutaciones front H26–H34 | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) · [demo-H2](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-H2.md) |
+| H2 | Service Worker que nunca cachea el API | `src/sw/sw.js` del frontend, [ADR 0007](adr/0007-sin-conexion.md) | `sw.spec.mjs` sin red; mutaciones front H35–H39 | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) · [demo-H2](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-H2.md) |
+| H2 | Fuentes autoalojadas por subconjunto | `@fontsource-variable` con `unicode-range` | Pestaña Red: solo los subconjuntos usados, del mismo origen | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) · [demo-H2](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-H2.md) |
+| H1–J | Accesibilidad WCAG 2.1 AA en los dos temas | axe en cada pantalla (Playwright, Chromium y Firefox) | `scripts\e2e.bat` | [guía H1–J](guia-demostracion.md#bloques-h1-a-j-interfaz-de-identidad) |
+| I | Token de un enlace fuera de la URL antes de usarlo | `src/token-url.js` del frontend | Mutación front H42 | [guía, paso 6](guia-demostracion.md#6-primera-cuenta-por-invitación) · [demo-I](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-I.md) |
+| I | Entrada en dos pasos y recuperación desde la interfaz | `src/vistas/publico/` | Completar una invitación de admin con MFA y volver a entrar | [guía, paso 6](guia-demostracion.md#6-primera-cuenta-por-invitación) · [demo-I](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-I.md) |
+| J | Recorte del avatar en el cliente, sin metadatos | `src/vistas/lector/foto.js` y `src/reglas-cuenta.js` | E2E: el PNG subido no trae su trozo de texto; mutaciones front H51–H53 | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-J](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-J.md) |
+| J | Administración sin ver nunca el enlace de invitación | `src/vistas/admin/panel.js` | Invitar desde `#/admin` y comprobar que el enlace solo llega al buzón | [guía G](guia-demostracion.md#bloque-g-perfil-sesiones-y-datos) · [demo-J](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/demo-J.md) |
 
 ### Tramo 3: editor colaborativo (K1–O)
 
 | Bloque | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|---|
-| K1 | Espacios, documentos y permisos: sin acceso 404, sin el rol 403 | `src/contenido/acceso.ts`; rol efectivo de la base (`rol_efectivo_documento`, 0009) | Pasos 2–4 de la demo K1; mutaciones back W01–W21 | back: K1 |
-| K1 | Compactación del log Yjs que la app no puede saltarse | `compactar_documento()` (0021, `SECURITY DEFINER` con `search_path` fijo) | Paso 5 de la demo K1; mutaciones base K01–K12 | back: K1 |
-| K2 | WebSocket con ticket de un solo uso en el subprotocolo (nunca en la URL) y Origin comprobado | `src/tiempo-real/`; [protocolo-tiempo-real.md](protocolo-tiempo-real.md) | `tiempo-real.test.ts`; mutaciones back T02 y T03 | R9 |
-| K2 | Guardia de permiso en cada mensaje | `src/tiempo-real/servidor.ts` | Un lector que manda una actualización: se descarta, y a la tercera, cierre 4403; mutaciones back T01 y T08 | R9 |
-| K2 | Revocación en vivo por avisos de la base | `NOTIFY cuaderno_permisos` (0022) → Redis → conexiones | Quitar a un miembro con el documento abierto: se corta (medido 8–19 ms); mutaciones back T04–T06, base K13–K15 | R9 |
-| K2 | Auditoría de concesiones y revocaciones | `eventos_seguridad` con `objetivo_id` y `recurso_id` (0022) | `auditoria.test.ts`; mutaciones base K16 y K17 | R9 |
-| L | Editor colaborativo CodeMirror 6 + Yjs, deshacer solo lo propio, Tab que no atrapa el foco | `src/vistas/editor/editar.js` del frontend, [ADR 0004](adr/0004-motor-de-edicion.md) | E2E `editor.spec.mjs`: dos personas a la vez, el mismo texto | R9 |
-| L | Presencia con la identidad del servidor, no la del cliente | `src/tiempo-real/presencia.js` del frontend y el servidor | Un cliente que manda otro nombre o un color con CSS: no llega al DOM; mutaciones back T07 y T09, front L01–L03 | R9 |
-| L | Colores de presencia con contraste medido | 6 tokens `--color-presencia-N`, nunca violeta | `npm run contraste` del frontend | R9 |
-| M | Convergencia del CRDT contra el servidor y la base reales | `tests/integracion/convergencia.test.ts` (con semilla: réplicas, cortes, duplicados y compactación) | La prueba con su semilla; mutación back M01 (el fallo que encontró) | R9 |
-| M | Trabajo sin conexión con copia local | `src/tiempo-real/almacen-local.js` (IndexedDB), [ADR 0007](adr/0007-sin-conexion.md) | E2E `editor.spec.mjs`: sin red, cerrar la página y volver; mutaciones front M01–M04 | R9 |
-| N | Versiones con restauración como cambio nuevo | `src/versiones/` del backend (diff por líneas y por caracteres) | E2E `versiones-comentarios.spec.mjs`; mutaciones back N01–N11 | R9 |
-| N | Comparación de versiones en un Web Worker | `src/diff/` del frontend (Myers) | Comparar dos versiones grandes sin congelar la página | R9 |
-| N | Comentarios anclados con posiciones relativas de Yjs | `src/comentarios/anclas.js` del frontend | Escribir antes del tramo comentado y ver que el ancla lo sigue; mutaciones front N01 y N02 | R9 |
-| O | Vista renderizada sin HTML, con dos capas de lista blanca | `src/markdown/vista.js` del frontend | Batería XSS unitaria y E2E `markdown.spec.mjs`; mutaciones front O01–O04 | R9 |
-| O | Atajos, menú «/» y paleta Ctrl+K accesibles | `src/vistas/editor/comandos.js` y `paleta.js` del frontend | Usar el editor solo con el teclado; mutación front O05 (un bloque insertado no se pega al párrafo) | R9 |
-| O | KaTeX y resaltado bajo demanda, con tope | `src/diferidas/` del frontend | `npm run presupuestos` (KaTeX 74,94 de 75 KiB) | R9 |
-| O | Comentar desde la vista renderizada | `src/comentarios/posiciones.js` del frontend | E2E `anclaje-renderizado.spec.mjs`; mutaciones front O06–O08 | R9 |
+| K1 | Espacios, documentos y permisos: sin acceso 404, sin el rol 403 | `src/contenido/acceso.ts`; rol efectivo de la base (`rol_efectivo_documento`, 0009) | Pasos 2–4 de la demo K1; mutaciones back W01–W21 | [guía K1](guia-demostracion.md#bloque-k1-espacios-documentos-y-permisos) · [demo-K1](demo-K1.md) |
+| K1 | Compactación del log Yjs que la app no puede saltarse | `compactar_documento()` (0021, `SECURITY DEFINER` con `search_path` fijo) | Paso 5 de la demo K1; mutaciones base K01–K12 | [guía K1](guia-demostracion.md#bloque-k1-espacios-documentos-y-permisos) · [demo-K1](demo-K1.md) |
+| K2 | WebSocket con ticket de un solo uso en el subprotocolo (nunca en la URL) y Origin comprobado | `src/tiempo-real/`; [protocolo-tiempo-real.md](protocolo-tiempo-real.md) | `tiempo-real.test.ts`; mutaciones back T02 y T03 | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
+| K2 | Guardia de permiso en cada mensaje | `src/tiempo-real/servidor.ts` | Un lector que manda una actualización: se descarta, y a la tercera, cierre 4403; mutaciones back T01 y T08 | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
+| K2 | Revocación en vivo por avisos de la base | `NOTIFY cuaderno_permisos` (0022) → Redis → conexiones | Quitar a un miembro con el documento abierto: se corta (medido 8–19 ms); mutaciones back T04–T06, base K13–K15 | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
+| K2 | Auditoría de concesiones y revocaciones | `eventos_seguridad` con `objetivo_id` y `recurso_id` (0022) | `auditoria.test.ts`; mutaciones base K16 y K17 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) (auditoría) |
+| L | Editor colaborativo CodeMirror 6 + Yjs, deshacer solo lo propio, Tab que no atrapa el foco | `src/vistas/editor/editar.js` del frontend, [ADR 0004](adr/0004-motor-de-edicion.md) | E2E `editor.spec.mjs`: dos personas a la vez, el mismo texto | [guía L](guia-demostracion.md#bloque-l-editor-y-presencia) |
+| L | Presencia con la identidad del servidor, no la del cliente | `src/tiempo-real/presencia.js` del frontend y el servidor | Un cliente que manda otro nombre o un color con CSS: no llega al DOM; mutaciones back T07 y T09, front L01–L03 | [guía L](guia-demostracion.md#bloque-l-editor-y-presencia) |
+| L | Colores de presencia con contraste medido | 6 tokens `--color-presencia-N`, nunca violeta | `npm run contraste` del frontend | [guía L](guia-demostracion.md#bloque-l-editor-y-presencia) |
+| M | Convergencia del CRDT contra el servidor y la base reales | `tests/integracion/convergencia.test.ts` (con semilla: réplicas, cortes, duplicados y compactación) | La prueba con su semilla; mutación back M01 (el fallo que encontró) | [guía M](guia-demostracion.md#bloque-m-convergencia-y-sin-conexión) |
+| M | Trabajo sin conexión con copia local | `src/tiempo-real/almacen-local.js` (IndexedDB), [ADR 0007](adr/0007-sin-conexion.md) | E2E `editor.spec.mjs`: sin red, cerrar la página y volver; mutaciones front M01–M04 | [guía M](guia-demostracion.md#bloque-m-convergencia-y-sin-conexión) |
+| N | Versiones con restauración como cambio nuevo | `src/versiones/` del backend (diff por líneas y por caracteres) | E2E `versiones-comentarios.spec.mjs`; mutaciones back N01–N11 | [guía N](guia-demostracion.md#bloque-n-versiones-y-comentarios) |
+| N | Comparación de versiones en un Web Worker | `src/diff/` del frontend (Myers) | Comparar dos versiones grandes sin congelar la página | [guía N](guia-demostracion.md#bloque-n-versiones-y-comentarios) |
+| N | Comentarios anclados con posiciones relativas de Yjs | `src/comentarios/anclas.js` del frontend | Escribir antes del tramo comentado y ver que el ancla lo sigue; mutaciones front N01 y N02 | [guía N](guia-demostracion.md#bloque-n-versiones-y-comentarios) |
+| O | Vista renderizada sin HTML, con dos capas de lista blanca | `src/markdown/vista.js` del frontend | Batería XSS unitaria y E2E `markdown.spec.mjs`; mutaciones front O01–O04 | [guía O](guia-demostracion.md#bloque-o-vista-renderizada-y-comandos) |
+| O | Atajos, menú «/» y paleta Ctrl+K accesibles | `src/vistas/editor/comandos.js` y `paleta.js` del frontend | Usar el editor solo con el teclado; mutación front O05 (un bloque insertado no se pega al párrafo) | [guía O](guia-demostracion.md#bloque-o-vista-renderizada-y-comandos) |
+| O | KaTeX y resaltado bajo demanda, con tope | `src/diferidas/` del frontend | `npm run presupuestos` (KaTeX 74,94 de 75 KiB) | [guía O](guia-demostracion.md#bloque-o-vista-renderizada-y-comandos) |
+| O | Comentar desde la vista renderizada | `src/comentarios/posiciones.js` del frontend | E2E `anclaje-renderizado.spec.mjs`; mutaciones front O06–O08 | [guía O](guia-demostracion.md#bloque-o-vista-renderizada-y-comandos) |
 
 ### Tramo 4: IA (P1–Q)
 
 | Bloque | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|---|
-| P1 | **gRPC** entre el API y el servicio de IA, con los cuatro tipos de llamada | `proto/cuaderno/ia/v1/ia.proto`, `src/ia/`, [ADR 0002](adr/0002-comunicacion.md): unaria (`Explicar`), del servidor (`Resumir`, `Mejorar`), del cliente (`IndexarDocumento`) y bidireccional (`Autocompletar`) | `ia-grpc.test.ts`; `scripts\ia.bat` y el API arriba | R9 |
-| P1 | Token entre servicios, deadlines, cancelación y salud estándar | Interceptor del servicio; `grpc.health.v1` | Mutaciones back P01–P06 y P10–P14 | R9 |
-| P1 | Contrato versionado que no se rompe sin querer | `buf lint` y `buf breaking` contra `main` (`npm run proto:check`, en el job `verificar` del CI) | Mutación back P27 | R9 |
-| P2 | Búsqueda semántica aislada por espacio y por el acceso de hoy | `buscar_fragmentos` (0023) y `src/ia/` | `ia-p2.test.ts`; mutaciones back P19, P21 y P31–P34, base P01–P04 | R9 |
-| P2 | Prompts armados contra la inyección | `src/ia/prompt.ts`: contenido escapado en un bloque con nonce, salida recortada | `ia-prompt.test.ts`; mutaciones back P28–P30 y P40–P43; riesgo R-04 | R9 |
-| P2 | Topes de IA por cuenta y presupuesto de indexado por espacio | `uso_ia_diario`, `uso_ia_indexado_diario` (0023) | Mutaciones back P15, P16 y P35–P39, base P08–P10 | R9 |
-| P3 | **Medición** gRPC frente a REST/JSON (HTTP/1.1 y h2c) | `scripts/medicion/`, [medicion-p3.md](medicion-p3.md) | `scripts\medir.bat --rapido` (no mide con más del 10 % de CPU ocupada); el informe abre con lo que no permite concluir | R9 |
-| Q | Asistente de IA en la interfaz: Mejorar nunca se aplica solo | `src/diferidas/ia.js` del frontend | E2E `ia.spec.mjs`; mutaciones front Q01–Q07 | R9 |
-| Q | Sugerencias mientras se escribe, por el WebSocket | `src/diferidas/ia-autocompletado.js` del frontend; `ia.autocompletar` en el protocolo | `ia-autocompletado.test.ts` del backend; mutaciones front Q08–Q14, back P06 y P23 | R9 |
-| Q | IA bajo demanda: quien lee no descarga CodeMirror | Diferidas con tope de 25 KiB cada una | `npm run presupuestos`; mutaciones front Q15–Q17 | R9 |
+| P1 | **gRPC** entre el API y el servicio de IA, con los cuatro tipos de llamada | `proto/cuaderno/ia/v1/ia.proto`, `src/ia/`, [ADR 0002](adr/0002-comunicacion.md): unaria (`Explicar`), del servidor (`Resumir`, `Mejorar`), del cliente (`IndexarDocumento`) y bidireccional (`Autocompletar`) | `ia-grpc.test.ts`; `scripts\ia.bat` y el API arriba | [guía P1](guia-demostracion.md#bloque-p1-grpc) |
+| P1 | Token entre servicios, deadlines, cancelación y salud estándar | Interceptor del servicio; `grpc.health.v1` | Mutaciones back P01–P06 y P10–P14 | [guía P1](guia-demostracion.md#bloque-p1-grpc) |
+| P1 | Contrato versionado que no se rompe sin querer | `buf lint` y `buf breaking` contra `main` (`npm run proto:check`, en el job `verificar` del CI) | Mutación back P27 | [guía P1](guia-demostracion.md#bloque-p1-grpc) |
+| P2 | Búsqueda semántica aislada por espacio y por el acceso de hoy | `buscar_fragmentos` (0023) y `src/ia/` | `ia-p2.test.ts`; mutaciones back P19, P21 y P31–P34, base P01–P04 | [guía P2](guia-demostracion.md#bloque-p2-búsqueda-inyección-y-topes) |
+| P2 | Prompts armados contra la inyección | `src/ia/prompt.ts`: contenido escapado en un bloque con nonce, salida recortada | `ia-prompt.test.ts`; mutaciones back P28–P30 y P40–P43; riesgo R-04 | [guía P2](guia-demostracion.md#bloque-p2-búsqueda-inyección-y-topes) |
+| P2 | Topes de IA por cuenta y presupuesto de indexado por espacio | `uso_ia_diario`, `uso_ia_indexado_diario` (0023) | Mutaciones back P15, P16 y P35–P39, base P08–P10 | [guía P2](guia-demostracion.md#bloque-p2-búsqueda-inyección-y-topes) |
+| P3 | **Medición** gRPC frente a REST/JSON (HTTP/1.1 y h2c) | `scripts/medicion/`, [medicion-p3.md](medicion-p3.md) | `scripts\medir.bat --rapido` (no mide con más del 10 % de CPU ocupada); el informe abre con lo que no permite concluir | [guía P3](guia-demostracion.md#bloque-p3-medición-grpc-frente-a-restjson) |
+| Q | Asistente de IA en la interfaz: Mejorar nunca se aplica solo | `src/diferidas/ia.js` del frontend | E2E `ia.spec.mjs`; mutaciones front Q01–Q07 | [guía Q](guia-demostracion.md#bloque-q-asistente-de-ia) |
+| Q | Sugerencias mientras se escribe, por el WebSocket | `src/diferidas/ia-autocompletado.js` del frontend; `ia.autocompletar` en el protocolo | `ia-autocompletado.test.ts` del backend; mutaciones front Q08–Q14, back P06 y P23 | [guía Q](guia-demostracion.md#bloque-q-asistente-de-ia) |
+| Q | IA bajo demanda: quien lee no descarga CodeMirror | Diferidas con tope de 25 KiB cada una | `npm run presupuestos`; mutaciones front Q15–Q17 | [guía Q](guia-demostracion.md#bloque-q-asistente-de-ia) |
 
 ### Tramo 5: cierre (R)
 
 | Bloque | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|---|
-| R1 | Verificar la cadena de versiones desde la interfaz | `GET /api/documentos/{id}/versiones/verificacion`; el historial del frontend | Prueba de integración que altera una versión con el dueño de la base; mutaciones back R01–R03, front R01 y R02 | R9 |
-| R2 | CSP estricta en el build | `scripts/lib/csp.mjs` del frontend | E2E `csp.spec.mjs` (un script en línea no corre); mutaciones front R03–R06; riesgo R-06 | R9 |
-| R3 | **Carga** HTTP y WebSocket contra el API real | `scripts/carga/`, [carga-r.md](carga-r.md) | `scripts\carga.bat --rapido` y `scripts\carga-linux.bat --rapido` (base y Redis de pruebas; no mide con más del 10 % de CPU); mutaciones back R04–R06 | R9 |
-| R4 | **Modelo de amenazas** STRIDE con riesgos residuales medidos | [modelo-amenazas.md](modelo-amenazas.md): diagrama de flujo de datos, análisis por elemento y R-01–R-07 | Cada riesgo residual dice su evidencia; R-01 medido con `tiempo-real.test.ts` | R9 |
-| R4 | Abuso de almacenamiento por versiones (R-02) | `scripts/carga/medir-almacenamiento.ts`, [almacenamiento-r.md](almacenamiento-r.md) | `scripts\almacenamiento.bat --rapido`; mutación back R07 | R9 |
-| R4 | **Límite general** de 600 pedidos por minuto y cuenta (R-07) | `limiteGeneral` en `src/auth/limites.ts` | `limite-general.test.ts` (con el límite agotado, `/health` responde y el WebSocket sigue); mutaciones back R08–R10; costo medido en [limite-r/carga-r.md](limite-r/carga-r.md) | R9 |
-| R4 | Cuerpos comprimidos rechazados sin descomprimir | `inflate: false` en `express.json()` y `express.raw()` | 415 `codificacion_no_admitida`; mutaciones back B01–B03; riesgo R-05 | R9 |
-| R5 | Modelo de dominio: cada regla con su prueba y su mutación | [modelo-dominio.md](https://github.com/Jonar519/editor-ia-database/blob/main/docs/modelo-dominio.md) del repo de base | Elegir una regla de la tabla y correr su mutación | R9 |
-| R6 | Decisiones de arquitectura con su estado de verificación | [ADR 0001–0008](adr/) | Cada ADR separa lo verificado de lo que no tiene prueba propia | — |
-| R7 | OpenAPI revisado ruta por ruta y protocolo de tiempo real | `src/openapi.ts`, [openapi.json](openapi.json), [protocolo-tiempo-real.md](protocolo-tiempo-real.md) | `openapi.test.ts` (toda ruta de Express documentada; 429 con `Retry-After` y 503 en todo `/api`); mutaciones back R11–R13 | R9 |
+| R1 | Verificar la cadena de versiones desde la interfaz | `GET /api/documentos/{id}/versiones/verificacion`; el historial del frontend | Prueba de integración que altera una versión con el dueño de la base; mutaciones back R01–R03, front R01 y R02 | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R2 | CSP estricta en el build | `scripts/lib/csp.mjs` del frontend | E2E `csp.spec.mjs` (un script en línea no corre); mutaciones front R03–R06; riesgo R-06 | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R3 | **Carga** HTTP y WebSocket contra el API real | `scripts/carga/`, [carga-r.md](carga-r.md) | `scripts\carga.bat --rapido` y `scripts\carga-linux.bat --rapido` (base y Redis de pruebas; no mide con más del 10 % de CPU); mutaciones back R04–R06 | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R4 | **Modelo de amenazas** STRIDE con riesgos residuales medidos | [modelo-amenazas.md](modelo-amenazas.md): diagrama de flujo de datos, análisis por elemento y R-01–R-07 | Cada riesgo residual dice su evidencia; R-01 medido con `tiempo-real.test.ts` | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R4 | Abuso de almacenamiento por versiones (R-02) | `scripts/carga/medir-almacenamiento.ts`, [almacenamiento-r.md](almacenamiento-r.md) | `scripts\almacenamiento.bat --rapido`; mutación back R07 | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R4 | **Límite general** de 600 pedidos por minuto y cuenta (R-07) | `limiteGeneral` en `src/auth/limites.ts` | `limite-general.test.ts` (con el límite agotado, `/health` responde y el WebSocket sigue); mutaciones back R08–R10; costo medido en [limite-r/carga-r.md](limite-r/carga-r.md) | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R4 | Cuerpos comprimidos rechazados sin descomprimir | `inflate: false` en `express.json()` y `express.raw()` | 415 `codificacion_no_admitida`; mutaciones back B01–B03; riesgo R-05 | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R5 | Modelo de dominio: cada regla con su prueba y su mutación | [modelo-dominio.md](https://github.com/Jonar519/editor-ia-database/blob/main/docs/modelo-dominio.md) del repo de base | Elegir una regla de la tabla y correr su mutación | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R6 | Decisiones de arquitectura con su estado de verificación | [ADR 0001–0008](adr/) | Cada ADR separa lo verificado de lo que no tiene prueba propia | [guía R](guia-demostracion.md#bloque-r-cierre) |
+| R7 | OpenAPI revisado ruta por ruta y protocolo de tiempo real | `src/openapi.ts`, [openapi.json](openapi.json), [protocolo-tiempo-real.md](protocolo-tiempo-real.md) | `openapi.test.ts` (toda ruta de Express documentada; 429 con `Retry-After` y 503 en todo `/api`); mutaciones back R11–R13 | [guía R](guia-demostracion.md#bloque-r-cierre) |
 
 ### En todos los repos
 
 | Tema | Dónde está | Cómo demostrarlo | Demo |
 |---|---|---|---|
-| Pruebas de mutación | `mutations/catalogo.json` en cada repo; al cierre de R8: base 173 (3 equivalentes), back 226 (2 equivalentes), front 105 | `scripts\mutar.bat` | todas |
-| CI con los mismos pasos en local | `.github/workflows/ci.yml` y `scripts\ci.bat` en cada repo | Pestaña Actions de cada PR; `scripts\ci.bat` muestra el código de salida real de cada paso | todas |
-| Dependencias: versiones exactas, 14 días de publicadas y `npm audit` | [ADR 0008](adr/0008-dependencias.md) | `npm audit --audit-level=high` en el CI | — |
-| Ningún secreto en los repos públicos | gitleaks sobre todo el historial (`scripts\gitleaks.bat` y job `gitleaks`) | `scripts\gitleaks.bat` | todas |
+| Pruebas de mutación | `mutations/catalogo.json` en cada repo; al cierre de R8: base 173 (3 equivalentes), back 226 (2 equivalentes), front 105 | `scripts\mutar.bat` | [guía, recorrido](guia-demostracion.md#8-recorrido-por-tema) |
+| CI con los mismos pasos en local | `.github/workflows/ci.yml` y `scripts\ci.bat` en cada repo | Pestaña Actions de cada PR; `scripts\ci.bat` muestra el código de salida real de cada paso | [guía, paso 9](guia-demostracion.md#9-pruebas-y-ci-de-los-tres-repos) |
+| Dependencias: versiones exactas, 14 días de publicadas y `npm audit` | [ADR 0008](adr/0008-dependencias.md) | `npm audit --audit-level=high` en el CI | [guía, paso 9](guia-demostracion.md#9-pruebas-y-ci-de-los-tres-repos) |
+| Ningún secreto en los repos públicos | gitleaks sobre todo el historial (`scripts\gitleaks.bat` y job `gitleaks`) | `scripts\gitleaks.bat` | [guía, paso 9](guia-demostracion.md#9-pruebas-y-ci-de-los-tres-repos) |
 
 ## ⚠️ Antes del despliegue (AWS): paso obligatorio
 

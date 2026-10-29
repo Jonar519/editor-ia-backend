@@ -16,8 +16,9 @@ Al cierre de R8 (28-10-2026), el backend tiene completos los bloques D a R7:
 - IA por gRPC con proveedor simulado (P1–P3);
 - verificación de la cadena, carga, modelo de amenazas, límite general, ADRs, OpenAPI revisado y protocolo (R1–R7).
 
+**Cómo levantarlo todo y demostrarlo, desde un clon limpio:** [docs/guia-demostracion.md](docs/guia-demostracion.md) (R9).
+
 **Sin despliegue y sin IA real.** Lo que exige el despliegue está en el README general. Quedan del bloque R:
-- R9: guía de demostración consolidada;
 - R10: lista de revisión;
 - R11: dependencias. El 2-11-2026 entra `fast-uri` 3.1.9; el 5-11-2026 se revisa el override de `body-parser` 2.4.0, riesgo R-05.
 
@@ -162,6 +163,7 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | Documento | Qué tiene |
 |---|---|
 | [docs/README-general.md](docs/README-general.md) | Los tres repos, la tabla de demostración de A a R, lo que exige el despliegue y las decisiones vigentes |
+| [docs/guia-demostracion.md](docs/guia-demostracion.md) | Guía de demostración para cmd.exe desde un clon limpio: puesta en marcha, primera cuenta, un recorrido por cada tema y lo no medido o no cubierto |
 | [docs/adr/](docs/adr/) | ADR 0001–0008, cada uno con su estado de verificación |
 | [docs/modelo-amenazas.md](docs/modelo-amenazas.md) | STRIDE por elemento y riesgos residuales R-01–R-07 |
 | [docs/protocolo-tiempo-real.md](docs/protocolo-tiempo-real.md) | Ticket, comprobaciones del upgrade, mensajes, límites y códigos de cierre |
