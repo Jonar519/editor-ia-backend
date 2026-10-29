@@ -454,7 +454,7 @@ curl -s -X POST http://127.0.0.1:4200/api/documentos/%DOC%/propiedad -H "authori
 curl -s -o NUL -w "%{http_code}\n" -X DELETE http://127.0.0.1:4200/api/espacios/%ESP%/miembros/<id de Bruno> -H "authorization: Bearer %MARTA%"
 ```
 
-**Qué debes ver:** `204`, y en el navegador de Bruno, **en el acto**, «Conexión: Ya no tienes acceso a este documento.»: el servidor cortó su WebSocket. La base avisa con `NOTIFY`, Redis lo reenvía y el servidor corta la conexión (medido: 8–19 ms). Para seguir con los bloques siguientes, Marta vuelve a agregar a Bruno como editor (el `POST .../miembros` de K1).
+**Qué debes ver:** `204`, y en el navegador de Bruno, **en el acto**, «Conexión: Ya no tienes acceso a este documento.»: el servidor cortó su WebSocket. La base avisa con `NOTIFY`, Redis lo reenvía y el servidor corta la conexión (medido: 8–19 ms). Su editor queda **de solo lectura** (R10), con el aviso «El editor quedó de solo lectura: lo que escribas aquí ya no se guarda.». Escribir, Ctrl+B o Ctrl+Z ya no cambian el texto. Si en lugar de quitarlo le bajas el rol a lector, ve «Solo puedes leer este documento» y sigue recibiendo lo que escriben los demás. Esto último lo verifica la E2E de R10 (más abajo); en vivo se recorrió solo el aviso de la conexión. Para seguir con los bloques siguientes, Marta vuelve a agregar a Bruno como editor (el `POST .../miembros` de K1).
 
 ```bat
 cd /d "%RAIZ%\editor-ia-backend"
@@ -671,6 +671,22 @@ curl -s -w " %{http_code}\n" -X POST http://127.0.0.1:4200/api/auth/sesion -H "c
 ```
 
 **Qué debes ver:** `415` con `codificacion_no_admitida`.
+
+**R10: el editor en solo lectura al perder el acceso o bajar a lector.** Se ve en vivo en el bloque K2, al quitar a Bruno. En el frontend:
+
+```bat
+cd /d "%RAIZ%\editor-ia-frontend"
+scripts\e2e.bat tests/e2e/editor.spec.mjs -g "solo lectura"
+scripts\mutar.bat R07 R08 R09 R10 R11 R12 R13 R14 R15 R16
+```
+
+**Qué debes ver:** las dos E2E pasan en Chromium y Firefox, y las mutaciones salen `DETECTADA`. Una de ellas, R16, deja pasar el deshacer del navegador, que Chromium manda al editor aunque ya no tenga el foco.
+
+**R10: lista de revisión.** La del frontend, [revision-bloque-R.md](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md), reúne:
+- el estado de los textos del hero y de la CSP;
+- lo que quedó sin medir;
+- las dependencias que se revisan en R11;
+- lo que pasa al despliegue.
 
 **R5: modelo de dominio.** El [modelo de dominio](https://github.com/Jonar519/editor-ia-database/blob/main/docs/modelo-dominio.md) del repo de base: cada regla con dónde se aplica, su prueba y su mutación. Elige una fila y corre su mutación.
 
