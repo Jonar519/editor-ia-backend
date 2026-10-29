@@ -23,13 +23,28 @@ export function crearMetricas(): Metricas {
 /**
  * Mide cada petición. La etiqueta "ruta" es el PATRÓN de Express (/documentos/:id), nunca la URL real,
  * para que la cardinalidad no crezca con los ids; lo que no coincide con ninguna ruta va como "sin_ruta".
+ *
+ * El patrón se anota cuando Express elige la ruta (asigna req.route), porque ahí req.baseUrl todavía
+ * tiene el prefijo de los routers. En el 'finish' ya no siempre: si la ruta terminó en next(err), el
+ * router restauró baseUrl al salir y la etiqueta perdía el prefijo ("/refresco" en vez de
+ * "/api/auth/refresco").
  */
 export function medirPeticiones(metricas: Metricas): RequestHandler {
   return (req, res, next) => {
     const fin = metricas.duracionHttp.startTimer();
+    let ruta = 'sin_ruta';
+    let elegida: unknown;
+    Object.defineProperty(req, 'route', {
+      configurable: true,
+      enumerable: true,
+      get: () => elegida,
+      set: (r: unknown) => {
+        elegida = r;
+        const patron: unknown = (r as { path?: unknown } | undefined)?.path;
+        ruta = typeof patron === 'string' ? `${req.baseUrl}${patron}` : 'sin_ruta';
+      },
+    });
     res.on('finish', () => {
-      const patron: unknown = (req.route as { path?: unknown } | undefined)?.path;
-      const ruta = typeof patron === 'string' ? `${req.baseUrl}${patron}` : 'sin_ruta';
       fin({ metodo: req.method, ruta, estado: String(res.statusCode) });
     });
     next();

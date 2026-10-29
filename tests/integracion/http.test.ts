@@ -1,4 +1,5 @@
 import { gzipSync } from 'node:zlib';
+import express from 'express';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { ErrorHttp } from '../../src/http/errores.js';
@@ -106,6 +107,33 @@ describe('/metrics', () => {
     expect(r.text).toContain('cuaderno_process_cpu_user_seconds_total');
     expect(r.text).toMatch(/cuaderno_http_duracion_segundos_count\{metodo="GET",ruta="\/doc\/:id",estado="200"\} 2/);
     expect(r.text).not.toContain('/doc/123');
+  });
+
+  it('la ruta lleva el prefijo de su router también cuando termina en error (next(err))', async () => {
+    // Como el API: /api y, adentro, un router por recurso. Al salir de un router con un error, Express
+    // restaura req.baseUrl antes de que se responda.
+    const espacios = express.Router();
+    espacios.get('/', (_req, res) => res.json([]));
+    espacios.get('/:id', (req) => {
+      throw new ErrorHttp(404, 'no_encontrado', `No existe ${req.params.id}`);
+    });
+    const auth = express.Router();
+    auth.post('/refresco', () => {
+      throw new ErrorHttp(401, 'no_autenticado', 'Sin refresco');
+    });
+    const api = express.Router();
+    api.use('/espacios', espacios);
+    api.use('/auth', auth);
+    const { app } = appDePrueba({ api });
+    expect((await request(app).post('/api/auth/refresco')).status).toBe(401);
+    expect((await request(app).get('/api/espacios/e1')).status).toBe(404);
+    expect((await request(app).get('/api/espacios')).status).toBe(200);
+    const r = await request(app).get('/metrics');
+    expect(r.text).toMatch(/cuaderno_http_duracion_segundos_count\{metodo="POST",ruta="\/api\/auth\/refresco",estado="401"\} 1/);
+    expect(r.text).toMatch(/cuaderno_http_duracion_segundos_count\{metodo="GET",ruta="\/api\/espacios\/:id",estado="404"\} 1/);
+    // Una ruta '/' es el patrón tal cual de Express: el prefijo y la barra.
+    expect(r.text).toMatch(/cuaderno_http_duracion_segundos_count\{metodo="GET",ruta="\/api\/espacios\/",estado="200"\} 1/);
+    expect(r.text).not.toMatch(/ruta="\/refresco"|ruta="\/:id"/);
   });
 
   it('con token configurado: 401 sin token o con uno incorrecto, 200 con el correcto', async () => {
