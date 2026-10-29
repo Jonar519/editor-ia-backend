@@ -115,7 +115,7 @@ describe('/metrics', () => {
     const espacios = express.Router();
     espacios.get('/', (_req, res) => res.json([]));
     espacios.get('/:id', (req) => {
-      throw new ErrorHttp(404, 'no_encontrado', `No existe ${String(req.params.id)}`);
+      throw new ErrorHttp(404, 'no_encontrado', `No existe ${req.params.id}`);
     });
     const auth = express.Router();
     auth.post('/refresco', () => {
