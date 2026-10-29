@@ -251,7 +251,7 @@ cd /d "%RAIZ%\editor-ia-backend"
 for /f "tokens=1,* delims==" %a in ('findstr /b "METRICS_TOKEN=" .env') do @curl -s http://127.0.0.1:4200/metrics -H "authorization: Bearer %b" | findstr /b "cuaderno_http_duracion_segundos_count"
 ```
 
-**Qué debes ver:** una línea por ruta, método y estado, como `cuaderno_http_duracion_segundos_count{metodo="GET",ruta="/health",estado="200"} 1`. La etiqueta `ruta` es el **patrón** (`/api/documentos/:documentoId`), nunca la URL con el id.
+**Qué debes ver:** una línea por ruta, método y estado, como `cuaderno_http_duracion_segundos_count{metodo="GET",ruta="/health",estado="200"} 1`. La etiqueta `ruta` es el **patrón** (`/api/documentos/:documentoId`), nunca la URL con el id. Lleva el prefijo completo también cuando la ruta termina en error, por ejemplo `ruta="/api/auth/refresco",estado="401"`.
 
 **Redis caído** (la ventana del API sigue abierta):
 
@@ -276,7 +276,7 @@ scripts\demo-linux.bat produccion
 **Qué debes ver:** el apagado ordenado (`/ready` en 503 apenas empieza, y los recursos cerrados una vez), y producción negándose a arrancar con proveedores `mock` y con el usuario dueño de las tablas. Detalle en [demo-D](demo-D.md), pasos 6 y 7.
 
 ```bat
-scripts\mutar.bat S05 S08 S18 S24
+scripts\mutar.bat S05 S08 S18 S24 S30
 ```
 
 ### Bloque E: invitaciones y sesión

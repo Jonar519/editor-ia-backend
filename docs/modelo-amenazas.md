@@ -113,7 +113,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 | S | Usar un access token de una sesión revocada | Cada pedido verifica la sesión viva en la base | back E05, E06 | — |
 | T | Configuración insegura en producción | Validación al arrancar: sin proveedores simulados, `METRICS_TOKEN`, Redis con contraseña o TLS, `APP_URL` https, cookie `Secure`, scrypt 15+, usuario de base sin privilegios de más | back S01–S04, S22–S24, E31–E33, P24–P26 | Solo se valida al arrancar: no detecta un cambio posterior en la infraestructura. |
 | I | Un error interno que filtre su mensaje | Respuesta genérica; detalle solo en el log | back S10 | — |
-| I | `/metrics` abierto | Exige el token, comparado completo; etiquetas por patrón de ruta, no por URL | back S08, S09, S18 | — |
+| I | `/metrics` abierto | Exige el token, comparado completo; etiquetas por patrón de ruta, no por URL | back S08, S09, S18, S30 | — |
 | I | Respuestas guardadas en cachés intermedias | `Cache-Control: no-store` | back E36 | — |
 | I | Metadatos (GPS) en las fotos de perfil | Lista blanca de segmentos JPEG y chunks PNG; se guarda solo la versión limpia; se sirve con CSP `default-src 'none'; sandbox` | back U01–U11; base G03–G08 | — |
 | D | Saturar el proceso con lecturas | Límite general por cuenta (600 por minuto): una cuenta sola ya no ocupa el proceso con pedidos válidos | back R08–R10. R3: con 10 conexiones, `GET /api/espacios` ya usaba un núcleo entero (2 580 pedidos/s en Linux). R4: con el límite, a esa cuenta se le responde 429 a 5 761–6 337 pedidos/s | **R-07** |
