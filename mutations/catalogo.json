@@ -189,8 +189,8 @@
       "id": "S18",
       "regla": "Las métricas usan el PATRÓN de ruta, no la URL",
       "archivo": "src/observabilidad/metricas.ts",
-      "buscar": "const ruta = typeof patron === 'string' ? `${req.baseUrl}${patron}` : 'sin_ruta';",
-      "reemplazo": "const ruta = req.originalUrl;",
+      "buscar": "ruta = typeof patron === 'string' ? `${req.baseUrl}${patron}` : 'sin_ruta';",
+      "reemplazo": "ruta = req.originalUrl;",
       "comando": "test",
       "pruebas": [
         "tests/integracion/http.test.ts"
@@ -1280,6 +1280,15 @@
       "reemplazo": "if (version <= minimo) throw",
       "comando": "test",
       "pruebas": ["tests/integracion/salud.test.ts"]
+    },
+    {
+      "id": "S30",
+      "regla": "Las métricas anotan el patrón cuando se elige la ruta: tras next(err) la etiqueta conserva el prefijo del router",
+      "archivo": "src/observabilidad/metricas.ts",
+      "buscar": "fin({ metodo: req.method, ruta, estado: String(res.statusCode) });",
+      "reemplazo": "fin({ metodo: req.method, ruta: elegida ? `${req.baseUrl}${String((elegida as { path?: unknown }).path)}` : 'sin_ruta', estado: String(res.statusCode) });",
+      "comando": "test",
+      "pruebas": ["tests/integracion/http.test.ts"]
     },
     {
       "id": "T01",
