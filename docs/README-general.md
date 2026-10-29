@@ -20,11 +20,11 @@ Este README general viaja dentro del repo del backend. Reúne el estado de los t
 | 2. Frontend de identidad | H1, H2, I, J | Cerrado (confirmado por escrito al cerrar J) |
 | 3. Editor colaborativo | K1, K2, L, M, N, O | Cerrado. ADR [0002](adr/0002-comunicacion.md), [0003](adr/0003-crdt.md) y [0004](adr/0004-motor-de-edicion.md). |
 | 4. IA | P1, P2, P3, Q | Cerrado. IA con proveedor simulado: **sin IA real** en el proyecto. |
-| 5. Cierre | R1–R11 | En curso. Hechos: R1–R9 ([guía de demostración](guia-demostracion.md)). Faltan R10 (lista de revisión) y R11 (fechas de dependencias: 2-11 y 5-11-2026). |
+| 5. Cierre | R1–R11 | En curso. Hechos: R1–R10 ([guía de demostración](guia-demostracion.md); [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend). Falta R11 (fechas de dependencias: 2-11 y 5-11-2026). |
 
 **Sin despliegue.** Todo corre en local. Lo que exige el despliegue está en «Antes del despliegue», más abajo.
 
-**Sin medir al cierre del tramo 2** (se revisan en la lista de revisión de R10, [revision-bloque-R.md](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend): la recodificación del avatar con fotos reales de cámara en Firefox, Safari, y lo que solo cubren las E2E sin mutación (olvidar la sesión después de eliminar la cuenta, el foco en las confirmaciones).
+**Sin medir al cierre del tramo 2** (siguen sin medir al cerrar R10; declarados en la [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend y en la guía, sección [«Lo no medido o no cubierto»](guia-demostracion.md#10-lo-no-medido-o-no-cubierto)): la recodificación del avatar con fotos reales de cámara en Firefox, Safari, y lo que solo cubren las E2E sin mutación (olvidar la sesión después de eliminar la cuenta, el foco en las confirmaciones).
 
 ## Puertos locales
 
@@ -99,7 +99,7 @@ Este README general viaja dentro del repo del backend. Reúne el estado de los t
 | K1 | Compactación del log Yjs que la app no puede saltarse | `compactar_documento()` (0021, `SECURITY DEFINER` con `search_path` fijo) | Paso 5 de la demo K1; mutaciones base K01–K12 | [guía K1](guia-demostracion.md#bloque-k1-espacios-documentos-y-permisos) · [demo-K1](demo-K1.md) |
 | K2 | WebSocket con ticket de un solo uso en el subprotocolo (nunca en la URL) y Origin comprobado | `src/tiempo-real/`; [protocolo-tiempo-real.md](protocolo-tiempo-real.md) | `tiempo-real.test.ts`; mutaciones back T02 y T03 | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
 | K2 | Guardia de permiso en cada mensaje | `src/tiempo-real/servidor.ts` | Un lector que manda una actualización: se descarta, y a la tercera, cierre 4403; mutaciones back T01 y T08 | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
-| K2 | Revocación en vivo por avisos de la base | `NOTIFY cuaderno_permisos` (0022) → Redis → conexiones | Quitar a un miembro con el documento abierto: se corta (medido 8–19 ms); mutaciones back T04–T06, base K13–K15 | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
+| K2 | Revocación en vivo por avisos de la base | `NOTIFY cuaderno_permisos` (0022) → Redis → conexiones | Quitar a un miembro con el documento abierto: se corta (medido 8–19 ms) y su editor queda de solo lectura (R10); mutaciones back T04–T06, base K13–K15, front R07–R16 y E2E `editor.spec.mjs` | [guía K2](guia-demostracion.md#bloque-k2-tiempo-real) |
 | K2 | Auditoría de concesiones y revocaciones | `eventos_seguridad` con `objetivo_id` y `recurso_id` (0022) | `auditoria.test.ts`; mutaciones base K16 y K17 | [guía F](guia-demostracion.md#bloque-f-mfa-recuperación-y-auditoría) (auditoría) |
 | L | Editor colaborativo CodeMirror 6 + Yjs, deshacer solo lo propio, Tab que no atrapa el foco | `src/vistas/editor/editar.js` del frontend, [ADR 0004](adr/0004-motor-de-edicion.md) | E2E `editor.spec.mjs`: dos personas a la vez, el mismo texto | [guía L](guia-demostracion.md#bloque-l-editor-y-presencia) |
 | L | Presencia con la identidad del servidor, no la del cliente | `src/tiempo-real/presencia.js` del frontend y el servidor | Un cliente que manda otro nombre o un color con CSS: no llega al DOM; mutaciones back T07 y T09, front L01–L03 | [guía L](guia-demostracion.md#bloque-l-editor-y-presencia) |
