@@ -20,7 +20,7 @@ Este README general viaja dentro del repo del backend. Reúne el estado de los t
 | 2. Frontend de identidad | H1, H2, I, J | Cerrado (confirmado por escrito al cerrar J) |
 | 3. Editor colaborativo | K1, K2, L, M, N, O | Cerrado. ADR [0002](adr/0002-comunicacion.md), [0003](adr/0003-crdt.md) y [0004](adr/0004-motor-de-edicion.md). |
 | 4. IA | P1, P2, P3, Q | Cerrado. IA con proveedor simulado: **sin IA real** en el proyecto. |
-| 5. Cierre | R1–R11 | En curso. Hechos: R1–R10 ([guía de demostración](guia-demostracion.md); [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend). R11 (dependencias): `fast-uri` hecho el 4-11; falta `body-parser` el 5-11-2026. |
+| 5. Cierre | R1–R11 | En curso. Hechos: R1–R10 ([guía de demostración](guia-demostracion.md); [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend). R11 (dependencias): `fast-uri` hecho el 4-11; `body-parser` el 5-11-2026 (sin override; R-05 cerrado). |
 
 **Sin despliegue.** Todo corre en local. Lo que exige el despliegue está en «Antes del despliegue», más abajo.
 
