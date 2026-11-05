@@ -178,7 +178,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 
 | | Amenaza | Mitigación | Evidencia | Queda |
 |---|---|---|---|---|
-| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más ([ADR 0008](adr/0008-dependencias.md)); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). fast-uri, cerrado el 4-11 (3.1.9). Aviso moderado pendiente de decisión: minimatch, solo de desarrollo ([ADR 0008](adr/0008-dependencias.md)). |
+| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más ([ADR 0008](adr/0008-dependencias.md)); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs): cerrado el 5-11 (sin override de body-parser; `qs` 6.16.1 ya cumple 14 días). fast-uri, cerrado el 4-11 (3.1.9). minimatch, moderado y solo de desarrollo: excepción documentada el 4-11, sin overrides, con revisión el 13-11 ([ADR 0008](adr/0008-dependencias.md)). |
 
 ## Riesgos residuales
 
@@ -272,7 +272,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 - **Lo que no hay:** una garantía de que un modelo real ignore las órdenes del documento. La batería de 20 cargas prueba la estructura del prompt contra un modelo "ingenuo"; falta evaluar el modelo real elegido, y un aviso en la interfaz de que la respuesta se basa en contenido del documento (Q).
 - **Estado:** **sigue abierto al cerrar R4.** En R no hay IA real (decisión escrita): la batería no se corrió contra ningún modelo de verdad. Se corre al elegir el proveedor.
 
-### R-05 · Dependencias publicadas hace menos de 14 días (excepción por GHSA-27r3-jxmh-p828)
+### R-05 · Dependencias publicadas hace menos de 14 días (excepción por GHSA-27r3-jxmh-p828) — cerrado el 5-11-2026
 
 - **Origen:** 23-10-2026. Aviso alto en `body-parser` 2.0.0–2.3.0 (por Express 5.3.0): un cuerpo comprimido con bytes sobrantes al final provoca denegación de servicio. Era alcanzable en el API (`express.json()` y `express.raw()` del avatar).
 - **Qué se hizo:** `body-parser` 2.4.0 y `qs` 6.16.1 con overrides exactos, por una **excepción escrita** a la regla de los 14 días (registrada en el [ADR 0008](adr/0008-dependencias.md), que reemplaza a la tabla del ADR 0003). Y, aparte, `inflate: false` en los dos parsers: un cuerpo con `Content-Encoding` comprimido recibe 415 sin descomprimirse (pruebas y mutaciones B01–B03). Con eso, la ruta vulnerable no se recorre aunque una versión futura reintrodujera el problema.
@@ -280,7 +280,11 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - la lectura del diff de las dos versiones antes de aprobarlas (cambio acotado, sin red, archivos ni procesos nuevos);
   - el lockfile cambiado solo en esas dos entradas, con su integridad;
   - `npm audit` en el CI y gitleaks.
-- **Estado:** aceptado por escrito el 23-10-2026. Se revisa al actualizar Express o body-parser: los overrides se quitan cuando Express traiga por sí solo una versión parcheada con 14 días o más. Revisión agendada para el 5-11-2026, cuando body-parser 2.4.0 cumple 14 días (R11).
+- **Estado:** aceptado por escrito el 23-10-2026. **Cerrado el 5-11-2026** (R11), cuando body-parser 2.4.0 cumplió 14 días:
+  - se quitó el override de `body-parser`: Express 5.3.0 pide `^2.3.0` y resuelve por sí solo la 2.4.0;
+  - `npm install --before=2026-10-22T11:40:00Z` no cambió el lockfile (0 entradas nuevas, cambiadas o quitadas);
+  - se mantiene el override exacto de `qs` 6.16.1, que ya tiene más de 14 días, para que `^6.16.0` no resuelva 6.16.2 o 6.17.x (aún sin 14 días). Ya no es una excepción;
+  - `inflate: false` sigue en los dos parsers (B01–B03).
 - **Otros avisos de dependencias, sin excepción** (no son parte de R-05; se anotan para no perderlos):
   - ~~**fast-uri** 3.1.8 (moderado, solo de desarrollo)~~: **cerrado el 4-11-2026** con 3.1.9 (16 días de publicada; solo cambió esa entrada del lockfile).
   - **minimatch** 10.2.6 (moderado, solo de desarrollo, GHSA-g3hv-75wg-m249, aparece el 4-11-2026 en los tres repos, por eslint): **pendiente de decisión**. La corrección (11.0.1) es una versión mayor y cumple 14 días el 10-11-2026. Detalle en el [ADR 0008](adr/0008-dependencias.md). El CI pasa (umbral `high`).
