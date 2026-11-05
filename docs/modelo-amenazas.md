@@ -178,7 +178,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
 
 | | Amenaza | Mitigación | Evidencia | Queda |
 |---|---|---|---|---|
-| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más ([ADR 0008](adr/0008-dependencias.md)); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). Aviso moderado pendiente: fast-uri hasta el 2-11. |
+| T | Una versión nueva maliciosa o rota | Versiones exactas, con 14 días o más ([ADR 0008](adr/0008-dependencias.md)); `npm audit` en el CI (umbral `high`) y al instalar; gitleaks sobre todo el historial antes de cada push | CI de los tres repos | **R-05** (excepción de body-parser y qs). fast-uri, cerrado el 4-11 (3.1.9). Aviso moderado pendiente de decisión: minimatch, solo de desarrollo ([ADR 0008](adr/0008-dependencias.md)). |
 
 ## Riesgos residuales
 
@@ -282,7 +282,8 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - `npm audit` en el CI y gitleaks.
 - **Estado:** aceptado por escrito el 23-10-2026. Se revisa al actualizar Express o body-parser: los overrides se quitan cuando Express traiga por sí solo una versión parcheada con 14 días o más. Revisión agendada para el 5-11-2026, cuando body-parser 2.4.0 cumple 14 días (R11).
 - **Otros avisos de dependencias, sin excepción** (no son parte de R-05; se anotan para no perderlos):
-  - **fast-uri** 3.1.8 (moderado, solo de desarrollo): la versión corregida, 3.1.9, cumple 14 días el 2-11-2026 (R11). Hasta entonces, `npm audit` lo muestra y el CI pasa (umbral `high`).
+  - ~~**fast-uri** 3.1.8 (moderado, solo de desarrollo)~~: **cerrado el 4-11-2026** con 3.1.9 (16 días de publicada; solo cambió esa entrada del lockfile).
+  - **minimatch** 10.2.6 (moderado, solo de desarrollo, GHSA-g3hv-75wg-m249, aparece el 4-11-2026 en los tres repos, por eslint): **pendiente de decisión**. La corrección (11.0.1) es una versión mayor y cumple 14 días el 10-11-2026. Detalle en el [ADR 0008](adr/0008-dependencias.md). El CI pasa (umbral `high`).
   - **uuid** 8.3.2 (GHSA-w5hq-g745-h8pq, moderado, solo de desarrollo, por autocannon → hyperid). Resuelto el 27-10-2026 con un override exacto a 11.1.1, que tiene más de 14 días: **no** es una excepción a la regla.
 
 ### R-06 · Inyección de CSS: `'unsafe-inline'` en los estilos de la CSP
