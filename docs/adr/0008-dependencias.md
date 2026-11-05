@@ -67,7 +67,13 @@ Una excepción es para **versiones concretas**, por un **motivo concreto** (un a
 
 | Aviso | Dónde | Nivel | Qué se espera |
 |---|---|---|---|
-| `fast-uri` 3.0.0–3.1.8 (GHSA-w74x-v6f9-j3xg y otros tres) | backend, solo de desarrollo | moderado | La versión corregida, 3.1.9, cumple 14 días el **2-11-2026** (R11). Hasta entonces, el CI pasa con el umbral `high`. |
+| ~~`fast-uri` 3.0.0–3.1.8 (GHSA-w74x-v6f9-j3xg y otros tres)~~ | backend, solo de desarrollo | moderado | **Cerrado el 4-11-2026** (R11, rama `chore/fast-uri`). `fast-uri` 3.1.9 se publicó el 19-10-2026 y tenía 16 días al instalarla (cumplía 14 el 2-11). No tiene dependencias. Entra por `prisma` → `@prisma/dev` → `@prisma/streams-local` → `ajv` 8.20.0 (`^3.0.1`), así que bastó `npm update fast-uri`: el lockfile cambió solo en la entrada `node_modules/fast-uri` (versión, `resolved`, `integrity`), sin override y sin tocar `package.json`. Sin `npm audit fix`. |
+
+## Avisos nuevos en R11 (4-11-2026)
+
+| Aviso | Dónde | Nivel | Estado |
+|---|---|---|---|
+| `minimatch` 10.2.6, GHSA-g3hv-75wg-m249 (publicado el 30-10-2026): denegación de servicio por amplificación de `globparts`, `>=7.0.0 <11.0.1` | **Los tres repos**, solo de desarrollo, por `eslint` (`^10.2.5`), `@eslint/config-array` y, en el backend, `@typescript-eslint/typescript-estree` (`^10.2.2`). Ya estaba en el lockfile antes de R11: no lo trajo `fast-uri` | moderado (10 entradas de `npm audit` en el backend y 4 en el frontend y en la base, porque se propaga) | **Pendiente de decisión, no es una excepción.** La única corrección es `minimatch` 11.0.1: es una versión mayor que la que piden eslint y typescript-eslint (habría que forzarla con un override), y además se publicó el 27-10-2026 y cumple 14 días el **10-11-2026**. `npm audit fix --force` bajaría eslint a 9.39.5: se descarta. Solo procesa globs de la configuración de eslint, que son del repo. El CI pasa con el umbral `high`. |
 
 ## Alternativas
 
@@ -92,6 +98,7 @@ Una excepción es para **versiones concretas**, por un **motivo concreto** (un a
   - frontend: 0 avisos, corrido el 27-10-2026;
   - base: 0 avisos, en el CI de R5.
 - gitleaks: sin hallazgos en los tres repos antes de cada push del bloque R.
+- **R11 (4-11-2026), backend:** `npm audit --audit-level=high` en exit 0, con 0 altos y 10 moderados, todos de `minimatch`; `fast-uri` ya no aparece. En el frontend y en la base, con un `npm audit` de solo lectura: 4 moderados de `minimatch` en cada uno.
 - Las 33 entradas nuevas de autocannon (R3) y la de `uuid` 11.1.1 (R4), con 14 días o más, revisadas a mano contra el registro.
 
 **Sin control automático:**
