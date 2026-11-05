@@ -19,7 +19,7 @@ Al cierre de R8 (28-10-2026), el backend tiene completos los bloques D a R7:
 **Cómo levantarlo todo y demostrarlo, desde un clon limpio:** [docs/guia-demostracion.md](docs/guia-demostracion.md) (R9).
 
 **Sin despliegue y sin IA real.** Lo que exige el despliegue está en el README general y en la [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend (R10). Queda del bloque R:
-- R11: dependencias. `fast-uri` 3.1.9 entró el 4-11-2026 (cumplía 14 días el 2-11). El 5-11-2026 se revisa el override de `body-parser` 2.4.0, riesgo R-05. Hay un aviso nuevo de `minimatch`, solo de desarrollo y pendiente de decisión ([ADR 0008](docs/adr/0008-dependencias.md)).
+- R11: dependencias. `fast-uri` 3.1.9 entró el 4-11-2026 (cumplía 14 días el 2-11). El 5-11-2026 se quitó el override de `body-parser` 2.4.0 (cumplió 14 días; Express 5.3.0 la resuelve por sí solo) y se cerró el riesgo R-05; el de `qs` 6.16.1 se mantiene. `minimatch` (moderado, solo de desarrollo) es una excepción documentada desde el 4-11-2026, con revisión el 13-11 ([ADR 0008](docs/adr/0008-dependencias.md)).
 
 ## Requisitos
 
