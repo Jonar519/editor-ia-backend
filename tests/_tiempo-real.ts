@@ -19,14 +19,14 @@ import { appDePrueba, loggerEnMemoria, urlBdPruebas } from './_apoyo.js';
 
 export type Persona = Awaited<ReturnType<typeof cuentaActiva>> & { sesionId: string; auth: string };
 
-export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean; ia?: IaTiempoReal; api?: Partial<DependenciasApi> } = {}) {
+export async function levantar(o: { limites?: Partial<LimitesTiempoReal>; avisos?: boolean; ia?: IaTiempoReal; api?: Partial<DependenciasApi>; appUrl?: string } = {}) {
   const e = await entornoApi(o.api);
   const { log, lineas } = loggerEnMemoria();
   const rt = new ServidorTiempoReal({
     prisma: e.prisma,
     redis: e.deps.redis,
     prefijoRedis: e.deps.prefijoRedis,
-    appUrl: APP_URL,
+    appUrl: o.appUrl ?? APP_URL,
     log,
     limites: { ...LIMITES_PRODUCCION, ...o.limites },
     pedirCompactacion: null,
