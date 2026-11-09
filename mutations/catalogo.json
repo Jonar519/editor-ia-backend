@@ -455,6 +455,7 @@
       "archivo": "src/auth/rutas.ts",
       "buscar": "if (origen !== undefined && origen !== new URL(appUrl).origin) {",
       "reemplazo": "if (false) {",
+      "equivalente": "Desde el CORS de /api (H02), un Origin ajeno recibe 403 antes de llegar a la ruta del refresco: la prueba de auth.test.ts sigue viendo el 403 y la cookie sin consumir. La regla en la ruta queda como segunda barrera por si /api se monta de otra forma.",
       "comando": "test",
       "pruebas": [
         "tests/integracion/auth.test.ts"
