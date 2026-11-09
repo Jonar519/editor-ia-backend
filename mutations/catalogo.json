@@ -45,6 +45,42 @@
       ]
     },
     {
+      "id": "S31",
+      "regla": "TRUST_PROXY es un número de saltos: \"true\" se rechaza (con true cualquiera falsifica su IP)",
+      "archivo": "src/config/entorno.ts",
+      "buscar": ".regex(/^\\d{1,2}$/, { error: 'debe ser el número de proxies",
+      "reemplazo": ".regex(/^(\\d{1,2}|true|false)$/, { error: 'debe ser el número de proxies",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config.test.ts"]
+    },
+    {
+      "id": "S32",
+      "regla": "TRUST_PROXY: a lo sumo 10 saltos",
+      "archivo": "src/config/entorno.ts",
+      "buscar": ".pipe(z.number().max(10,",
+      "reemplazo": ".pipe(z.number().max(99,",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config.test.ts"]
+    },
+    {
+      "id": "S33",
+      "regla": "trust proxy de Express recibe el número de saltos (no confía en todo X-Forwarded-For)",
+      "archivo": "src/app.ts",
+      "buscar": "app.set('trust proxy', d.trustProxy);",
+      "reemplazo": "app.set('trust proxy', d.trustProxy > 0);",
+      "comando": "test",
+      "pruebas": ["tests/integracion/http.test.ts"]
+    },
+    {
+      "id": "S34",
+      "regla": "gRPC: una IA_HOST IPv6 (::) se enlaza entre corchetes",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "host.includes(':') && !host.startsWith('[') ? `[${host}]` : host",
+      "reemplazo": "host",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-direccion.test.ts"]
+    },
+    {
       "id": "S05",
       "regla": "/ready responde 503 apenas empieza el apagado",
       "archivo": "src/http/salud.ts",
