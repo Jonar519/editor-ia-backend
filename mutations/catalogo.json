@@ -2074,6 +2074,142 @@
       "pruebas": ["tests/integracion/ia-grpc.test.ts"]
     },
     {
+      "id": "P46",
+      "regla": "Proveedor real: sistema y usuario van SEPARADOS (el documento nunca entra al mensaje de sistema)",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "      system: prompt.sistema,\n      messages: [{ role: 'user', content: prompt.usuario }],",
+      "reemplazo": "      messages: [{ role: 'user', content: `${prompt.sistema}\\n${prompt.usuario}` }],",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P47",
+      "regla": "Proveedor real: stop_reason refusal es un error, nunca una respuesta vacía",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "if (stop === 'refusal') throw",
+      "reemplazo": "if (false) throw",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P48",
+      "regla": "Proveedor real: un 429 de Anthropic llega con su Retry-After",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "segundosDeEspera(err.headers.get('retry-after'))",
+      "reemplazo": "undefined",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P49",
+      "regla": "Proveedor real: 5xx y 529 de Anthropic son no_disponible (503), no un error interno",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "if (estado >= 500) return new ErrorProveedor('no_disponible'",
+      "reemplazo": "if (false) return new ErrorProveedor('no_disponible'",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P50",
+      "regla": "Proveedor real: el autocompletado nunca reintenta (tiene 2 s)",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "        ...(tarea === 'autocompletar' ? { maxRetries: 0 } : {}),\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P51",
+      "regla": "Proveedor real: la corriente recibe la AbortSignal (cancelar deja de generar y de cobrar)",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "MAX_TOKENS.transformar, ESFUERZO.transformar), { signal: senal });",
+      "reemplazo": "MAX_TOKENS.transformar, ESFUERZO.transformar), {});",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P52",
+      "regla": "Proveedor real: si quien consume deja de leer, la corriente se aborta",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "if (!terminada) corriente.abort();",
+      "reemplazo": "void terminada;",
+      "equivalente": "Al salir del for await (return del generador), el iterador de la corriente del SDK ya aborta la conexión: la prueba 'si quien consume deja de pedir fragmentos' pasa igual. El abort explícito es una segunda barrera por si un cambio del SDK deja de hacerlo.",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P53",
+      "regla": "Proveedor real: a Haiku no se le mandan fallbacks (no tiene fallback del lado del servidor)",
+      "archivo": "src/ia/proveedor-anthropic.ts",
+      "buscar": "!modelo.startsWith('claude-haiku')",
+      "reemplazo": "true",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P54",
+      "regla": "Voyage: se piden exactamente 1024 dimensiones (columna vector(1024))",
+      "archivo": "src/ia/embeddings-voyage.ts",
+      "buscar": "output_dimension: DIMENSIONES",
+      "reemplazo": "output_dimension: 2048",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P55",
+      "regla": "Voyage: input_type query para la consulta y document para los fragmentos",
+      "archivo": "src/ia/embeddings-voyage.ts",
+      "buscar": "input_type: tipo === 'consulta' ? 'query' : 'document'",
+      "reemplazo": "input_type: 'document'",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P56",
+      "regla": "Voyage: un 429 es limite con su Retry-After",
+      "archivo": "src/ia/embeddings-voyage.ts",
+      "buscar": "if (r.status === 429) throw",
+      "reemplazo": "if (false) throw",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P57",
+      "regla": "Voyage: lotes de a lo sumo 128 textos",
+      "archivo": "src/ia/embeddings-voyage.ts",
+      "buscar": "actual.length >= LOTE_MAX_TEXTOS || ",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P58",
+      "regla": "Voyage: cada vector va en su índice aunque lleguen desordenados",
+      "archivo": "src/ia/embeddings-voyage.ts",
+      "buscar": "      vectores[i] = d.embedding as number[];",
+      "reemplazo": "      vectores[datos.indexOf(d)] = d.embedding as number[];",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/ia-anthropic.test.ts"]
+    },
+    {
+      "id": "P59",
+      "regla": "Config del servicio: AI_PROVIDER=anthropic exige VOYAGE_API_KEY",
+      "archivo": "src/ia/config.ts",
+      "buscar": "if (c.AI_PROVIDER === 'anthropic' && c.VOYAGE_API_KEY === undefined) {",
+      "reemplazo": "if (false) {",
+      "comando": "test",
+      "pruebas": ["tests/unitarias/config-ia.test.ts"]
+    },
+    {
+      "id": "P60",
+      "regla": "Servicio: la consulta de búsqueda se embebe como consulta (input_type query)",
+      "archivo": "src/ia/servicio.ts",
+      "buscar": "p.embeber([consulta], ac.signal, 'consulta')",
+      "reemplazo": "p.embeber([consulta], ac.signal)",
+      "comando": "test",
+      "pruebas": ["tests/integracion/ia-grpc.test.ts"]
+    },
+    {
       "id": "B01",
       "regla": "GHSA-27r3-jxmh-p828: el JSON comprimido no se descomprime (inflate: false)",
       "archivo": "src/app.ts",
