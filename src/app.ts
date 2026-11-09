@@ -16,7 +16,8 @@ export interface DependenciasApp {
   comprobaciones: Comprobacion[];
   estado: EstadoProceso;
   tokenMetricas: string | undefined;
-  trustProxy: boolean;
+  /** Saltos de proxy de confianza (TRUST_PROXY): req.ip es la dirección que vio el último de ellos. */
+  trustProxy: number;
   /** Rutas del API, montadas en /api. */
   api?: Router;
   /** URL del frontend (APP_URL): el único origen al que /api responde con CORS (http/cors.ts). */

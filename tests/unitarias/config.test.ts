@@ -45,7 +45,7 @@ describe('cargarConfig', () => {
       PORT: 4200,
       LOG_LEVEL: 'info',
       SHUTDOWN_TIMEOUT_MS: 10_000,
-      TRUST_PROXY: false,
+      TRUST_PROXY: 0,
       AI_PROVIDER: 'mock',
       EMAIL_PROVIDER: 'mock',
       GEO_PROVIDER: 'mock',
@@ -75,6 +75,22 @@ describe('cargarConfig', () => {
     expect(problemas({ ...base, SHUTDOWN_TIMEOUT_MS: '10' })).toEqual([expect.stringMatching(/^SHUTDOWN_TIMEOUT_MS:/)]);
     expect(problemas({ ...base, AI_PROVIDER: 'openai' })).toEqual([expect.stringMatching(/^AI_PROVIDER:/)]);
     expect(problemas({ ...base, TRUST_PROXY: 'si' })).toEqual([expect.stringMatching(/^TRUST_PROXY:/)]);
+  });
+
+  it('TRUST_PROXY es un número de saltos (0 a 10), nunca un booleano', () => {
+    expect(cargarConfig({ ...base, TRUST_PROXY: '1' }).TRUST_PROXY).toBe(1);
+    expect(cargarConfig({ ...base, TRUST_PROXY: '0' }).TRUST_PROXY).toBe(0);
+    expect(problemas({ ...base, TRUST_PROXY: 'true' })).toEqual([
+      'TRUST_PROXY: debe ser el número de proxies delante del API (0 = ninguno, 1 detrás del borde de Railway)',
+    ]);
+    expect(problemas({ ...base, TRUST_PROXY: 'false' })).toHaveLength(1);
+    expect(problemas({ ...base, TRUST_PROXY: '-1' })).toHaveLength(1);
+    expect(problemas({ ...base, TRUST_PROXY: '11' })).toEqual(['TRUST_PROXY: a lo sumo 10 proxies']);
+  });
+
+  it('HOST acepta la interfaz de un contenedor (0.0.0.0 y ::)', () => {
+    expect(cargarConfig({ ...base, HOST: '0.0.0.0' }).HOST).toBe('0.0.0.0');
+    expect(cargarConfig({ ...base, HOST: '::' }).HOST).toBe('::');
   });
 
   it('nunca incluye el valor de un secreto en los mensajes', () => {
