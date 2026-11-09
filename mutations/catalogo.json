@@ -1312,10 +1312,101 @@
       "id": "T03",
       "regla": "Entrar: solo desde el Origin del frontend (secuestro de WebSocket entre sitios)",
       "archivo": "src/tiempo-real/servidor.ts",
-      "buscar": "if (req.headers.origin !== this.d.appUrl)",
+      "buscar": "if (req.headers.origin !== this.origenApp)",
       "reemplazo": "if (false)",
       "comando": "test",
       "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "H01",
+      "regla": "CORS: Access-Control-Allow-Origin es el origen exacto del frontend, nunca *",
+      "archivo": "src/http/cors.ts",
+      "buscar": "res.setHeader('Access-Control-Allow-Origin', permitido);",
+      "reemplazo": "res.setHeader('Access-Control-Allow-Origin', '*');",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H02",
+      "regla": "CORS: un Origin ajeno recibe 403 y la ruta no se ejecuta",
+      "archivo": "src/http/cors.ts",
+      "buscar": "    if (origen !== permitido) {\n      next(rechazo());",
+      "reemplazo": "    if (false) {\n      next(rechazo());",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H03",
+      "regla": "CORS: el preflight rechaza cabeceras que el frontend no usa",
+      "archivo": "src/http/cors.ts",
+      "buscar": " || pedidas.some((h) => !cabeceras.has(h))",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H04",
+      "regla": "CORS: el preflight rechaza métodos que el frontend no usa",
+      "archivo": "src/http/cors.ts",
+      "buscar": "!metodos.has(metodoPedido.toUpperCase()) || ",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H05",
+      "regla": "CORS: Retry-After, Content-Disposition y X-Request-Id quedan expuestas al frontend",
+      "archivo": "src/http/cors.ts",
+      "buscar": "    res.setHeader('Access-Control-Expose-Headers', CABECERAS_EXPUESTAS.join(', '));\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H06",
+      "regla": "CORS: con credenciales (la cookie de refresco viaja entre orígenes del mismo sitio)",
+      "archivo": "src/http/cors.ts",
+      "buscar": "    res.setHeader('Access-Control-Allow-Credentials', 'true');\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H07",
+      "regla": "CORS: el filtro está montado en /api antes de las rutas",
+      "archivo": "src/app.ts",
+      "buscar": "  app.use('/api', cors(d.appUrl));\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
+    },
+    {
+      "id": "H08",
+      "regla": "Ticket del WebSocket: solo para el Origin del frontend",
+      "archivo": "src/tiempo-real/rutas.ts",
+      "buscar": "  r.use(exigirOrigenApp(d.appUrl));\n",
+      "reemplazo": "",
+      "equivalente": "El filtro de CORS de /api (H02) ya rechaza cualquier Origin ajeno antes de la ruta: la prueba del ticket recibe 403 igual. La regla en la ruta es una segunda barrera por si /api se monta de otra forma.",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "H09",
+      "regla": "WebSocket: el Origin se compara con el ORIGEN de APP_URL (aunque traiga / al final)",
+      "archivo": "src/tiempo-real/servidor.ts",
+      "buscar": "this.origenApp = origenDe(d.appUrl);",
+      "reemplazo": "this.origenApp = d.appUrl;",
+      "comando": "test",
+      "pruebas": ["tests/integracion/tiempo-real.test.ts"]
+    },
+    {
+      "id": "H10",
+      "regla": "CORS: Vary: Origin (ninguna caché mezcla respuestas de orígenes distintos)",
+      "archivo": "src/http/cors.ts",
+      "buscar": "    res.vary('Origin');\n",
+      "reemplazo": "",
+      "comando": "test",
+      "pruebas": ["tests/integracion/cors.test.ts"]
     },
     {
       "id": "T04",
