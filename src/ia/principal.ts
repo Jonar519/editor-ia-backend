@@ -12,7 +12,14 @@ import { ProveedorMock } from './proveedor-mock.js';
 import { crearServicioIa } from './servicio.js';
 
 function proveedorDe(c: ConfigIa): ProveedorIa {
-  if (c.AI_PROVIDER === 'anthropic') return new ProveedorAnthropic(c.ANTHROPIC_API_KEY ?? '');
+  if (c.AI_PROVIDER === 'anthropic') {
+    return new ProveedorAnthropic({
+      clave: c.ANTHROPIC_API_KEY ?? '',
+      modelo: c.ANTHROPIC_MODEL,
+      modeloAutocompletar: c.ANTHROPIC_MODEL_AUTOCOMPLETAR,
+      voyage: { clave: c.VOYAGE_API_KEY ?? '', modelo: c.VOYAGE_MODEL },
+    });
+  }
   return new ProveedorMock({ retrasoFragmentoMs: c.IA_MOCK_RETRASO_MS });
 }
 

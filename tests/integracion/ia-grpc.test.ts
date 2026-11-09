@@ -133,6 +133,27 @@ describe('los cuatro tipos de llamada', () => {
     expect(r.vectores.get(1)).not.toEqual(r.vectores.get(0));
   });
 
+  it('embeddings: la consulta llega al proveedor como "consulta" y los fragmentos como "documento" (input_type de Voyage)', async () => {
+    const mock = new ProveedorMock();
+    const tipos: (string | undefined)[] = [];
+    const espia: ProveedorIa = {
+      nombre: 'mock',
+      modeloEmbeddings: mock.modeloEmbeddings,
+      dimensiones: mock.dimensiones,
+      explicar: (e, s) => mock.explicar(e, s),
+      transformar: (e, s) => mock.transformar(e, s),
+      autocompletar: (e, s) => mock.autocompletar(e, s),
+      embeber: (textos, s, tipo) => {
+        tipos.push(tipo);
+        return mock.embeber(textos, s);
+      },
+    };
+    const x = await ia({ proveedor: espia });
+    await x.cliente.embeberConsulta(origenFicticio({ documentoId: '' }), 'alfa');
+    await x.cliente.indexar(origenFicticio(), [{ indice: 0, contenido: 'alfa' }]);
+    expect(tipos).toEqual(['consulta', 'documento']);
+  });
+
   it('bidireccional: un pedido nuevo cancela la sugerencia anterior (que no llega y no se genera)', async () => {
     const x = await ia({ mock: { retrasoRespuestaMs: 150 } });
     const sesion = x.cliente.autocompletado(origenFicticio());

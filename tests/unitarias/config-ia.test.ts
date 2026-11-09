@@ -92,13 +92,31 @@ describe('servicio de IA (proceso aparte)', () => {
     expect(problemas(cargarConfigIa, {})).toEqual([expect.stringMatching(/^IA_SERVICE_TOKEN: falta/)]);
   });
 
-  it('AI_PROVIDER=anthropic exige su clave', () => {
-    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic' })).toEqual(['ANTHROPIC_API_KEY: obligatoria con AI_PROVIDER=anthropic']);
-    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA })).toEqual([]);
+  it('AI_PROVIDER=anthropic exige la clave de Anthropic y la de Voyage (embeddings)', () => {
+    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic' })).toEqual([
+      'ANTHROPIC_API_KEY: obligatoria con AI_PROVIDER=anthropic',
+      'VOYAGE_API_KEY: obligatoria con AI_PROVIDER=anthropic (embeddings)',
+    ]);
+    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA })).toEqual([
+      'VOYAGE_API_KEY: obligatoria con AI_PROVIDER=anthropic (embeddings)',
+    ]);
+    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA, VOYAGE_API_KEY: CLAVE_FICTICIA })).toEqual([]);
+  });
+
+  it('modelos: por defecto Claude Opus 5.5 y voyage-3.5; el del autocompletado es opcional; solo ids', () => {
+    expect(cargarConfigIa({ IA_SERVICE_TOKEN: TOKEN_IA })).toMatchObject({ ANTHROPIC_MODEL: 'claude-opus-5-5', VOYAGE_MODEL: 'voyage-3.5' });
+    expect(cargarConfigIa({ IA_SERVICE_TOKEN: TOKEN_IA }).ANTHROPIC_MODEL_AUTOCOMPLETAR).toBeUndefined();
+    expect(cargarConfigIa({ IA_SERVICE_TOKEN: TOKEN_IA, ANTHROPIC_MODEL_AUTOCOMPLETAR: '' }).ANTHROPIC_MODEL_AUTOCOMPLETAR).toBeUndefined();
+    expect(cargarConfigIa({ IA_SERVICE_TOKEN: TOKEN_IA, ANTHROPIC_MODEL: 'claude-sonnet-5-5', ANTHROPIC_MODEL_AUTOCOMPLETAR: 'claude-haiku-5-5' })).toMatchObject({
+      ANTHROPIC_MODEL: 'claude-sonnet-5-5',
+      ANTHROPIC_MODEL_AUTOCOMPLETAR: 'claude-haiku-5-5',
+    });
+    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, ANTHROPIC_MODEL: 'https://otro.example/v1' })).toEqual([expect.stringMatching(/^ANTHROPIC_MODEL: /)]);
+    expect(problemas(cargarConfigIa, { IA_SERVICE_TOKEN: TOKEN_IA, VOYAGE_MODEL: 'Voyage 3.5' })).toEqual([expect.stringMatching(/^VOYAGE_MODEL: /)]);
   });
 
   it('producción: sin simulado, y con TLS mutuo o red privada', () => {
-    const prod = { NODE_ENV: 'production', IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA };
+    const prod = { NODE_ENV: 'production', IA_SERVICE_TOKEN: TOKEN_IA, AI_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: CLAVE_FICTICIA, VOYAGE_API_KEY: CLAVE_FICTICIA };
     expect(problemas(cargarConfigIa, { ...prod, ...TLS })).toEqual([]);
     expect(problemas(cargarConfigIa, { ...prod, IA_RED_PRIVADA: 'true' })).toEqual([]);
     expect(problemas(cargarConfigIa, prod)).toEqual(['IA_TLS_CERT: en producción hace falta TLS mutuo (IA_TLS_*) o IA_RED_PRIVADA=true']);
