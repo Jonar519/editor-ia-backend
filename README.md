@@ -171,6 +171,26 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | [docs/data-retention.md](docs/data-retention.md) | Plazos de retención |
 | `docs/demo-D.md` … `docs/demo-K1.md` | Pasos de demostración para cmd.exe de los bloques D, E, F, G y K1 |
 
+## Contenedor (Docker · despliegue en Railway)
+
+Un solo build ([`Dockerfile`](Dockerfile), Node 24 sobre Debian 12, sin root) para los dos procesos. Cambia solo el comando:
+
+| Servicio | Comando de arranque | Escucha | Salud |
+|---|---|---|---|
+| API | por defecto (`node dist/servidor.js`) | `HOST:PORT` (la imagen trae `HOST=0.0.0.0`; `PORT` lo pone Railway) | `/ready` |
+| Servicio de IA | `node dist/ia/principal.js` | `IA_HOST:IA_PORT` (en Railway `IA_HOST=::`, red privada) | `grpc.health.v1` (el API la muestra en `/ready`) |
+
+```bat
+docker build -t editor-ia-backend .
+docker run --rm -p 4200:4200 --env-file .env.produccion editor-ia-backend
+docker run --rm --env-file .env.produccion editor-ia-backend node dist/ia/principal.js
+```
+
+- **`node` directo, nunca `npm start`:** npm no reenvía SIGTERM y se perdería el apagado ordenado.
+- **Sin secretos ni `.env` en la imagen** (`.dockerignore`); el contrato gRPC (`proto/`) sí va, porque se carga al arrancar.
+- **Las migraciones no corren al arrancar:** van con `editor-ia-database`, y el API se conecta como `cuaderno_app`.
+- `typescript` y el CLI de `prisma` quedan en `node_modules` aunque son de desarrollo: son peers de `@prisma/client` y `npm prune` no los quita. No se usan al correr.
+
 ## Problema conocido: el trabajador de Vitest muere en Windows con la CPU saturada
 
 **Aceptado y sin causa raíz** (decisión escrita del cierre de R7).
