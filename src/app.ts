@@ -5,6 +5,7 @@ import express, { type Express, type Router } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
+import { cors } from './http/cors.js';
 import { manejadorErrores, noEncontrado } from './http/errores.js';
 import { rutasSalud, type Comprobacion, type EstadoProceso } from './http/salud.js';
 import { medirPeticiones, type Metricas } from './observabilidad/metricas.js';
@@ -18,6 +19,8 @@ export interface DependenciasApp {
   trustProxy: boolean;
   /** Rutas del API, montadas en /api. */
   api?: Router;
+  /** URL del frontend (APP_URL): el único origen al que /api responde con CORS (http/cors.ts). */
+  appUrl: string;
   /** Solo para pruebas: agrega rutas antes del 404 (por ejemplo, una ruta lenta o que falla). */
   extender?: (app: Express) => void;
 }
@@ -47,6 +50,9 @@ export function crearApp(d: DependenciasApp): Express {
     }),
   );
   app.use(helmet());
+  // CORS antes de todo lo demás de /api: el preflight se responde sin leer cuerpos ni contar en límites, y
+  // un Origin ajeno se rechaza (403) antes de llegar a las rutas.
+  app.use('/api', cors(d.appUrl));
   app.use(medirPeticiones(d.metricas));
   // inflate: false (GHSA-27r3-jxmh-p828, defensa adicional): un cuerpo comprimido (Content-Encoding
   // distinto de identity) se rechaza con 415 sin descomprimirlo. El frontend nunca comprime pedidos.

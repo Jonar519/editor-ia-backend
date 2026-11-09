@@ -33,6 +33,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { validarSesion } from '../auth/sesiones.js';
 import { type RolContenido, rolEnDocumento } from '../contenido/acceso.js';
 import type { PrismaClient } from '../generated/prisma/client.js';
+import { origenDe } from '../http/cors.js';
 import { ErrorHttp } from '../http/errores.js';
 import { CONTEXTO_AUTOCOMPLETADO, type IaTiempoReal } from '../ia/autocompletado.js';
 import type { SesionAutocompletado } from '../ia/cliente.js';
@@ -127,8 +128,12 @@ export class ServidorTiempoReal implements ContenidoVivo {
   private servidor: Server | null = null;
   private readonly alUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => void this.upgrade(req, socket, head);
 
+  /** El origen del frontend (de APP_URL, aunque traiga "/" al final): el único que puede abrir un WebSocket. */
+  private readonly origenApp: string;
+
   constructor(private readonly d: DepsTiempoReal) {
-    this.wss = new WebSocketServer({ noServer: true, maxPayload: d.limites.mensajeBytes, handleProtocols: () => PROTOCOLO });
+    this.origenApp = origenDe(d.appUrl);
+    this.wss =new WebSocketServer({ noServer: true, maxPayload: d.limites.mensajeBytes, handleProtocols: () => PROTOCOLO });
   }
 
   adjuntar(servidor: Server): void {
@@ -141,7 +146,7 @@ export class ServidorTiempoReal implements ContenidoVivo {
   private async upgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
     if (new URL(req.url ?? '/', 'http://x').pathname !== RUTA_TIEMPO_REAL) { rechazar(socket, 404, 'Not Found'); return; }
     // Contra el secuestro de WebSocket entre sitios: solo el origen del frontend.
-    if (req.headers.origin !== this.d.appUrl) { rechazar(socket, 403, 'Forbidden'); return; }
+    if (req.headers.origin !== this.origenApp) { rechazar(socket, 403, 'Forbidden'); return; }
     const ticket = ticketDeProtocolos(req.headers['sec-websocket-protocol']);
     if (!ticket) { rechazar(socket, 401, 'Unauthorized'); return; }
     let datos;

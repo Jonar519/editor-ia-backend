@@ -33,7 +33,11 @@ export interface OpcionesAppPrueba {
   tokenMetricas?: string;
   api?: Router;
   extender?: (app: Express) => void;
+  appUrl?: string;
 }
+
+/** El frontend de las pruebas (el mismo valor por defecto de APP_URL). */
+export const APP_URL_PRUEBA = 'http://127.0.0.1:5175';
 
 export function appDePrueba(o: OpcionesAppPrueba = {}) {
   const { log, lineas } = loggerEnMemoria();
@@ -45,6 +49,7 @@ export function appDePrueba(o: OpcionesAppPrueba = {}) {
     estado,
     tokenMetricas: o.tokenMetricas,
     trustProxy: false,
+    appUrl: o.appUrl ?? APP_URL_PRUEBA,
     ...(o.api ? { api: o.api } : {}),
     ...(o.extender ? { extender: o.extender } : {}),
   });
