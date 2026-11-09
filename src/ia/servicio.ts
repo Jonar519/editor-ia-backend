@@ -293,7 +293,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
       void (async () => {
         origen = validarOrigen(llamada.request.origen, false);
         const consulta = texto(llamada.request.consulta, LIMITES_SERVICIO.consulta, 'consulta');
-        const r = await p.embeber([consulta], ac.signal);
+        const r = await p.embeber([consulta], ac.signal, 'consulta');
         const [vector] = verificarVectores(r.vectores, 1);
         ac.abort();
         registrar('EmbeberConsulta', origen, inicio, grpc.status.OK);
@@ -336,6 +336,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
           const r = await p.embeber(
             fragmentos.map((f) => f.contenido),
             ac.signal,
+            'documento',
           );
           const vectores = verificarVectores(r.vectores, fragmentos.length);
           ac.abort();
