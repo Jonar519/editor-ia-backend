@@ -155,6 +155,7 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | Logs | pino en JSON. Nunca registra `Authorization`, cookies, contraseñas ni tokens. |
 | OpenAPI | Generada desde los esquemas zod (`docs/openapi.json`). `npm run openapi:check` falla si quedó desactualizada. Los errores comunes de `/api` (400, 401, 413, 415, 429 con `Retry-After`, 503) se agregan en un solo lugar, y `openapi.test.ts` exige que toda ruta de Express esté documentada. |
 | Tiempo real | WebSocket en `/api/tiempo-real`, en el mismo proceso: ticket de un solo uso en el subprotocolo, guardia por mensaje, revocación por los avisos de la base y persistencia con búfer de 250 ms. [ADR 0002](docs/adr/0002-comunicacion.md), [ADR 0003](docs/adr/0003-crdt.md) y [protocolo](docs/protocolo-tiempo-real.md). |
+| CORS | El frontend y el API están en orígenes distintos del mismo sitio (`cuaderno.<dominio>` y `api-cuaderno.<dominio>`). `/api` responde con CORS solo al origen de `APP_URL`, con credenciales y sin `*` ([src/http/cors.ts](src/http/cors.ts)); expone `Retry-After`, `Content-Disposition` y `X-Request-Id`. Un `Origin` ajeno recibe 403 `origen_no_permitido` antes de la ruta; el ticket del WebSocket y el WebSocket repiten la regla. |
 | Límites | Por ruta sensible (login, MFA, recuperación, miembros, versiones, comentarios, IA, tickets) y un límite general de 600 pedidos por minuto y cuenta en todo `/api`. Todos en Redis y fallan cerrado (503). |
 
 ## Documentación
