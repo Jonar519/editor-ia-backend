@@ -68,7 +68,15 @@ const esquema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(4200),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
     SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(10_000),
-    TRUST_PROXY: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+    // Cuántos proxies de confianza hay delante del API (saltos de X-Forwarded-For que se creen): 0 = ninguno
+    // (local), 1 = el borde de Railway. Un número, nunca "true": con true cualquiera falsifica su IP y se
+    // salta los límites por IP.
+    TRUST_PROXY: z
+      .string()
+      .regex(/^\d{1,2}$/, { error: 'debe ser el número de proxies delante del API (0 = ninguno, 1 detrás del borde de Railway)' })
+      .default('0')
+      .transform(Number)
+      .pipe(z.number().max(10, { error: 'a lo sumo 10 proxies' })),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/, error: 'debe ser una URL postgresql://' }),
     REDIS_URL: z.url({ protocol: /^rediss?$/, error: 'debe ser una URL redis:// o rediss://' }),
     MFA_ENCRYPTION_KEY: claveAes256,

@@ -87,6 +87,24 @@ describe('HTTP: formato de errores y seguridad básica', () => {
     expect(largo.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it('TRUST_PROXY por saltos: con 1 cuenta solo el último proxy; con 0 X-Forwarded-For no cambia nada', async () => {
+    const conIp = (trustProxy: number) =>
+      appDePrueba({
+        trustProxy,
+        extender: (a) =>
+          a.get('/ip', (req, res) => {
+            res.json({ ip: req.ip });
+          }),
+      }).app;
+    // Lo que manda el cliente (falsificado) va primero; el borde agrega la IP que vio: la última.
+    const xff = '203.0.113.66, 198.51.100.7';
+    const uno = await request(conIp(1)).get('/ip').set('x-forwarded-for', xff);
+    expect((uno.body as { ip: string }).ip).toBe('198.51.100.7');
+    const cero = await request(conIp(0)).get('/ip').set('x-forwarded-for', xff);
+    expect((cero.body as { ip: string }).ip).not.toBe('198.51.100.7');
+    expect((cero.body as { ip: string }).ip).not.toBe('203.0.113.66');
+  });
+
   it('el log nunca guarda Authorization ni cookies', async () => {
     const { app, lineas } = appDePrueba();
     await request(app).get('/no-existe').set('authorization', 'Bearer token-secreto-123').set('cookie', 'refresco=secreto-456');

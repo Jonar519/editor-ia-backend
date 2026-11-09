@@ -32,7 +32,7 @@ export function entornoApi(c: Conexiones, claveAcceso: Buffer, limitePedidosMinu
     METRICS_TOKEN: randomBytes(32).toString('base64url'),
     APP_URL: ORIGEN,
     COOKIE_SECURE: 'true',
-    TRUST_PROXY: 'false',
+    TRUST_PROXY: '0',
     AI_PROVIDER: 'mock',
     EMAIL_PROVIDER: 'mock',
     GEO_PROVIDER: 'mock',

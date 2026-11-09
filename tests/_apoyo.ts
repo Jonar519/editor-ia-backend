@@ -34,6 +34,7 @@ export interface OpcionesAppPrueba {
   api?: Router;
   extender?: (app: Express) => void;
   appUrl?: string;
+  trustProxy?: number;
 }
 
 /** El frontend de las pruebas (el mismo valor por defecto de APP_URL). */
@@ -48,7 +49,7 @@ export function appDePrueba(o: OpcionesAppPrueba = {}) {
     comprobaciones: o.comprobaciones ?? [comprobacionOk('bd')],
     estado,
     tokenMetricas: o.tokenMetricas,
-    trustProxy: false,
+    trustProxy: o.trustProxy ?? 0,
     appUrl: o.appUrl ?? APP_URL_PRUEBA,
     ...(o.api ? { api: o.api } : {}),
     ...(o.extender ? { extender: o.extender } : {}),
