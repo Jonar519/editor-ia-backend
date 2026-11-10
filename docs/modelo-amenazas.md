@@ -287,7 +287,7 @@ S: suplantación; T: manipulación; R: repudio; I: revelación de información; 
   - `inflate: false` sigue en los dos parsers (B01–B03).
 - **Otros avisos de dependencias, sin excepción** (no son parte de R-05; se anotan para no perderlos):
   - ~~**fast-uri** 3.1.8 (moderado, solo de desarrollo)~~: **cerrado el 4-11-2026** con 3.1.9 (16 días de publicada; solo cambió esa entrada del lockfile).
-  - **minimatch** 10.2.6 (moderado, solo de desarrollo, GHSA-g3hv-75wg-m249, aparece el 4-11-2026 en los tres repos, por eslint): **pendiente de decisión**. La corrección (11.0.1) es una versión mayor y cumple 14 días el 10-11-2026. Detalle en el [ADR 0008](adr/0008-dependencias.md). El CI pasa (umbral `high`).
+  - **minimatch** 10.2.6 (moderado, solo de desarrollo, GHSA-g3hv-75wg-m249, aparece el 4-11-2026 en los tres repos, por eslint): **excepción documentada**, aceptada por escrito el 4-11-2026, sin overrides. Se revisa el **13-11-2026**, o antes si eslint pide `minimatch` 11 (la corrección, 11.0.1, es una versión mayor y cumple 14 días el 10-11-2026). Detalle en el [ADR 0008](adr/0008-dependencias.md). El CI pasa (umbral `high`).
   - **uuid** 8.3.2 (GHSA-w5hq-g745-h8pq, moderado, solo de desarrollo, por autocannon → hyperid). Resuelto el 27-10-2026 con un override exacto a 11.1.1, que tiene más de 14 días: **no** es una excepción a la regla.
 
 ### R-06 · Inyección de CSS: `'unsafe-inline'` en los estilos de la CSP

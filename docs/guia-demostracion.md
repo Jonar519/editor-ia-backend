@@ -719,7 +719,7 @@ scripts\ci.bat
 
 **Qué debes ver:** `RESULTADO: OK` en los tres. El del frontend incluye las E2E (Playwright + axe, Chromium y Firefox) en el contenedor oficial de Linux.
 
-`npm audit` muestra en los tres repos avisos **moderados** de `minimatch` (por eslint), solo de desarrollo y pendientes de decisión desde el 4-11-2026. `fast-uri` se cerró ese mismo día con 3.1.9 ([ADR 0008](adr/0008-dependencias.md)). El CI pasa porque su umbral es `high`.
+`npm audit` muestra en los tres repos avisos **moderados** de `minimatch` (por eslint), solo de desarrollo: es una excepción documentada desde el 4-11-2026, con revisión el 13-11. `fast-uri` se cerró ese mismo día con 3.1.9 ([ADR 0008](adr/0008-dependencias.md)). El CI pasa porque su umbral es `high`.
 
 ## 10. Lo no medido o no cubierto
 
