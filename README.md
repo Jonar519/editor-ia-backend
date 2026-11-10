@@ -19,7 +19,7 @@ Al cierre de R8 (28-10-2026), el backend tiene completos los bloques D a R7:
 **Cómo levantarlo todo y demostrarlo, desde un clon limpio:** [docs/guia-demostracion.md](docs/guia-demostracion.md) (R9).
 
 **Sin despliegue y sin IA real.** Lo que exige el despliegue está en el README general y en la [lista de revisión](https://github.com/Jonar519/editor-ia-frontend/blob/main/docs/revision-bloque-R.md) del frontend (R10). Queda del bloque R:
-- R11: dependencias. `fast-uri` 3.1.9 entró el 4-11-2026 (cumplía 14 días el 2-11). El 5-11-2026 se revisa el override de `body-parser` 2.4.0, riesgo R-05. `minimatch` (moderado, solo de desarrollo) es una excepción documentada desde el 4-11-2026, con revisión el 13-11 ([ADR 0008](docs/adr/0008-dependencias.md)).
+- R11: dependencias. `fast-uri` 3.1.9 entró el 4-11-2026 (cumplía 14 días el 2-11). El 5-11-2026 se quitó el override de `body-parser` 2.4.0 (cumplió 14 días; Express 5.3.0 la resuelve por sí solo) y se cerró el riesgo R-05; el de `qs` 6.16.1 se mantiene. `minimatch` (moderado, solo de desarrollo) es una excepción documentada desde el 4-11-2026, con revisión el 13-11 ([ADR 0008](docs/adr/0008-dependencias.md)).
 
 ## Requisitos
 
@@ -155,6 +155,7 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | Logs | pino en JSON. Nunca registra `Authorization`, cookies, contraseñas ni tokens. |
 | OpenAPI | Generada desde los esquemas zod (`docs/openapi.json`). `npm run openapi:check` falla si quedó desactualizada. Los errores comunes de `/api` (400, 401, 413, 415, 429 con `Retry-After`, 503) se agregan en un solo lugar, y `openapi.test.ts` exige que toda ruta de Express esté documentada. |
 | Tiempo real | WebSocket en `/api/tiempo-real`, en el mismo proceso: ticket de un solo uso en el subprotocolo, guardia por mensaje, revocación por los avisos de la base y persistencia con búfer de 250 ms. [ADR 0002](docs/adr/0002-comunicacion.md), [ADR 0003](docs/adr/0003-crdt.md) y [protocolo](docs/protocolo-tiempo-real.md). |
+| CORS | El frontend y el API están en orígenes distintos del mismo sitio (`cuaderno.<dominio>` y `api-cuaderno.<dominio>`). `/api` responde con CORS solo al origen de `APP_URL`, con credenciales y sin `*` ([src/http/cors.ts](src/http/cors.ts)); expone `Retry-After`, `Content-Disposition` y `X-Request-Id`. Un `Origin` ajeno recibe 403 `origen_no_permitido` antes de la ruta; el ticket del WebSocket y el WebSocket repiten la regla. |
 | Límites | Por ruta sensible (login, MFA, recuperación, miembros, versiones, comentarios, IA, tickets) y un límite general de 600 pedidos por minuto y cuenta en todo `/api`. Todos en Redis y fallan cerrado (503). |
 
 ## Documentación
@@ -170,6 +171,26 @@ Todas las variables están en [.env.example](.env.example), cada una con su come
 | [docs/medicion-p3.md](docs/medicion-p3.md), [docs/carga-r.md](docs/carga-r.md), [docs/almacenamiento-r.md](docs/almacenamiento-r.md), [docs/limite-r/carga-r.md](docs/limite-r/carga-r.md) | Mediciones generadas por sus scripts, cada una con lo que no permite concluir |
 | [docs/data-retention.md](docs/data-retention.md) | Plazos de retención |
 | `docs/demo-D.md` … `docs/demo-K1.md` | Pasos de demostración para cmd.exe de los bloques D, E, F, G y K1 |
+
+## Contenedor (Docker · despliegue en Railway)
+
+Un solo build ([`Dockerfile`](Dockerfile), Node 24 sobre Debian 12, sin root) para los dos procesos. Cambia solo el comando:
+
+| Servicio | Comando de arranque | Escucha | Salud |
+|---|---|---|---|
+| API | por defecto (`node dist/servidor.js`) | `HOST:PORT` (la imagen trae `HOST=0.0.0.0`; `PORT` lo pone Railway) | `/ready` |
+| Servicio de IA | `node dist/ia/principal.js` | `IA_HOST:IA_PORT` (en Railway `IA_HOST=::`, red privada) | `grpc.health.v1` (el API la muestra en `/ready`) |
+
+```bat
+docker build -t editor-ia-backend .
+docker run --rm -p 4200:4200 --env-file .env.produccion editor-ia-backend
+docker run --rm --env-file .env.produccion editor-ia-backend node dist/ia/principal.js
+```
+
+- **`node` directo, nunca `npm start`:** npm no reenvía SIGTERM y se perdería el apagado ordenado.
+- **Sin secretos ni `.env` en la imagen** (`.dockerignore`); el contrato gRPC (`proto/`) sí va, porque se carga al arrancar.
+- **Las migraciones no corren al arrancar:** van con `editor-ia-database`, y el API se conecta como `cuaderno_app`.
+- `typescript` y el CLI de `prisma` quedan en `node_modules` aunque son de desarrollo: son peers de `@prisma/client` y `npm prune` no los quita. No se usan al correr.
 
 ## Problema conocido: el trabajador de Vitest muere en Windows con la CPU saturada
 

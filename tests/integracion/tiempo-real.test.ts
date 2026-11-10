@@ -7,6 +7,7 @@ import { compactarDocumento } from '../../src/tiempo-real/compactacion.js';
 import { DocumentoVivo } from '../../src/tiempo-real/documento.js';
 import { CIERRE, LIMITES_PRODUCCION } from '../../src/tiempo-real/limites.js';
 import { emitirTicket } from '../../src/tiempo-real/tickets.js';
+import { APP_URL } from '../_api.js';
 import { conectar, esperar, estadoDelUpgrade, levantar, type Entorno } from '../_tiempo-real.js';
 
 const proto = (t: string) => ['cuaderno.v1', `ticket.${t}`];
@@ -59,6 +60,20 @@ describe('con avisos de la base', () => {
     expect(claves.join(' ')).not.toContain(tk);
     await new Promise((r) => setTimeout(r, 200));
     expect(await estadoDelUpgrade(t.url, proto(tk))).toBe(401);
+  });
+
+  it('pedir un ticket desde otro Origin: 403 (y no se emite); desde el frontend o sin Origin, 201', async () => {
+    const ana = await t.persona();
+    const { documentoId } = await t.documentoCon(ana);
+    const pedir = (origen?: string) => {
+      const r = request(t.app).post('/api/tiempo-real/tickets').set('authorization', ana.auth);
+      return (origen ? r.set('origin', origen) : r).send({ documentoId });
+    };
+    const ajeno = await pedir('https://malo.example.com');
+    expect(ajeno.status).toBe(403);
+    expect((ajeno.body as { error: { codigo: string } }).error.codigo).toBe('origen_no_permitido');
+    expect((await pedir(APP_URL)).status).toBe(201);
+    expect((await pedir()).status).toBe(201);
   });
 
   it('pedir un ticket sin acceso al documento: 404 (no se revela si existe)', async () => {
@@ -204,6 +219,24 @@ describe('con avisos de la base', () => {
 });
 
 // ─── R-01: la ventana si se pierde un aviso (sin puente de avisos, revalidación en 300 ms) ───────────────
+
+describe('APP_URL con "/" al final (como puede quedar en el panel del despliegue)', () => {
+  let t: Entorno;
+  beforeAll(async () => {
+    t = await levantar({ avisos: false, appUrl: `${APP_URL}/` });
+  });
+  afterAll(async () => {
+    await t.cerrar();
+  });
+
+  it('el WebSocket compara contra el ORIGEN de APP_URL: el frontend entra y otro origen sigue en 403', async () => {
+    const ana = await t.persona();
+    const { documentoId } = await t.documentoCon(ana);
+    expect(await estadoDelUpgrade(t.url, proto(await t.ticket(ana, documentoId)), APP_URL)).toBe(101);
+    expect(await estadoDelUpgrade(t.url, proto(await t.ticket(ana, documentoId)), `${APP_URL}/`)).toBe(403);
+    expect(await estadoDelUpgrade(t.url, proto(await t.ticket(ana, documentoId)), 'http://otro.example.com')).toBe(403);
+  });
+});
 
 describe('R-01: ventana de revocación sin avisos', () => {
   let t: Entorno;

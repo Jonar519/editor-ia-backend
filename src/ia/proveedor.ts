@@ -18,6 +18,8 @@ export interface Uso {
 
 export type Estilo = 'claro' | 'breve' | 'formal';
 
+export type TipoEmbedding = 'consulta' | 'documento';
+
 export interface ProveedorIa {
   readonly nombre: 'mock' | 'anthropic';
   /** Modelo de embeddings: se guarda en embeddings.modelo para saber con qué se indexó cada fragmento. */
@@ -27,7 +29,8 @@ export interface ProveedorIa {
   explicar(e: { contenido: string; lenguaje: string }, senal: AbortSignal): Promise<{ texto: string; uso: Uso }>;
   /** El texto llega de a poco (cada valor es un fragmento); al terminar, devuelve el uso. */
   transformar(e: { tarea: 'resumir' | 'mejorar'; contenido: string; estilo: Estilo }, senal: AbortSignal): AsyncGenerator<string, Uso>;
-  embeber(textos: string[], senal: AbortSignal): Promise<{ vectores: number[][]; uso: Uso }>;
+  /** `tipo`: lo que se embebe (una consulta de búsqueda o fragmentos de documentos); el real lo usa. */
+  embeber(textos: string[], senal: AbortSignal, tipo?: TipoEmbedding): Promise<{ vectores: number[][]; uso: Uso }>;
   autocompletar(e: { antes: string; despues: string }, senal: AbortSignal): Promise<{ texto: string; uso: Uso }>;
 }
 

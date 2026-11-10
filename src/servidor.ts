@@ -109,6 +109,7 @@ async function main(): Promise<void> {
     tokenMetricas: config.METRICS_TOKEN,
     trustProxy: config.TRUST_PROXY,
     api,
+    appUrl: config.APP_URL,
   });
 
   const servidor = app.listen(config.PORT, config.HOST, () => {

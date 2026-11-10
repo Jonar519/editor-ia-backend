@@ -5,6 +5,7 @@ import { crearLimitador, limitarTasa } from '../auth/limites.js';
 import { requiereSesion, usuarioDe } from '../auth/middleware.js';
 import { exigirDocumento } from '../contenido/acceso.js';
 import type { DependenciasApi } from '../dependencias.js';
+import { exigirOrigenApp } from '../http/cors.js';
 import { SolicitudTicket } from '../http/esquemas.js';
 import { LIMITES_PRODUCCION } from './limites.js';
 import { emitirTicket } from './tickets.js';
@@ -13,6 +14,8 @@ export const LIMITE_TICKETS = { max: 60, ventanaMs: 60_000 } as const;
 
 export function rutasTiempoReal(d: DependenciasApi, vigenciaMs = LIMITES_PRODUCCION.ticketMs): Router {
   const r = Router();
+  // El ticket abre el WebSocket (que también exige este Origin): se emite solo al frontend.
+  r.use(exigirOrigenApp(d.appUrl));
   r.use(requiereSesion(d));
   const lim = limitarTasa(
     crearLimitador({ redis: d.redis, prefijo: d.prefijoRedis, nombre: 'ticket_rt', ...LIMITE_TICKETS }),

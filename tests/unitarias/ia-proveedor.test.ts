@@ -52,12 +52,14 @@ describe('proveedor simulado', () => {
   });
 });
 
-describe('proveedor real (esqueleto)', () => {
-  it('cada operación falla con no_implementado (502 ia_error_interno), nunca con una respuesta inventada', async () => {
-    const p = new ProveedorAnthropic(randomBytes(24).toString('base64url'));
+describe('proveedor real (detalle en ia-anthropic.test.ts)', () => {
+  it('sin red, cada operación falla con no_disponible (503), nunca con una respuesta inventada', async () => {
+    const sinRed = (() => Promise.reject(new TypeError('fetch failed'))) as typeof fetch;
+    const clave = () => randomBytes(24).toString('base64url');
+    const p = new ProveedorAnthropic({ clave: clave(), modelo: 'claude-opus-5-5', voyage: { clave: clave(), modelo: 'voyage-3.5' }, fetch: sinRed, reintentos: 0 });
     await expect(p.explicar({ contenido: 'x', lenguaje: '' }, senal())).rejects.toBeInstanceOf(ErrorProveedor);
-    await expect(p.embeber(['x'], senal())).rejects.toMatchObject({ categoria: 'no_implementado' });
-    await expect(p.autocompletar({ antes: 'x', despues: '' }, senal())).rejects.toMatchObject({ categoria: 'no_implementado' });
-    await expect(p.transformar({ tarea: 'resumir', contenido: 'x', estilo: 'claro' }, senal()).next()).rejects.toMatchObject({ categoria: 'no_implementado' });
+    await expect(p.embeber(['x'], senal())).rejects.toMatchObject({ categoria: 'no_disponible' });
+    await expect(p.autocompletar({ antes: 'x', despues: '' }, senal())).rejects.toMatchObject({ categoria: 'no_disponible' });
+    await expect(p.transformar({ tarea: 'resumir', contenido: 'x', estilo: 'claro' }, senal()).next()).rejects.toMatchObject({ categoria: 'no_disponible' });
   });
 });

@@ -161,7 +161,8 @@ Decisiones escritas al aprobar el diseño de P1:
 - **Proceso aparte dentro del repo del backend** (`src/ia/`, `npm run ia:dev` / `ia:start`, `scripts\ia.bat`). No tiene base ni Redis: el API verifica sesión, permiso y tope ANTES de llamar, y guarda él mismo los resultados.
 - **La IA caída no pone `/ready` en 503**: se muestra (`"ia": "falla"`) y las rutas de IA responden 503 `ia_no_disponible` por su cuenta. El editor sigue sirviendo sin IA.
 - **Dependencias** exactas: `@grpc/grpc-js` 1.14.6, `@grpc/proto-loader` 0.8.1 y `@bufbuild/buf` 1.73.0 (desarrollo). Las 37 versiones nuevas, con transitivas, tienen 14 días o más.
-- **Proveedor intercambiable** (`ProveedorIa`): el simulado (determinista, sin red) funciona de punta a punta; `ProveedorAnthropic` es un esqueleto que falla con `no_implementado` (502) hasta que se decida el proveedor real. `AI_PROVIDER=anthropic` exige `ANTHROPIC_API_KEY`; en producción el simulado no arranca.
+- **Proveedor intercambiable** (`ProveedorIa`): el simulado (determinista, sin red) funciona de punta a punta; `ProveedorAnthropic` (actualización de noviembre de 2026) usa Claude con el SDK oficial `@anthropic-ai/sdk` 1.3.0 para explicar, resumir y mejorar (`ANTHROPIC_MODEL`, por defecto `claude-opus-5-5`) y autocompletar (`ANTHROPIC_MODEL_AUTOCOMPLETAR`, por defecto el mismo), y Voyage AI para los embeddings (`VOYAGE_MODEL=voyage-3.5`, `output_dimension` 1024). `AI_PROVIDER=anthropic` exige `ANTHROPIC_API_KEY` y `VOYAGE_API_KEY`; en producción el simulado no arranca.
+- **Proveedor real, reglas** (`src/ia/proveedor-anthropic.ts`, `src/ia/embeddings-voyage.ts`): sistema y usuario en mensajes separados; la `AbortSignal` del servicio va al SDK y a `fetch`; resumir y mejorar en streaming; `stop_reason` se revisa antes de leer (`refusal` → `invalido`, `max_tokens` entrega lo generado); 429 → `limite` con su `Retry-After`; 5xx, 529, red o tiempo → `no_disponible`; otros 4xx → `interno` (configuración). El autocompletado no reintenta. Fallbacks del lado del servidor (`"default"`) salvo con Haiku, que no los tiene. Voyage en lotes de hasta 128 textos, `input_type` `query` o `document`. Las pruebas usan un `fetch` falso: la resistencia de un modelo real a la batería de inyección se evalúa con las claves reales, fuera del CI.
 - **Autenticación**: interceptor del servidor; la salud estándar queda sin token (la consultan los orquestadores y solo dice `SERVING`/`NOT_SERVING`).
 - **Topes del lado del servicio**: además del deadline del API, cada método corta solo al doble de ese deadline, por si un cliente no lo pusiera.
 - **Aislamiento**: el `Origen` va solo en el primer mensaje de una corriente; otro después cierra con `INVALID_ARGUMENT`. Cada llamada se registra con cuenta, espacio y documento, nunca con el contenido.
@@ -316,7 +317,7 @@ Los embeddings son de **1024 dimensiones** (`vector(1024)` de la migración 0011
 | Que el trabajo pospuesto efectivamente corra al día siguiente (se prueba que queda demorado, no que corra) | `src/ia/indexado.ts` |
 | Caché de 60 s de `Describir` | `src/ia/cliente.ts` `modeloVigente()` |
 | `scripts\reindexar.bat` (se probó en vivo contra la base de pruebas, sin prueba automática) | `scripts/reindexar.ts` |
-| Prompts del esqueleto Anthropic (se arman, pero no se mandan a ningún modelo) | `src/ia/proveedor-anthropic.ts` |
+| Respuestas de Claude y Voyage reales (las pruebas usan un `fetch` falso; con claves reales se prueba a mano) | `src/ia/proveedor-anthropic.ts`, `src/ia/embeddings-voyage.ts` |
 
 ## Estado de verificación al cierre (R6)
 

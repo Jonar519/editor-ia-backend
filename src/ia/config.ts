@@ -6,6 +6,9 @@ import { ErrorConfig, PROVEEDORES, reglaTransporte, tokenServicio, transporteIa 
 
 const opcional = <T extends z.ZodType>(esquema: T) => z.preprocess((v) => (v === '' ? undefined : v), esquema.optional());
 
+/** Un id de modelo: minúsculas, dígitos, punto y guion (nunca una URL ni texto libre). */
+const MODELO = /^[a-z0-9][a-z0-9.-]{1,63}$/;
+
 const esquema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -16,6 +19,13 @@ const esquema = z
     IA_SERVICE_TOKEN: tokenServicio,
     AI_PROVIDER: z.enum(PROVEEDORES.AI_PROVIDER).default('mock'),
     ANTHROPIC_API_KEY: opcional(z.string().min(20, { error: 'parece incompleta' })),
+    /** Modelo de explicar, resumir y mejorar. */
+    ANTHROPIC_MODEL: z.string().regex(MODELO, { error: 'debe ser un id de modelo (ej. claude-opus-5-5)' }).default('claude-opus-5-5'),
+    /** Modelo del autocompletado (deadline de 2 s en el API): vacío = ANTHROPIC_MODEL. */
+    ANTHROPIC_MODEL_AUTOCOMPLETAR: opcional(z.string().regex(MODELO, { error: 'debe ser un id de modelo (ej. claude-haiku-5-5)' })),
+    /** Embeddings (Voyage AI). El modelo tiene que dar EXACTAMENTE 1024 dimensiones (columna vector(1024)). */
+    VOYAGE_API_KEY: opcional(z.string().min(20, { error: 'parece incompleta' })),
+    VOYAGE_MODEL: z.string().regex(MODELO, { error: 'debe ser un id de modelo (ej. voyage-3.5)' }).default('voyage-3.5'),
     ...transporteIa,
     /** Pausa del simulado entre fragmentos (para que el streaming se vea en la demo). */
     IA_MOCK_RETRASO_MS: z.coerce.number().int().min(0).max(5000).default(40),
@@ -23,6 +33,9 @@ const esquema = z
   .superRefine((c, ctx) => {
     if (c.AI_PROVIDER === 'anthropic' && c.ANTHROPIC_API_KEY === undefined) {
       ctx.addIssue({ code: 'custom', path: ['ANTHROPIC_API_KEY'], message: 'obligatoria con AI_PROVIDER=anthropic' });
+    }
+    if (c.AI_PROVIDER === 'anthropic' && c.VOYAGE_API_KEY === undefined) {
+      ctx.addIssue({ code: 'custom', path: ['VOYAGE_API_KEY'], message: 'obligatoria con AI_PROVIDER=anthropic (embeddings)' });
     }
     reglaTransporte(c, ctx);
     if (c.NODE_ENV === 'production' && c.AI_PROVIDER === 'mock') {

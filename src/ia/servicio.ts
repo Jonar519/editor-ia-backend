@@ -40,6 +40,12 @@ export const LIMITES_SERVICIO = {
 } as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * host:puerto para gRPC. Una dirección IPv6 va entre corchetes ("[::]:4210"): sin ellos ":::4210" no se
+ * entiende. "::" escucha en IPv6 e IPv4 a la vez (la red privada de Railway usa IPv6).
+ */
+export const direccionGrpc = (host: string, puerto: number): string => `${host.includes(':') && !host.startsWith('[') ? `[${host}]` : host}:${String(puerto)}`;
 const RUTA_SALUD = '/grpc.health.v1.Health/';
 
 const invalido = (mensaje: string) => new ErrorProveedor('invalido', mensaje);
@@ -293,7 +299,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
       void (async () => {
         origen = validarOrigen(llamada.request.origen, false);
         const consulta = texto(llamada.request.consulta, LIMITES_SERVICIO.consulta, 'consulta');
-        const r = await p.embeber([consulta], ac.signal);
+        const r = await p.embeber([consulta], ac.signal, 'consulta');
         const [vector] = verificarVectores(r.vectores, 1);
         ac.abort();
         registrar('EmbeberConsulta', origen, inicio, grpc.status.OK);
@@ -336,6 +342,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
           const r = await p.embeber(
             fragmentos.map((f) => f.contenido),
             ac.signal,
+            'documento',
           );
           const vectores = verificarVectores(r.vectores, fragmentos.length);
           ac.abort();
@@ -419,7 +426,7 @@ export function crearServicioIa(o: OpcionesServicioIa) {
     /** Escucha en host:puerto (0 = uno libre, para las pruebas). Devuelve el puerto. */
     escuchar: (host: string, puerto: number): Promise<number> =>
       new Promise((resolver, rechazar) => {
-        servidor.bindAsync(`${host}:${String(puerto)}`, o.credenciales ?? grpc.ServerCredentials.createInsecure(), (err, real) => {
+        servidor.bindAsync(direccionGrpc(host, puerto), o.credenciales ?? grpc.ServerCredentials.createInsecure(), (err, real) => {
           if (err) rechazar(err);
           else resolver(real);
         });
