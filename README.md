@@ -529,7 +529,7 @@ almacenamiento de versiones ([docs/almacenamiento-r.md](docs/almacenamiento-r.md
 | Local: el API rechaza el origen                         | Usa `http://127.0.0.1:5175`, no `localhost` (debe coincidir con `APP_URL`).                                                                                                       |
 | Local: `/ready` muestra `"ia":"falla"`                  | Falta la ventana de `scripts\ia.bat`, o el API y la IA no comparten el mismo `IA_SERVICE_TOKEN` del `.env`.                                                                      |
 | Local: no llega ningún correo                           | En local no se envían: `scripts\buzon.bat <correo>` muestra el buzón simulado.                                                                                                    |
-| Local: `retencion.test.ts` falla con `statement timeout` | La base `cuaderno_test` acumuló datos de muchas corridas y la purga pasa de 5 s. Con una base de pruebas nueva pasa: define `CUADERNO_TEST_DB` y `TEST_DATABASE_URL` con otra base terminada en `_test`, prepárala con `node scripts/bd-preparar.mjs` y vuelve a correr. |
+| Local: `retencion.test.ts` falla con `statement timeout` | La base `cuaderno_test` acumuló datos de muchas corridas y la purga pasa de 5 s. Corre `scripts\db-test.bat` en `editor-ia-database`: recrea `cuaderno_test` desde cero; después las pruebas del backend pasan. |
 
 ## 10. Estructura del repositorio
 
