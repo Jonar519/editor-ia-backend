@@ -21,6 +21,11 @@ explican su parte y enlazan aquí:
 4. [Qué necesita el profesor](#4-qué-necesita-el-profesor)
 5. [Acceso y roles](#5-acceso-y-roles)
 6. [Guía de pruebas función por función](#6-guía-de-pruebas-función-por-función)
+7. [Pruebas automatizadas](#7-pruebas-automatizadas)
+8. [Limitaciones conocidas y decisiones de diseño](#8-limitaciones-conocidas-y-decisiones-de-diseño)
+9. [Solución de problemas](#9-solución-de-problemas)
+10. [Estructura del repositorio](#10-estructura-del-repositorio)
+11. [Glosario](#11-glosario)
 
 ## 1. Qué es el proyecto
 
@@ -458,3 +463,123 @@ Arriba, **Tu cuenta**.
 | gRPC: los cuatro tipos de llamada, token entre servicios, deadlines y cancelación | `proto/`, `src/ia/`                                      | [Guía de demostración, bloque P1](docs/guia-demostracion.md#bloque-p1-grpc) · `npm run proto:check`                        |
 | Métricas Prometheus                                                     | `GET /metrics` con token                                           | Tests de integración                                                                                                      |
 | CLI de operador: invitar, reindexar, buzón simulado, TOTP               | `scripts/`                                                         | [Referencia técnica: scripts](docs/referencia-tecnica.md#scripts)                                                         |
+
+## 7. Pruebas automatizadas
+
+Necesitan la opción local (Docker con los servicios de `editor-ia-database`). Las pruebas usan
+siempre la base `cuaderno_test` y la db 1 de Redis, nunca la de desarrollo. En cada repositorio,
+`scripts\ci.bat` corre los mismos pasos que la CI y muestra el código de salida de cada uno.
+
+| Repositorio          | Comando                                   | Qué cubre                                                                                                                                                                                                 | Resultado esperado                                                                     |
+| -------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `editor-ia-backend`  | `scripts\test.bat`                        | Unitarias y de integración con Supertest contra la base y Redis reales: sesión, MFA, invitaciones, cuenta, espacios y permisos, tiempo real con sockets reales, convergencia del CRDT, versiones, comentarios, IA por gRPC real, inyección de prompts, topes, retención, OpenAPI | `Tests 563 passed (563)` en 50 archivos.                                                |
+| `editor-ia-backend`  | `scripts\ci.bat`                          | Además: `proto:generate`, lint, typecheck, `prisma:check` (el esquema no se desvía), `openapi:check`, `proto:check` (buf lint y breaking), build, **256 mutaciones**, `npm audit` y gitleaks | `RESULTADO: OK`.                                                                        |
+| `editor-ia-frontend` | `scripts\ci.bat`                          | Lint, typecheck, 432 pruebas unitarias, auditoría de color y contraste (128 pares AA en los dos temas), build, presupuestos de peso, **128 mutaciones**, `npm audit`, **E2E en Linux** (Playwright + axe, 223 pruebas) y gitleaks | `RESULTADO: OK` y `Detectadas 128, sobreviven 0`.                                       |
+| `editor-ia-database` | `scripts\ci.bat`                          | Migraciones, pruebas SQL del esquema y del usuario con privilegios mínimos, mutaciones de la base, `npm audit` y gitleaks                                                                                  | `RESULTADO: OK`.                                                                        |
+
+La **CI** (GitHub Actions) corre todo esto en cada `push`. Hay además mediciones con sus informes
+(cada una dice primero lo que no permite concluir): gRPC frente a REST/JSON
+([docs/medicion-p3.md](docs/medicion-p3.md)), carga HTTP y WebSocket ([docs/carga-r.md](docs/carga-r.md)) y
+almacenamiento de versiones ([docs/almacenamiento-r.md](docs/almacenamiento-r.md)).
+
+> **Problema conocido en Windows:** muy de vez en cuando, con la CPU saturada, el proceso de Vitest
+> termina con `exit code 3221226505` y sin ninguna prueba fallida. Se repite la corrida; en Linux
+> nunca se vio ([detalle](docs/referencia-tecnica.md#problema-conocido-el-trabajador-de-vitest-muere-en-windows-con-la-cpu-saturada)).
+
+## 8. Limitaciones conocidas y decisiones de diseño
+
+- **Correo en modo de pruebas.** Amazon SES está en modo _sandbox_: solo entrega a direcciones
+  verificadas por el estudiante. Invitaciones, recuperación de contraseña y cambio de correo solo
+  llegan a esas direcciones.
+- **Miembros y permisos solo por la API.** Agregar o quitar miembros de un espacio, transferir la
+  propiedad y dar permisos por documento no tienen pantalla: se hacen con la API (y así lo prueba la
+  guía de demostración). Por eso, para probar la colaboración entre dos cuentas, el estudiante prepara
+  el espacio compartido.
+- **Cuotas de IA.** Por cuenta y por día: 300 pedidos y 300 000 tokens; el indexado automático de cada
+  espacio tiene su propio presupuesto diario. Al llegar al tope, la IA lo dice y cuándo se renueva.
+- **Respuestas de la IA no deterministas.** En producción las genera Claude: el texto cambia de una vez
+  a otra. Lo que no cambia son las reglas (qué ve la IA, quién puede usar qué). El umbral de la
+  búsqueda por significado (`IA_SIMILITUD_MINIMA`) no está calibrado con datos reales.
+- **La IA es un servicio aparte.** Si el servicio de IA cae, el resto de Cuaderno sigue funcionando:
+  `/ready` muestra `"ia":"falla"` sin dejar de responder 200 y la interfaz dice que la IA no está
+  disponible.
+- **Ubicación de las sesiones.** Se estima con una tabla local de rangos de IP, nunca con un servicio
+  externo; si la tabla no tiene el rango, la ubicación aparece como desconocida.
+- **Límite de versiones.** Guardar versiones tiene un límite por hora (contra el crecimiento del
+  almacenamiento; ver [docs/almacenamiento-r.md](docs/almacenamiento-r.md)).
+- **Sin registro público, sin desactivar la MFA de administración y sin voz:** decisiones de diseño.
+- **Eliminar una cuenta deja una lápida:** la cuenta conserva su id (para la autoría) y pierde correo,
+  nombre, teléfono y contraseña; así el historial y la cadena de hash siguen verificándose ([docs/data-retention.md](docs/data-retention.md)).
+
+## 9. Solución de problemas
+
+| Síntoma                                                 | Qué hacer                                                                                                                                                                         |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La página no carga                                      | Abre <https://api-cuaderno.jonarproyectos.com/ready>. Si no responde, avisa al estudiante. Si responde, recarga con Ctrl+F5 o prueba en incógnito.                               |
+| "Conexión: Sin conexión. Reintentando…" que no se va     | Revisa tu conexión; si una red corporativa bloquea WebSockets, prueba otra. Lo que escribas se guarda en el navegador y se envía al volver.                                      |
+| La sesión expiró o vuelve a **Entrar**                  | Vuelve a entrar. Pasa si cerraste las sesiones desde **Sesiones abiertas**, cambiaste la contraseña o pasó mucho tiempo sin usarla.                                               |
+| No llega el correo                                      | Revisa spam. Solo llega a direcciones verificadas ([Limitaciones](#8-limitaciones-conocidas-y-decisiones-de-diseño)). Pide al estudiante un **Reenviar**.                          |
+| La invitación dice que no es válida                     | Venció (72 h), ya se usó o se reenvió otra. Pide una nueva.                                                                                                                      |
+| La IA dice que no está disponible                       | Mira `/ready`: si `ia` dice `falla`, el servicio de IA está caído o reiniciando; el resto de la app sigue funcionando. Vuelve a intentar en un minuto.                            |
+| La IA dice que llegaste al tope                         | Es la cuota diaria de la cuenta (300 pedidos). Se renueva al día siguiente.                                                                                                      |
+| La búsqueda por significado no encuentra nada           | El documento no está indexado todavía: **IA → Actualizar índice de búsqueda** (o espera 5 minutos después de editar).                                                             |
+| No aparece **Editar** o **Mejorar**                     | Tu cuenta o tu rol en ese espacio es de Lectura.                                                                                                                                  |
+| "Demasiadas solicitudes"                                | Límite de uso: espera los segundos que indica el mensaje.                                                                                                                         |
+| Local: `Configuración inválida` al arrancar             | El mensaje lista qué variable falta o es inválida. `scripts\env-init.bat` completa las que falten sin tocar las demás (por ejemplo, `TRUST_PROXY` debe ser un número, `0` en local). |
+| Local: el API rechaza el origen                         | Usa `http://127.0.0.1:5175`, no `localhost` (debe coincidir con `APP_URL`).                                                                                                       |
+| Local: `/ready` muestra `"ia":"falla"`                  | Falta la ventana de `scripts\ia.bat`, o el API y la IA no comparten el mismo `IA_SERVICE_TOKEN` del `.env`.                                                                      |
+| Local: no llega ningún correo                           | En local no se envían: `scripts\buzon.bat <correo>` muestra el buzón simulado.                                                                                                    |
+| Local: `retencion.test.ts` falla con `statement timeout` | La base `cuaderno_test` acumuló datos de muchas corridas y la purga pasa de 5 s. Con una base de pruebas nueva pasa: define `CUADERNO_TEST_DB` y `TEST_DATABASE_URL` con otra base terminada en `_test`, prepárala con `node scripts/bd-preparar.mjs` y vuelve a correr. |
+
+## 10. Estructura del repositorio
+
+```
+editor-ia-backend/
+├── src/
+│   ├── servidor.ts · app.ts · apagado.ts  # arranque, middlewares y apagado ordenado
+│   ├── config/            # variables validadas con zod y negativas de producción
+│   ├── http/              # CORS, cookies, errores, salud (/health, /ready)
+│   ├── auth/ · invitaciones/ · cuenta/ · usuarios/   # sesión, MFA, recuperación, invitaciones y cuenta
+│   ├── espacios/ · documentos/ · versiones/ · comentarios/ · contenido/   # dominio del editor
+│   ├── tiempo-real/       # WebSocket: tickets, guardia por mensaje, avisos de la base, compactación
+│   ├── ia/                # servicio de IA gRPC (proveedores, prompts, embeddings) y su cliente
+│   ├── correo/ · geo/ · imagen/   # proveedores intercambiables y limpieza de imágenes
+│   ├── trabajos/          # retención diaria (BullMQ)
+│   ├── observabilidad/ · infra/   # métricas, logs, Prisma y Redis
+│   └── generated/         # cliente de Prisma y tipos del contrato gRPC (generados)
+├── proto/                 # contrato gRPC (cuaderno/ia/v1/ia.proto)
+├── prisma/                # schema.prisma (sale de db pull; el esquema lo manda editor-ia-database)
+├── tests/unitarias · tests/integracion
+├── mutations/             # catálogo de mutaciones
+├── scripts/               # dev, ia, test, ci, invitar, buzón, totp, medir, carga, gitleaks…
+├── docs/                  # referencia técnica, guía de demostración, ADR, amenazas, protocolo, OpenAPI, mediciones
+└── Dockerfile
+```
+
+Los otros repositorios describen su estructura en su propio README:
+[editor-ia-frontend](https://github.com/Jonar519/editor-ia-frontend#readme) y
+[editor-ia-database](https://github.com/Jonar519/editor-ia-database#readme).
+
+## 11. Glosario
+
+| Término                      | Qué significa aquí                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **API REST**                 | Las direcciones del servidor (`/api/...`) que la app llama con métodos HTTP y que responden JSON.                                   |
+| **WebSocket**                | Conexión abierta para enviar y recibir cambios al instante; aquí, una por documento abierto.                                        |
+| **Ticket**                   | Credencial de un solo uso (30 s) para abrir el WebSocket; viaja en el subprotocolo, nunca en la URL.                                |
+| **CRDT / Yjs**               | Estructura de datos que permite que varias personas editen a la vez y siempre lleguen al mismo texto; Yjs es la implementación.     |
+| **gRPC**                     | Forma de comunicación entre servicios con un contrato tipado (`.proto`) y streaming en los dos sentidos; aquí, entre el API y la IA. |
+| **Streaming / SSE**          | La respuesta llega por partes mientras se genera; en el navegador, con eventos enviados por el servidor sobre `fetch`.               |
+| **Embedding**                | Lista de números que representa el significado de un texto; textos parecidos tienen embeddings cercanos.                            |
+| **pgvector**                 | Extensión de PostgreSQL que guarda embeddings y busca los más cercanos.                                                             |
+| **Búsqueda por significado** | Buscar fragmentos por lo que quieren decir, comparando embeddings, en vez de por palabras exactas.                                  |
+| **Inyección de prompts**     | Texto dentro del documento que intenta darle órdenes a la IA; aquí el contenido va escapado y separado de las instrucciones.         |
+| **Cadena de hash**           | Cada versión guarda el hash de la anterior: alterar una rompe la cadena y la verificación lo detecta.                                |
+| **MFA / verificación en dos pasos** | Además de la contraseña, un código de 6 dígitos de una app del teléfono (TOTP) o un código de respaldo.                     |
+| **Cookie httpOnly**          | Cookie que el JavaScript de la página no puede leer: protege la sesión si alguien logra inyectar un script.                         |
+| **CORS / CSP**               | Reglas que limitan qué origen puede llamar a la API / de dónde puede cargar y a dónde puede conectarse la página.                    |
+| **NOTIFY**                   | Aviso de PostgreSQL a los procesos que escuchan; aquí avisa al servidor cuando cambian los permisos.                                |
+| **Service Worker**           | Script del navegador que guarda el armazón de la app para que cargue sin conexión.                                                  |
+| **Prueba de mutación**       | Se rompe el código a propósito y se comprueba que algún test falle.                                                                 |
+| **E2E**                      | Prueba de punta a punta: un navegador automatizado usa la aplicación completa.                                                      |
+| **ADR**                      | Documento corto que registra una decisión técnica, sus alternativas y por qué se eligió.                                            |
